@@ -52,40 +52,51 @@ class Maze:
         self.grid = [[random.randint(0b0000,0b1111) for _ in range(width_)] for _ in range(height_)]
 
     def __repr__(self):
-        return pprint.pformat(self.grid)
+        return "[" + ',\n'.join(map(repr,self.grid)) + "]"
 
     def __format__(self, *args):
         if args[0] == '':
             return self.ascii_thin()
         else:
-            return self.ascii_str(wall=args[0])
+            return self.ascii_block(wall=args[0])
 
-    def ascii_str(self, wall=None, air=None, columnated=True):
-        """
-        Produce a 'block' ASCII representation of the maze.
-        """
-        if wall is None: wall = '%#'
-        if air is None: air = len(wall)*' '
-        if columnated:
-            column = lambda x,y: wall
-        else:
-            column = lambda x,y: wall if x==self.width-1 or y==self.height-1 or has_wall(x,y,RIGHT) or has_wall(x,y,DOWN) or has_wall(x,y+1,RIGHT) or has_wall(x+1,y,DOWN) else air
+    def bitmap(self, columnated=True):
         has_wall, [RIGHT,UP,LEFT,DOWN] = self.has_wall, self.DIRECTIONS
+        wall, air = True, False
+        if columnated: column = lambda x,y: True
+        else:
+            column = lambda x,y: x==self.width-1 or y==self.height-1 or has_wall(x,y,RIGHT) or has_wall(x,y,DOWN) or has_wall(x,y+1,RIGHT) or has_wall(x+1,y,DOWN)
         # Top-left corner
-        string = wall
+        bmap = [[wall]]
         # Top wall
         for x,node in enumerate(self.grid[0]):
-            string += f"{wall if has_wall(x,0,UP) else air}{wall}"
+            bmap[0].append(has_wall(x,0,UP))
+            bmap[0].append(wall)
         # Middle and bottom rows of string
         for y,row in enumerate(self.grid):
             # Left wall
-            string += f"\n{wall if has_wall(0,y,LEFT) else air}"
-            strbelow = f"\n{wall}"
+            brow1 = [has_wall(0,y,LEFT)]
+            brow2 = [wall]
             # Middle and bottom walls (2 blocks/node)
             for x,node in enumerate(row):
-                string += f"{air}{wall if has_wall(x,y,RIGHT) else air}"
-                strbelow += f"{wall if has_wall(x,y,DOWN) else air}{column(x,y)}"
-            string += strbelow
+                brow1.append(air)
+                brow1.append(has_wall(x,y,RIGHT))
+                brow2.append(has_wall(x,y,DOWN))
+                brow2.append(column(x,y))
+            bmap.append(brow1)
+            bmap.append(brow2)
+        return bmap
+
+    def ascii_block(self, wall=None, air=None):
+        """
+        Produce a canonical, 'blocky' ASCII representation of the maze.
+        """
+        if wall is None:
+            wall = '%#'
+        if air is None:
+            air = len(wall)*' '
+        bmap = self.bitmap(columnated=True)
+        string = '\n'.join(''.join(wall if b else air for b in row) for row in bmap)
         return string
 
     def ascii_thin(self):
@@ -140,9 +151,9 @@ class Maze:
                 string += cornersegment(x,y)
         return string
 
-    def utf_str(self):
+    def utf_pipe(self):
         """
-        Produce a pipe-like unicode art to represent the maze.
+        Produce pipe-like unicode art to represent the maze.
         """
         tiles = " ╶╺╵└┕╹┖┗╴─╼┘┴┶┚┸┺╸╾━┙┵┷┛┹┻╷┌┍│├┝╿┞┡┐┬┮┤┼┾┦╀╄┑┭┯┥┽┿┩╃╇╻┎┏╽┟┢┃┠┣┒┰┲┧╁╆┨╂╊┓┱┳┪╅╈┫╉╋"
         string = ""
@@ -186,13 +197,12 @@ class Maze:
 
 def main():
     maze = Maze(10,10)
-    print("Repr:\n" + str(maze))
-    print(f"Format:\n{maze}")
-    print(f"Formatted:\n{maze:██}")
-    print(f"Decolumnated ruins:\n{maze.ascii_str(wall='%#',columnated=False)}")
-    print(f"UTF pipes:\n{maze.utf_str()}")
+    print("repr : \n" + str(maze))
+    print(f"ascii_thin : \n{maze}")
+    print(f"ascii_block : \n{maze:██}")
+    print(f"utf_pipe : \n{maze.utf_pipe()}")
 
-    help(Maze)
+    #help(Maze)
 
 if __name__=="__main__": main()
 
