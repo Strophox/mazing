@@ -46,10 +46,11 @@ class Maze:
 
     def ascii_thin(self):
         """
-        Produce a compact ASCII representation.
+        Produce a 'compact' ASCII representation.
         """
-        """
-            ,___, ,___, ,___, ,___,
+        wall,RIGHT,UP,LEFT,DOWN = self.has_wall,self.RIGHT,self.UP,self.LEFT,self.DOWN
+        # Corner cases are nasty, man
+        """ ,___, ,___, ,___, ,___,
             |   | | __| | | | | |_|
             |___| |___| |___| |___|
             ,___, ,___, ,___, ,___,
@@ -60,33 +61,30 @@ class Maze:
             |_|_| |_|_| |_|_| |_|_|
             ,___, ,___, ,___, ,___,
             |_, | |___| |_| | |_|_|
-            |_|_| |_|_| |_|_| |_|_|
-        """
-        def wall(x, y, direction):
-            return not self.edge_toward((x,y),direction)
+            |_|_| |_|_| |_|_| |_|_|"""
         def cornersegment_top_left():
-            if wall(0,0,self.LEFT): return ','
-            elif wall(0,0,self.UP): return '_'
+            if wall(0,0,LEFT): return ','
+            elif wall(0,0,UP): return '_'
             else: return '.'
         def cornersegment_top(x):
-            if wall(x,0,self.RIGHT) and not (wall(x,0,self.UP) and x<self.width-1 and wall(x+1,0,self.UP)): return ','
-            elif wall(x,0,self.UP) or (x<self.width-1 and wall(x+1,0,self.UP)): return '_'
+            if wall(x,0,RIGHT) and not (wall(x,0,UP) and x<self.width-1 and wall(x+1,0,UP)): return ','
+            elif wall(x,0,UP) or (x<self.width-1 and wall(x+1,0,UP)): return '_'
             else: return '.'
         def cornersegment_left(y):
-            if wall(0,y,self.LEFT): return '|'
-            elif y!=self.height-1 and wall(0,y+1,self.LEFT): return ','
-            elif wall(0,y,self.DOWN): return '_'
+            if wall(0,y,LEFT): return '|'
+            elif y!=self.height-1 and wall(0,y+1,LEFT): return ','
+            elif wall(0,y,DOWN): return '_'
             else: return '.'
         def cornersegment(x, y):
-            if wall(x,y,self.RIGHT): return '|'
-            elif y<self.height-1 and wall(x,y+1,self.RIGHT) and not (wall(x,y,self.DOWN) and x<self.width-1 and wall(x+1,y,self.DOWN)): return ','
-            elif wall(x,y,self.DOWN) or (x<self.width-1 and wall(x+1,y,self.DOWN)): return '_'
+            if wall(x,y,RIGHT): return '|'
+            elif y<self.height-1 and wall(x,y+1,RIGHT) and not (wall(x,y,DOWN) and x<self.width-1 and wall(x+1,y,DOWN)): return ','
+            elif wall(x,y,DOWN) or (x<self.width-1 and wall(x+1,y,DOWN)): return '_'
             else: return '.'
         # Top-left corner
         string = cornersegment_top_left()
         # Top wall
         for x,node in enumerate(self.grid[0]):
-            string += '_' if wall(x,0,self.UP) else ' '
+            string += '_' if wall(x,0,UP) else ' '
             string += cornersegment_top(x)
         # Middle and bottom rows of string
         for y,row in enumerate(self.grid):
@@ -94,7 +92,7 @@ class Maze:
             string += f"\n{cornersegment_left(y)}"
             # Middle and right walls (2 chars/node)
             for x,node in enumerate(row):
-                string += '_' if wall(x,y,self.DOWN) else ' '
+                string += '_' if wall(x,y,DOWN) else ' '
                 string += cornersegment(x, y)
         return string
 
@@ -102,24 +100,21 @@ class Maze:
         """Produce a 'block' ASCII representation of the maze."""
         if wall is None: wall = '%#'
         if air is None: air = len(wall)*' '
+        has_wall,RIGHT,UP,LEFT,DOWN = self.has_wall,self.RIGHT,self.UP,self.LEFT,self.DOWN
         # Top-left corner
         string = wall
         # Top wall
         for x,node in enumerate(self.grid[0]):
-            wall_above = not self.edge_toward((x,0),self.UP)
-            string += f"{wall if wall_above else air}{wall}"
+            string += f"{wall if has_wall(x,0,UP) else air}{wall}"
         # Middle and bottom rows of string
         for y,row in enumerate(self.grid):
             # Left wall
-            wall_left = not self.edge_toward((0,y),self.LEFT)
-            string += f"\n{wall if wall_left else air}"
+            string += f"\n{wall if has_wall(0,y,LEFT) else air}"
             strbelow = f"\n{wall}"
             # Middle and bottom walls (2 blocks/node)
             for x,node in enumerate(row):
-                wall_right = not self.edge_toward((x,y),self.RIGHT)
-                wall_below = not self.edge_toward((x,y),self.DOWN)
-                string += f"{air}{wall if wall_right else air}"
-                strbelow += f"{wall if wall_below else air}{wall}"
+                string += f"{air}{wall if has_wall(x,y,RIGHT) else air}"
+                strbelow += f"{wall if has_wall(x,y,DOWN) else air}{wall}"
             string += strbelow
         return string
 
@@ -130,6 +125,8 @@ class Maze:
         (x,y) = node_coordinate
         return bool(self.grid[y][x] & direction)
 
+    def has_wall(self, x, y, direction):
+        return not self.edge_toward((x,y), direction)
 
 # CLASSES END
 
