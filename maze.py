@@ -3,7 +3,7 @@
 
 # A small script to generate some mazes
 
-# TO DO
+# TODO
 # - █▯▓▯▒▯░▯ ▯▘▯▝▯▀▯▖▯▌▯▞▯▛▯▗▯▚▯▐▯▜▯▄▯▙▯▟▯█
 # - ╶╺╵└┕╹┖┗╴─╼┘┴┶┚┸┺╸╾━┙┵┷┛┹┻╷┌┍│├┝╿┞┡┐┬┮┤┼┾┦╀╄┑┭┯┥┽┿┩╃╇╻┎┏╽┟┢┃┠┣┒┰┲┧╁╆┨╂╊┓┱┳┪╅╈┫╉╋
 
@@ -42,42 +42,50 @@ class Maze:
             return self.ascii_str(wall=args[0])
 
     def ascii_thin(self):
-        """Produce a compact ASCII representation."""
+        """
+        Produce a compact ASCII representation.
+        """
+        """
+            ,___, ,___, ,___, ,___,
+            |   | | __| | | | | |_|
+            |___| |___| |___| |___|
+            ,___, ,___, ,___, ,___,
+            |__ | |___| |_| | |_|_|
+            |___| |___| |___| |___|
+            ,___, ,___, ,___, ,___,
+            | , | | ,_| | | | | |_|
+            |_|_| |_|_| |_|_| |_|_|
+            ,___, ,___, ,___, ,___,
+            |_, | |___| |_| | |_|_|
+            |_|_| |_|_| |_|_| |_|_|
+        """
         wall = lambda x,y,direction: not self.edge_toward((x,y),direction)
-#,___, ,___, ,___, ,___,
-#|   | | __| | | | | |_|
-#|___| |___| |___| |___|
-#,___, ,___, ,___, ,___,
-#|__ | |___| |_| | |_|_|
-#|___| |___| |___| |___|
-#,___, ,___, ,___, ,___,
-#| , | | ,_| | | | | |_|
-#|_|_| |_|_| |_|_| |_|_|
-#,___, ,___, ,___, ,___,
-#|_, | |___| |_| | |_|_|
-#|_|_| |_|_| |_|_| |_|_|
+        def middle_segment(x, y):
+            # Decide middle segment
+            if y==self.height-1 or wall(x,y,self.DOWN):
+                return '_'
+            else:
+                return ' '
+        def right_segment(x, y):
+            # Decide right segment
+            if x==self.width-1 or wall(x,y,self.RIGHT):
+                return '|'
+            elif (y<self.height-1 and wall(x,y+1,self.RIGHT)
+                    and not (wall(x,y,self.DOWN) and wall(x+1,y,self.DOWN))): # Wall below left and right
+                return ','
+            elif (y==self.height-1
+                    or wall(x,y,self.DOWN) or wall(x+1,y,self.DOWN)):
+                return '_'
+            else:
+                return ' '
         string = f",{'_'*(2*self.width-1)}," # Top fence # FIXME correct holes
         # Add to string row-wise
         for y,row in enumerate(self.grid):
             string += "\n|" # Left fence # FIXME correct holes
             # Add two chars per node
             for x,node in enumerate(row):
-                # Decide middle segment
-                if y==self.height-1 or wall(x,y,self.DOWN):
-                    string += '_'
-                else:
-                    string += ' '
-                # Decide right segment
-                if x==self.width-1 or wall(x,y,self.RIGHT):
-                    string += '|'
-                elif (y<self.height-1 and wall(x,y+1,self.RIGHT)
-                      and not (wall(x,y,self.DOWN) and wall(x+1,y,self.DOWN))): # Wall below left and right
-                    string += ','
-                elif (y==self.height-1
-                      or wall(x,y,self.DOWN) or wall(x+1,y,self.DOWN)):
-                    string += '_'
-                else:
-                    string += ' '
+                string += middle_segment(x, y)
+                string += right_segment(x, y)
         return string
 
     def ascii_str(self, wall=None, air=None):
@@ -122,7 +130,8 @@ def main():
     maze = Maze(10,10)
     print(maze)
     print(f"{maze}")
-    print(f"{maze:%#}")
+    #print(f"{maze:@#}")
+    print(f"{maze:██}")
 
 if __name__=="__main__": main()
 
