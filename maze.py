@@ -156,6 +156,9 @@ class Maze:
         return string
 
     def utf_block(self):
+        """
+        Produce blocky unicode art to represent the maze.
+        """
         return self.ascii_block(wall='██',air='  ')
 
     def utf_half(self):
@@ -170,6 +173,24 @@ class Maze:
         for y in range(0,len(bmap),2):
             string += '\n'
             string += ''.join(tiles[2*hi + 1*lo] for (hi,lo) in zip(bmap[y],bmap[y+1]))
+        return string
+
+    def utf_quarter(self):
+        """
+        Produce blocky unicode art to represent the maze, at quarter the size.
+        """
+        #tiles = " ▯▘▯▝▯▀▯▖▯▌▯▞▯▛▯▗▯▚▯▐▯▜▯▄▯▙▯▟▯█"
+        tiles = " ▘▝▀▖▌▞▛▗▚▐▜▄▙▟█"
+        bmap = self.bitmap(columnated=True)
+        if len(bmap)%2!=0:
+            bmap.append([False for _ in bmap[0]])
+        if len(bmap[0])%2!=0:
+            for row in bmap: row.append(False)
+        string = ""
+        for y in range(0,len(bmap),2):
+            string += '\n'
+            for x in range(0,len(bmap[0]),2):
+                string += tiles[8*bmap[y+1][x+1] + 4*bmap[y+1][x] + 2*bmap[y][x+1] + 1*bmap[y][x]]
         return string
 
     def utf_pipe(self):
@@ -225,6 +246,7 @@ def main():
     print(f"ascii_thin:\n{maze.ascii_thin()}")
     print(f"utf_block:\n{maze.utf_block()}")
     print(f"utf_half:\n{maze.utf_half()}")
+    print(f"utf_quarter:\n{maze.utf_quarter()}")
     print(f"utf_pipe:\n{maze.utf_pipe()}")
 
     #help(Maze)
