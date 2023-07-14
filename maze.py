@@ -1,8 +1,9 @@
 
-# OUTlINE BEGIN
+# OUTLINE BEGIN
 
+# A small script to generate some mazes
 
-# OUTINE END
+# OUTLINE END
 
 
 # IMPORTS BEGIN
@@ -28,11 +29,11 @@ class Maze:
 
     def __format__(self, *args):
         if args[0]=='':
-            return self.ascii_compact()
+            return self.ascii_thin()
         else:
-            raise NotImplementedError # TODO
+            return self.ascii_str(args[0])
 
-    def ascii_compact(self):
+    def ascii_thin(self):
         """Produce a compact ASCII representation."""
         wall = lambda x,y,direction: not self.edge_toward((x,y),direction)
 #,___, ,___, ,___, ,___,
@@ -50,7 +51,7 @@ class Maze:
         string = f",{'_'*(2*self.width-1)}," # Top fence
         # Add to string row-wise
         for y,row in enumerate(self.grid):
-            string += '\n|' # Left fence
+            string += "\n|" # Left fence
             # Add two chars per node
             for x,node in enumerate(row):
                 # Decide middle segment
@@ -71,12 +72,27 @@ class Maze:
                     string += ' '
         return string
 
+    def ascii_str(self, wall=None, air=None):
+        if wall is None: wall = '%#'
+        if air is None: air = len(wall)*' '
+        string = f"{wall*(2*self.width+1)}"
+        for y,row in enumerate(self.grid):
+            string += f"\n{wall}"
+            strbelow = f"\n{wall}"
+            for x,node in enumerate(row):
+                wall_right = not self.edge_toward((x,y),self.RIGHT)
+                wall_below = not self.edge_toward((x,y),self.DOWN)
+                string += f"{air}{wall if wall_right else air}"
+                strbelow += f"{wall if wall_below else air}{wall}"
+            string += strbelow
+        return string
+
     def edge_toward(self, node_coordinate, direction): # TODO bad idea?..
         """Check whether there is an edge from a specified node into some direction.
         - node_coordinate : (x,y) where 0<=x<width && 0<=y<height
         - direction : one of self.{RIGHT,UP,LEFT,DOWN}"""
         (x,y) = node_coordinate
-        return self.grid[y][x] & direction
+        return bool(self.grid[y][x] & direction)
 
 
 # CLASSES END
@@ -93,6 +109,7 @@ class Maze:
 def main():
     maze = Maze(10,10)
     print(f"{maze}")
+    print(maze.ascii_str('%#'))
 
 if __name__=="__main__": main()
 
