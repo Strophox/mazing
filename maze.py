@@ -148,7 +148,8 @@ class Maze:
         # Middle and bottom rows of string
         for y,row in enumerate(self.grid):
             # Left wall
-            string += f"\n{cornersegment_left(y)}"
+            string += '\n'
+            string += cornersegment_left(y)
             # Middle and right walls (2 chars/node)
             for x,node in enumerate(row):
                 string += '_' if wall(x,y,DOWN) else ' '
@@ -198,25 +199,41 @@ class Maze:
         Produce pipe-like unicode art to represent the maze.
         """
         tiles = " ╶╺╵└┕╹┖┗╴─╼┘┴┶┚┸┺╸╾━┙┵┷┛┹┻╷┌┍│├┝╿┞┡┐┬┮┤┼┾┦╀╄┑┭┯┥┽┿┩╃╇╻┎┏╽┟┢┃┠┣┒┰┲┧╁╆┨╂╊┓┱┳┪╅╈┫╉╋"
-        get_tile = lambda a,b,c,d: tiles[27*d + 9*c + 3*b + 1*a]
+        make_tile = lambda a,b,c,d: tiles[27*d + 9*c + 3*b + 1*a]
         string = ""
         for y,row in enumerate(self.grid):
-            string  += "\n"
+            string  += '\n'
             strbelow = "\n"
             for x,node in enumerate(row):
                 [r,u,l,d] = [self.has_wall(x,y,dir) for dir in self.DIRECTIONS]
                 [nr,nu,nl,nd] = [not val for val in (r,u,l,d)]
-                string += (get_tile(u,nu,nl,l) + 2*get_tile(u,0,u,0) + get_tile(nr,nu,u,r))
-                strbelow += get_tile(d,l,nl,nd) + 2*get_tile(d,0,d,0) + get_tile(nr,r,d,nd)
+                string += (make_tile(u,nu,nl,l) + 2*make_tile(u,0,u,0) + make_tile(nr,nu,u,r))
+                strbelow += make_tile(d,l,nl,nd) + 2*make_tile(d,0,d,0) + make_tile(nr,r,d,nd)
             string += strbelow
         return string
 
-    #def utf_thin(self):
-        #"""
-        #Produce a 'compact' unicode representation.
-        #"""
-        #tiles = " ╶╵└╴─┘┴╷┌│├┐┬┤┼"
-        #string = tiles[]
+    def utf_thin(self):
+        """
+        Produce a 'compact' unicode representation.
+        """
+        wall, [RIGHT,UP,LEFT,DOWN] = self.has_wall, self.DIRECTIONS
+        tiles = " ╶╵└╴─┘┴╷┌│├┐┬┤┼"
+        make_tile = lambda a,b,c,d: tiles[8*d + 4*c + 2*b + 1*a]
+        # Top-left corner
+        string = make_tile(wall(0,0,UP),False,False,wall(0,0,LEFT))
+        # Top wall
+        for x,node in enumerate(self.grid[0]):
+            string += make_tile(x<self.width-1 and wall(x+1,0,UP),False,wall(x,0,UP),wall(x,0,RIGHT))
+        # Middle and bottom rows of string
+        for y,row in enumerate(self.grid):
+            # Left wall
+            string += '\n'
+            string += make_tile(wall(x,y,DOWN),wall(x,y,LEFT),False,y<self.height-1 and wall(x,y+1,LEFT))
+            # Middle and right walls (2 chars/node)
+            for x,node in enumerate(row):
+                string += make_tile(x<self.width-1 and wall(x+1,y,DOWN),wall(x,y,RIGHT),wall(x,y,DOWN),y<self.height-1 and wall(x,y+1,RIGHT))
+        return string
+
 
     def utf_network(self):
         """
@@ -261,6 +278,7 @@ def main():
     print(f"utf_half:\n{maze.utf_half()}")
     print(f"utf_quarter:\n{maze.utf_quarter()}")
     print(f"utf_pipe:\n{maze.utf_pipe()}")
+    print(f"utf_thin:\n{maze.utf_thin()}")
     print(f"utf_network:\n{maze.utf_network()}")
 
     #help(Maze)
