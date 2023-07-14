@@ -198,6 +198,7 @@ class Maze:
         Produce pipe-like unicode art to represent the maze.
         """
         tiles = " ╶╺╵└┕╹┖┗╴─╼┘┴┶┚┸┺╸╾━┙┵┷┛┹┻╷┌┍│├┝╿┞┡┐┬┮┤┼┾┦╀╄┑┭┯┥┽┿┩╃╇╻┎┏╽┟┢┃┠┣┒┰┲┧╁╆┨╂╊┓┱┳┪╅╈┫╉╋"
+        get_tile = lambda a,b,c,d: tiles[27*d + 9*c + 3*b + 1*a]
         string = ""
         for y,row in enumerate(self.grid):
             string  += "\n"
@@ -205,16 +206,22 @@ class Maze:
             for x,node in enumerate(row):
                 [r,u,l,d] = [self.has_wall(x,y,dir) for dir in self.DIRECTIONS]
                 [nr,nu,nl,nd] = [not val for val in (r,u,l,d)]
-                string   += tiles[27*l + 9*nl + 3*nu + 1*u]
-                string   += 2*tiles[27*0 + 9*u + 3*0 + 1*u]
-                string   += tiles[27*r + 9*u + 3*nu + 1*nr]
-                strbelow += tiles[27*nd + 9*nl + 3*l + 1*d]
-                strbelow += 2*tiles[27*0 + 9*d + 3*0 + 1*d]
-                strbelow += tiles[27*nd + 9*d + 3*r + 1*nr]
+                string += (get_tile(u,nu,nl,l) + 2*get_tile(u,0,u,0) + get_tile(nr,nu,u,r))
+                strbelow += get_tile(d,l,nl,nd) + 2*get_tile(d,0,d,0) + get_tile(nr,r,d,nd)
             string += strbelow
         return string
 
+    #def utf_thin(self):
+        #"""
+        #Produce a 'compact' unicode representation.
+        #"""
+        #tiles = " ╶╵└╴─┘┴╷┌│├┐┬┤┼"
+        #string = tiles[]
+
     def utf_network(self):
+        """
+        Display the node connections in the maze.
+        """
         tiles = " ╶╵└╴─┘┴╷┌│├┐┬┤┼"
         #get_tile = lambda n: tiles[n]+tiles[5*(n%2)]
         get_tile = lambda n: tiles[n]
