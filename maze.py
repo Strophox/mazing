@@ -23,12 +23,15 @@ import pprint
 class Maze:
     """A class to store and interact with a maze grid."""
 
-    # Direction Masks
-    RIGHT,UP,LEFT,DOWN = 0b0001,0b0010,0b0100,0b1000
+    # Direction constants/flags
+    RIGHT = 0b0001
+    UP    = 0b0010
+    LEFT  = 0b0100
+    DOWN  = 0b1000
 
     def __init__(self, width_, height_):
         assert(width_ > 0 and height_ > 0)
-        self.width = width_
+        self.width  = width_
         self.height = height_
         self.grid = [[random.randint(0b0000,0b1111) for _ in range(width_)] for _ in range(height_)]
 
@@ -36,7 +39,7 @@ class Maze:
         return pprint.pformat(self.grid)
 
     def __format__(self, *args):
-        if args[0]=='':
+        if args[0] == '':
             return self.ascii_thin()
         else:
             return self.ascii_str(wall=args[0])
@@ -59,50 +62,63 @@ class Maze:
             |_, | |___| |_| | |_|_|
             |_|_| |_|_| |_|_| |_|_|
         """
-        wall = lambda x,y,direction: not self.edge_toward((x,y),direction)
-        def middle_segment(x, y):
-            # Decide middle segment
-            if y==self.height-1 or wall(x,y,self.DOWN):
-                return '_'
-            else:
-                return ' '
-        def right_segment(x, y):
-            # Decide right segment
-            if x==self.width-1 or wall(x,y,self.RIGHT):
-                return '|'
-            elif (y<self.height-1 and wall(x,y+1,self.RIGHT)
-                    and not (wall(x,y,self.DOWN) and wall(x+1,y,self.DOWN))): # Wall below left and right
-                return ','
-            elif (y==self.height-1
-                    or wall(x,y,self.DOWN) or wall(x+1,y,self.DOWN)):
-                return '_'
-            else:
-                return ' '
-        string = f",{'_'*(2*self.width-1)}," # Top fence # FIXME correct holes
-        # Add to string row-wise
+        def wall(x, y, direction):
+            return not self.edge_toward((x,y),direction)
+        def cornersegment_top_left():
+            if wall(0,0,self.LEFT): return ','
+            elif wall(0,0,self.UP): return '_'
+            else: return '.'
+        def cornersegment_top(x):
+            if wall(x,0,self.RIGHT) and not (wall(x,0,self.UP) and x<self.width-1 and wall(x+1,0,self.UP)): return ','
+            elif wall(x,0,self.UP) or (x<self.width-1 and wall(x+1,0,self.UP)): return '_'
+            else: return '.'
+        def cornersegment_left(y):
+            if wall(0,y,self.LEFT): return '|'
+            elif y!=self.height-1 and wall(0,y+1,self.LEFT): return ','
+            elif wall(0,y,self.DOWN): return '_'
+            else: return '.'
+        def cornersegment(x, y):
+            if wall(x,y,self.RIGHT): return '|'
+            elif y<self.height-1 and wall(x,y+1,self.RIGHT) and not (wall(x,y,self.DOWN) and x<self.width-1 and wall(x+1,y,self.DOWN)): return ','
+            elif wall(x,y,self.DOWN) or (x<self.width-1 and wall(x+1,y,self.DOWN)): return '_'
+            else: return '.'
+        # Top-left corner
+        string = cornersegment_top_left()
+        # Top wall
+        for x,node in enumerate(self.grid[0]):
+            string += '_' if wall(x,0,self.UP) else ' '
+            string += cornersegment_top(x)
+        # Middle and bottom rows of string
         for y,row in enumerate(self.grid):
-            string += "\n|" # Left fence # FIXME correct holes
-            # Add two chars per node
+            # Left wall
+            string += f"\n{cornersegment_left(y)}"
+            # Middle and right walls (2 chars/node)
             for x,node in enumerate(row):
-                string += middle_segment(x, y)
-                string += right_segment(x, y)
+                string += '_' if wall(x,y,self.DOWN) else ' '
+                string += cornersegment(x, y)
         return string
 
     def ascii_str(self, wall=None, air=None):
         """Produce a 'block' ASCII representation of the maze."""
         if wall is None: wall = '%#'
         if air is None: air = len(wall)*' '
-        # Produce topmost row
-        string = f"{wall}" + ''.join(f"{wall if (wall_above := not self.edge_toward((x,0),self.UP)) else air}{wall}" for x,node in enumerate(self.grid[0]))
-        # Add to string row-wise
+        # Top-left corner
+        string = wall
+        # Top wall
+        for x,node in enumerate(self.grid[0]):
+            wall_above = not self.edge_toward((x,0),self.UP)
+            string += f"{wall if wall_above else air}{wall}"
+        # Middle and bottom rows of string
         for y,row in enumerate(self.grid):
-            string += f"\n{wall if (wall_left := not self.edge_toward((0,y),self.LEFT)) else air}"
+            # Left wall
+            wall_left = not self.edge_toward((0,y),self.LEFT)
+            string += f"\n{wall if wall_left else air}"
             strbelow = f"\n{wall}"
-            # Add two cells per node
+            # Middle and bottom walls (2 blocks/node)
             for x,node in enumerate(row):
                 wall_right = not self.edge_toward((x,y),self.RIGHT)
-                string += f"{air}{wall if wall_right else air}"
                 wall_below = not self.edge_toward((x,y),self.DOWN)
+                string += f"{air}{wall if wall_right else air}"
                 strbelow += f"{wall if wall_below else air}{wall}"
             string += strbelow
         return string
