@@ -214,6 +214,12 @@ class Maze:
             string += strbelow
         return string
 
+    def utf_network(self):
+        tiles = " ╶╵└╴─┘┴╷┌│├┐┬┤┼"
+        #get_tile = lambda n: tiles[n]+tiles[5*(n%2)]
+        get_tile = lambda n: tiles[n]
+        return '\n'.join(''.join(get_tile(node) for node in row) for row in self.grid)
+
     def edge_toward(self, node_coordinate, direction): # TODO bad idea?..
         """
         Check whether there is an edge from a specified node into some direction.
@@ -248,6 +254,7 @@ def main():
     print(f"utf_half:\n{maze.utf_half()}")
     print(f"utf_quarter:\n{maze.utf_quarter()}")
     print(f"utf_pipe:\n{maze.utf_pipe()}")
+    print(f"utf_network:\n{maze.utf_network()}")
 
     #help(Maze)
 
