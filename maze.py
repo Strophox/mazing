@@ -5,7 +5,6 @@
 """
 Work in Progress:
 - Carvers:
-  * Growing Binary Tree (customizable)
   * Wilson's
   * Kruskal
   * Recursive division
@@ -60,6 +59,12 @@ class Node:
         - direction : one of {RIGHT,UP,LEFT,DOWN}
         """
         return bool(self._connectivity & direction)
+
+    def set_edges(self, direction):
+        """Change connectivity of a node.
+        - direction : one of {RIGHT,UP,LEFT,DOWN}
+        """
+        self._connectivity = direction
 
     def toggle_edge(self, direction):
         """Add or remove an edge into some direction.
@@ -328,22 +333,6 @@ def bogus(maze):
     for node in maze:
         node.toggle_edge(random.randint(0b0000,0b1111))
 
-def recursive_backtracker(maze):
-    """Carve a maze using simple randomized depth-first-search.
-    * Prone to function recursion limit for large mazes.
-    * Simple implementation and tries to fill out every unvisited node.
-    """
-    def dfs(node):
-        for neighbor in randomized(maze.neighbors_of(node)):
-            if not neighbor.flag:
-                neighbor.flag = True
-                maze.connect(node,neighbor)
-                dfs(neighbor)
-    for node in maze:
-        if not node.flag:
-            node.flag = True
-            dfs(node)
-
 def growingtree(maze, start=None, choose_index=None):
     """Carve a maze using the 'growing binary tree' algorithm.
     - start : origin `Node`
@@ -371,16 +360,32 @@ def growingtree(maze, start=None, choose_index=None):
         else:
             bucket.pop(n)
 
+def randomprim(maze):
+    """Carve a maze using randomized Prim's algorithm.
+    """
+    growingtree(maze, choose_index=lambda bucket: random.randint(0,len(bucket)-1))
+
 def backtracker(maze):
     """Carve a maze using simple randomized depth-first-search.
     * More robust than `backtracker` for larger mazes.
     """
     growingtree(maze, choose_index=lambda bucket: -1)
 
-def randomprim(maze):
-    """Carve a maze using randomized Prim's algorithm.
+def recursive_backtracker(maze):
+    """Carve a maze using simple randomized depth-first-search.
+    * Prone to function recursion limit for large mazes.
+    * Simple standalone implementation and tries to fill out every unvisited node.
     """
-    growingtree(maze, choose_index=lambda bucket: random.random.randint(0,len(bucket)-1))
+    def dfs(node):
+        for neighbor in randomized(maze.neighbors_of(node)):
+            if not neighbor.flag:
+                neighbor.flag = True
+                maze.connect(node,neighbor)
+                dfs(neighbor)
+    for node in maze:
+        if not node.flag:
+            node.flag = True
+            dfs(node)
 
 # FUNCTIONS END
 
