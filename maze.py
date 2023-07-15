@@ -49,6 +49,7 @@ class Node:
     """
     def __init__(self):
         self._connectivity = 0
+        self.flag = 0
 
     def __repr__(self):
         return self._connectivity.__repr__()
@@ -56,19 +57,19 @@ class Node:
     def __str__(self):
         return " ╶╵└╴─┘┴╷┌│├┐┬┤┼"[self._connectivity%0b10000]
 
-    def toggle_edge(self, direction):
-        """
-        Add or remove an edge into some direction.
-        - direction : one of {RIGHT,UP,LEFT,DOWN}
-        """
-        self._connectivity ^= direction
-
     def has_edge(self, direction):
         """
         Check whether there is an edge into some direction.
         - direction : one of {RIGHT,UP,LEFT,DOWN}
         """
         return bool(self._connectivity & direction)
+
+    def toggle_edge(self, direction):
+        """
+        Add or remove an edge into some direction.
+        - direction : one of {RIGHT,UP,LEFT,DOWN}
+        """
+        self._connectivity ^= direction
 
 class Maze:
     """
@@ -129,7 +130,7 @@ class Maze:
         elif callable(air): make_air = air
         else: make_air = lambda: air
         # Actually produce string using default maze bitmap
-        bmap = self.bitmap(columnated=True)
+        bmap = self.bitmap()
         string = '\n'.join(''.join(make_wall() if b else make_air() for b in row) for row in bmap)
         return string
 
@@ -264,7 +265,7 @@ class Maze:
                 string += make_tile(x<self.width-1 and wall(x+1,y,DOWN),wall(x,y,RIGHT),wall(x,y,DOWN),y<self.height-1 and wall(x,y+1,RIGHT))
         return string
 
-    def utf_network(self):
+    def utf_nodes(self):
         """
         Display the node connections in the maze.
         """
@@ -277,6 +278,30 @@ class Maze:
         - direction : one of {RIGHT,UP,LEFT,DOWN}
         """
         return not self.grid[y][x].has_edge(direction)
+
+    def node_at(self, x, y):
+        return self.grid[y][x]
+
+    def connect(self, source, destination):
+        (x0,y0), (x1,y1) = source, destination
+        dx,dy = x1-x0, y1-y0
+        if abs(dx) + abs(dy) != 1:
+            raise ValueError("can't connect non-neighboring nodes")
+        get_dir = lambda dx,dy: (None,RIGHT,LEFT)[dx] if dx else (None,DOWN,UP)[dy]
+        dir0,dir1 = get_dir(dx,dy), get_dir(-dx,-dy)
+        if not self.grid[y0][x0].has_edge(dir0):
+            self.grid[y0][x0].toggle_edge(dir0)
+        if not self.grid[y1][x1].has_edge(dir1):
+            self.grid[y1][x1].toggle_edge(dir1)
+
+    def neighbors_of(self, coord):
+        (x,y) = coord
+        neighbors = []
+        if 0 < x: neighbors.append((x-1,y))
+        if x < self.width-1: neighbors.append((x+1,y))
+        if 0 < y: neighbors.append((x,y-1))
+        if y < self.height-1: neighbors.append((x,y+1))
+        return neighbors
 
 # CLASSES END
 
@@ -292,14 +317,17 @@ def bogus(maze):
         node.toggle_edge(random_directions)
 
 def depth_first_search(maze):
-    stack = [start]
-    start.visited = True
     def dfs(node):
-        for neighbor in node.neighbors:
-            if not neighbor.visited:
-                neighbor.visited = True
-                node.connectto(neighbor)
+        neighbors = maze.neighbors_of(node)
+        random.shuffle(neighbors)
+        for neighbor in neighbors:
+            if not maze.node_at(*neighbor).flag:
+                maze.node_at(*neighbor).flag = True
+                maze.connect(node,neighbor)
                 dfs(neighbor)
+    start = (0,0)
+    maze.node_at(*start).flag = True
+    dfs(start)
 
 # FUNCTIONS END
 
@@ -324,7 +352,7 @@ def main():
         Maze.utf_quarter,
         Maze.utf_pipe,
         Maze.utf_thin,
-        Maze.utf_network,
+        Maze.utf_nodes,
     ]
     carvers = [
         bogus,
