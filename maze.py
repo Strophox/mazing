@@ -4,10 +4,6 @@
 # A small script to generate some mazes
 """
 Work in Progress:
-- Carvers:
-  * Wilson's
-  * Kruskal
-  * Recursive division
 - Printers:
   * png
 - ETC Dreams:
@@ -22,6 +18,7 @@ Work in Progress:
 # IMPORTS BEGIN
 
 import random
+from PIL import Image
 
 # IMPORTS END
 
@@ -89,7 +86,7 @@ class Maze:
         return self.ascii_bitmap()
 
     def __iter__(self):
-        return concat(*self.grid)
+        return concat(self.grid)
 
     def bitmap(self, corridorwidth=1, columnated=True):
         """Return a simple bitmap drawing of the maze.
@@ -267,6 +264,38 @@ class Maze:
         """
         return '\n'.join(''.join(str(node) for node in row) for row in self.grid)
 
+    def generate_image(self, bitmap=None):
+        """Generate an Image of the maze and store it in the instance.
+        - bitmap : custom bitmap (2D list)
+        """
+        if bitmap is None:
+            bitmap = self.bitmap()
+        width,height = len(bitmap[0]),len(bitmap)
+        to_rgb = lambda b: ((255,255,255),(0,0,0))[b]
+        img = tuple(to_rgb(b) for b in concat(bitmap))
+        # Convert to Image
+        self.image = Image.new('RGB', (width,height))
+        self.image.putdata(img)
+
+    def save_image(self, filename=None):
+        """Save the image of the maze to file.
+        - filename : str of image filename including extension (-> PIL)
+        """
+        if filename is None:
+            filename = f"maze_{hash(self)}.png"
+        # Generate image if not done yet
+        if getattr(self, 'image', None) is None:
+            self.generate_image()
+        # Save image
+        self.image.save(filename)
+
+    def show_image(self):
+        """Show an image of the maze.
+        """
+        if getattr(self, 'image', None) is None:
+            self.generate_image()
+        self.image.show()
+
     def has_wall(self, x, y, direction):
         """Check whether there is a wall in that direction.
         - x, y : integers where 0<=x<width && 0<=y<height
@@ -312,7 +341,7 @@ class Maze:
 
 # FUNCTIONS BEGIN
 
-def concat(*iterables):
+def concat(iterables):
     """Concatenate iterators.
     "Roughly equivalent" to itertools.chain
     """
@@ -387,6 +416,10 @@ def recursive_backtracker(maze):
             node.flag = True
             dfs(node)
 
+"""def wilsons(maze):
+    Carve a maze using Wilson's random uniform spanning tree algorithm.
+TODO """
+
 # FUNCTIONS END
 
 
@@ -396,7 +429,7 @@ def main():
     def from_mask(template):
         assert((height:=len(template)) > 0 and (width:=len(template[0])) > 0)
         maze = Maze(width, height)
-        for (node,mask) in zip(maze,concat(*template)):
+        for (node,mask) in zip(maze,concat(template)):
             node.flag = not mask
             node.toggle_edge(0b1111 * (not mask))
         return maze
@@ -417,7 +450,9 @@ def main():
         Sandbox / fiddle around with mazes
         | carve  (new maze)
         | print  (current maze, ascii/utf)
-        | resize (current maze)
+        | view   (current maze, external program)
+        | save   (maze image)
+        | resize (new maze)
         >""")
     printers = {p.__name__:p for p in (
         repr,
@@ -434,6 +469,9 @@ def main():
         backtracker,
         growingtree,
         randomprim,
+        #TODO wilsons,
+        #TODO kruskal
+        #TODO recursive division
     )}
     maze = Maze(10,10)
     while ui := input(main_menu_text).strip():
@@ -444,13 +482,17 @@ def main():
                     maze = Maze(maze.width, maze.height)
                     start = time.perf_counter()
                     carvers[ui](maze)
-                    print(f"<carving took {time.perf_counter()-start:.03f}s>")
-                    print(maze.utf_half())
+                    print(f"<carve completed in {time.perf_counter()-start:.03f}s>")
+                    print(maze.utf_half() if maze.width*maze.height<10000 else f"<no print (cellcount {maze.width*maze.height})>")
                 else:
                     print("<unrecognized carver>")
             case "print":
                 for name,printer in printers.items():
                     print(f"{name}:\n{printer(maze)}")
+            case "view":
+                maze.show_image()
+            case "save":
+                maze.save_image()
             case "resize":
                 try:
                     prompt = "Dimensions X,Y >"
