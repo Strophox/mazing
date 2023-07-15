@@ -26,6 +26,7 @@ Work in Progress:
 import random
 import pprint
 import itertools
+import time
 
 # IMPORTS END
 
@@ -259,7 +260,7 @@ class Maze:
         for y,row in enumerate(self.grid):
             # Left wall
             string += '\n'
-            string += make_tile(wall(x,y,DOWN),wall(x,y,LEFT),False,y<self.height-1 and wall(x,y+1,LEFT))
+            string += make_tile(wall(0,y,DOWN),wall(0,y,LEFT),False,y<self.height-1 and wall(0,y+1,LEFT))
             # Middle and right walls (2 chars/node)
             for x,node in enumerate(row):
                 string += make_tile(x<self.width-1 and wall(x+1,y,DOWN),wall(x,y,RIGHT),wall(x,y,DOWN),y<self.height-1 and wall(x,y+1,RIGHT))
@@ -277,7 +278,7 @@ class Maze:
         - node_coordinate : (x,y) where 0<=x<width && 0<=y<height
         - direction : one of {RIGHT,UP,LEFT,DOWN}
         """
-        return not self.grid[y][x].has_edge(direction)
+        return not self.node_at(x,y).has_edge(direction)
 
     def node_at(self, x, y):
         return self.grid[y][x]
@@ -289,10 +290,10 @@ class Maze:
             raise ValueError("can't connect non-neighboring nodes")
         get_dir = lambda dx,dy: (None,RIGHT,LEFT)[dx] if dx else (None,DOWN,UP)[dy]
         dir0,dir1 = get_dir(dx,dy), get_dir(-dx,-dy)
-        if not self.grid[y0][x0].has_edge(dir0):
-            self.grid[y0][x0].toggle_edge(dir0)
-        if not self.grid[y1][x1].has_edge(dir1):
-            self.grid[y1][x1].toggle_edge(dir1)
+        if not self.node_at(x0,y0).has_edge(dir0):
+            self.node_at(x0,y0).toggle_edge(dir0)
+        if not self.node_at(x1,y1).has_edge(dir1):
+            self.node_at(x1,y1).toggle_edge(dir1)
 
     def neighbors_of(self, coord):
         (x,y) = coord
@@ -316,7 +317,7 @@ def bogus(maze):
         random_directions = random.randint(0b0000,0b1111)
         node.toggle_edge(random_directions)
 
-def depth_first_search(maze):
+def backtracker(maze):
     def dfs(node):
         neighbors = maze.neighbors_of(node)
         random.shuffle(neighbors)
@@ -343,7 +344,7 @@ def main():
         * [carve] new maze
         >
     """).strip()
-    printers = [
+    printers = {p.__name__:p for p in (
         repr,
         Maze.ascii_block,
         Maze.ascii_thin,
@@ -353,17 +354,17 @@ def main():
         Maze.utf_pipe,
         Maze.utf_thin,
         Maze.utf_nodes,
-    ]
-    carvers = [
+    )}
+    carvers = {c.__name__:c for c in (
         bogus,
-        depth_first_search,
-    ]
+        backtracker,
+    )}
     maze = Maze(10,10)
     while user_input := input(main_menu_text).strip():
         match user_input:
             case "print":
-                for p in printers:
-                    print(f"{p.__name__}:\n{p(maze)}")
+                for name,printer in printers.items():
+                    print(f"{name}:\n{printer(maze)}")
             case "resize":
                 try:
                     prompt = "Dimensions X,Y >"
@@ -371,10 +372,17 @@ def main():
                 except:
                     print("<something went wrong>")
             case "carve":
-                prompt = f"Choose a carving method:\n| {' | '.join(c.__name__ for c in carvers)}\n>"
-                {c.__name__:c for c in carvers}.get(input(prompt), lambda _: print("<carving unsuccessful"))(maze)
+                prompt = f"Choose a carving method:\n| {' | '.join(carvers)}\n>"
+                if (user_input := input(prompt)) in carvers:
+                    maze = Maze(maze.width, maze.height)
+                    start = time.perf_counter()
+                    carvers[user_input](maze)
+                    print(maze.utf_pipe())
+                    print(f"<carving took {time.perf_counter()-start:.03f}s>")
+                else:
+                    print("<carving unsuccessful>")
             case "sudo":
-                try: exec(input())
+                try: exec(input(">>> "))
                 except: pass
             case _:
                 print("<invalid option>")
