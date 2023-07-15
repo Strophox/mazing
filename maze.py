@@ -5,7 +5,6 @@
 """
 Work in Progress:
 - Carvers:
-  * DFS
   * Growing Binary Tree (customizable)
   * Wilson's
   * Kruskal
@@ -13,7 +12,7 @@ Work in Progress:
 - Printers:
   * png
 - ETC Dreams:
-  * Maze navigator (w/ curses)
+  * Maze navigator (w/ curses) wall=lambda:random.choice(['##','#@','%#']
   * Interactive picker: distance by color
   * Doom (curses) █▯▓▯▒▯░
 """
@@ -48,7 +47,8 @@ class Node:
     """
     A class to abstract over a grid cell/node.
     """
-    def __init__(self):
+    def __init__(self, x, y):
+        self.coordinates = (self.x, self.y) = (x, y)
         self._connectivity = 0
         self.flag = 0
 
@@ -76,24 +76,28 @@ class Maze:
     """
     A class to store and interact with a maze grid.
     """
-    def __init__(self, width_, height_):
-        assert(width_ > 0 and height_ > 0)
-        self.width  = width_
-        self.height = height_
-        self.grid = [[Node() for _ in range(width_)] for _ in range(height_)]
+    def __init__(self, width, height):
+        assert(width > 0 and height > 0)
+        self.width  = width
+        self.height = height
+        self.grid = [[Node(x,y) for x in range(width)] for y in range(height)]
 
     def __repr__(self):
         return self.grid.__repr__()
 
     def __str__(self):
-        return self.ascii_block(wall='##', air='  ')
+        return self.ascii_bitmap()
 
     def __iter__(self):
         return itertools.chain(*self.grid)
 
-    def bitmap(self, columnated=True):
-        has_wall = self.has_wall
-        wall, air = True, False
+    def bitmap(self, corridorwidth=1, columnated=True):
+        """
+        Return a simple bitmap drawing of the maze.
+        - columnated : bool to determine whether to draw free-standing columns in the maze
+        - corridorwidth : how wide the corridors should be in relation to the walls
+        """
+        has_wall, w, (wall,air) = self.has_wall, corridorwidth, (True,False)
         if columnated: column = lambda x,y: True
         else:
             column = lambda x,y: x==self.width-1 or y==self.height-1 or has_wall(x,y,RIGHT) or has_wall(x,y,DOWN) or has_wall(x,y+1,RIGHT) or has_wall(x+1,y,DOWN)
@@ -101,8 +105,8 @@ class Maze:
         bmap = [[wall]]
         # Top wall
         for x,node in enumerate(self.grid[0]):
-            bmap[0].append(has_wall(x,0,UP))
-            bmap[0].append(wall)
+            bmap[0] += [has_wall(x,0,UP)] * w
+            bmap[0] += [wall]
         # Middle and bottom rows of string
         for y,row in enumerate(self.grid):
             # Left wall
@@ -110,29 +114,31 @@ class Maze:
             brow2 = [wall]
             # Middle and bottom walls (2 blocks/node)
             for x,node in enumerate(row):
-                brow1.append(air)
-                brow1.append(has_wall(x,y,RIGHT))
-                brow2.append(has_wall(x,y,DOWN))
-                brow2.append(column(x,y))
-            bmap.append(brow1)
-            bmap.append(brow2)
+                brow1 += [air] * w
+                brow1 += [has_wall(x,y,RIGHT)]
+                brow2 += [has_wall(x,y,DOWN)] * w
+                brow2 += [column(x,y)]
+            bmap += [brow1] * w
+            bmap += [brow2]
         return bmap
 
-    def ascii_block(self, wall=None, air=None):
+    def ascii_bitmap(self, wall=None, air=None, bitmap=None):
         """
         Produce a canonical, 'blocky' ASCII representation of the maze.
         Keyword arguments `wall`/`air` may also be functions that produce random texture instead of a fixed string.
+        - wall, air : a string (or callable object that produces a string) to be used as wall/air texture
         """
-        # Sort out non-/default wall/air texture,
-        if wall is None: make_wall = lambda: random.choice(['##','#@','%#'])
+        # Sort out default arguments
+        if wall is None: make_wall = lambda: '##'
         elif callable(wall): make_wall = wall
         else: make_wall = lambda: wall
         if air is None: make_air = lambda: ' '*len(make_wall())
         elif callable(air): make_air = air
         else: make_air = lambda: air
-        # Actually produce string using default maze bitmap
-        bmap = self.bitmap()
-        string = '\n'.join(''.join(make_wall() if b else make_air() for b in row) for row in bmap)
+        if bitmap is None:
+            bitmap = self.bitmap()
+        # Produce actual string
+        string = '\n'.join(''.join(make_wall() if b else make_air() for b in row) for row in bitmap)
         return string
 
     def ascii_thin(self):
@@ -188,12 +194,6 @@ class Maze:
                 string += cornersegment(x,y)
         return string
 
-    def utf_block(self):
-        """
-        Produce blocky unicode art to represent the maze.
-        """
-        return self.ascii_block(wall='██',air='  ')
-
     def utf_half(self):
         """
         Produce blocky unicode art to represent the maze, at half the size.
@@ -202,10 +202,7 @@ class Maze:
         bmap = self.bitmap(columnated=True)
         if len(bmap)%2!=0:
             bmap.append([False for _ in bmap[0]])
-        string = ""
-        for y in range(0,len(bmap),2):
-            string += '\n'
-            string += ''.join(tiles[2*hi + 1*lo] for (hi,lo) in zip(bmap[y],bmap[y+1]))
+        string = '\n'.join(''.join(tiles[2*hi + 1*lo] for (hi,lo) in zip(bmap[y],bmap[y+1])) for y in range(0,len(bmap),2))
         return string
 
     def utf_quarter(self):
@@ -275,16 +272,24 @@ class Maze:
     def has_wall(self, x, y, direction):
         """
         Check whether there is a wall in that direction.
-        - node_coordinate : (x,y) where 0<=x<width && 0<=y<height
+        - x, y : integers where 0<=x<width && 0<=y<height
         - direction : one of {RIGHT,UP,LEFT,DOWN}
         """
         return not self.node_at(x,y).has_edge(direction)
 
     def node_at(self, x, y):
+        """
+        Provide direct access to a grid node.
+        - x, y : integers where 0<=x<width && 0<=y<height
+        """
         return self.grid[y][x]
 
     def connect(self, source, destination):
-        (x0,y0), (x1,y1) = source, destination
+        """
+        Connect two nodes in the maze.
+        - source, destination : `Node`s
+        """
+        (x0,y0), (x1,y1) = source.coordinates, destination.coordinates
         dx,dy = x1-x0, y1-y0
         if abs(dx) + abs(dy) != 1:
             raise ValueError("can't connect non-neighboring nodes")
@@ -295,13 +300,17 @@ class Maze:
         if not self.node_at(x1,y1).has_edge(dir1):
             self.node_at(x1,y1).toggle_edge(dir1)
 
-    def neighbors_of(self, coord):
-        (x,y) = coord
+    def neighbors_of(self, node):
+        """
+        Get the available neighbors to a node.
+        - node : `Node`
+        """
+        (x,y) = node.coordinates
         neighbors = []
-        if 0 < x: neighbors.append((x-1,y))
-        if x < self.width-1: neighbors.append((x+1,y))
-        if 0 < y: neighbors.append((x,y-1))
-        if y < self.height-1: neighbors.append((x,y+1))
+        if 0 < x: neighbors.append(self.node_at(x-1,y))
+        if x < self.width-1: neighbors.append(self.node_at(x+1,y))
+        if 0 < y: neighbors.append(self.node_at(x,y-1))
+        if y < self.height-1: neighbors.append(self.node_at(x,y+1))
         return neighbors
 
 # CLASSES END
@@ -314,21 +323,25 @@ def bogus(maze):
     Carve complete bogus into a maze by essentially randomizing it.
     """
     for node in maze:
-        random_directions = random.randint(0b0000,0b1111)
-        node.toggle_edge(random_directions)
+        node.toggle_edge(random.randint(0b0000,0b1111))
 
 def backtracker(maze):
+    """
+    Carve a maze using simple randomized depth-first-search.
+    Prone to recursion limit for large mazes.
+    """
     def dfs(node):
         neighbors = maze.neighbors_of(node)
         random.shuffle(neighbors)
         for neighbor in neighbors:
-            if not maze.node_at(*neighbor).flag:
-                maze.node_at(*neighbor).flag = True
+            if not neighbor.flag:
+                neighbor.flag = True
                 maze.connect(node,neighbor)
                 dfs(neighbor)
-    start = (0,0)
-    maze.node_at(*start).flag = True
-    dfs(start)
+    for node in maze:
+        if not node.flag:
+            node.flag = True
+            dfs(node)
 
 # FUNCTIONS END
 
@@ -336,19 +349,37 @@ def backtracker(maze):
 # MAIN BEGIN
 
 def main():
+    def from_mask(template):
+        assert((height:=len(template)) > 0 and (width:=len(template[0])) > 0)
+        maze = Maze(width, height)
+        temp = itertools.chain(*template)
+        for (node,mask) in zip(maze,temp):
+            node.flag = not mask
+            node.toggle_edge(0b1111 * (not mask))
+        return maze
+    template = [
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,0,1,1,0,1,1,0,0,0,1,1,0,0,1],
+        [1,0,0,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
+        [1,0,1,0,1,0,0,0,1,1,0,1,1,0,0,1,1],
+        [1,0,1,0,1,0,1,0,1,0,0,0,1,1,0,0,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    ]
+
+    maze = from_mask(template)
+    backtracker(maze)
+    print(maze.utf_pipe())
     from textwrap import dedent # removes source code multiline string indents
-    main_menu_text = '\n' + dedent(f"""
-        Sandbox - fiddle around with mazes
-        * [print] current maze (ascii/utf)
-        * [resize] maze
-        * [carve] new maze
-        >
-    """).strip()
+    main_menu_text = dedent(f"""
+        Sandbox / fiddle around with mazes
+        | carve  (new maze)
+        | print  (current maze, ascii/utf)
+        | resize (current maze)
+        >""")
     printers = {p.__name__:p for p in (
         repr,
-        Maze.ascii_block,
+        Maze.ascii_bitmap,
         Maze.ascii_thin,
-        Maze.utf_block,
         Maze.utf_half,
         Maze.utf_quarter,
         Maze.utf_pipe,
@@ -360,8 +391,18 @@ def main():
         backtracker,
     )}
     maze = Maze(10,10)
-    while user_input := input(main_menu_text).strip():
-        match user_input:
+    while ui := input(main_menu_text).strip():
+        match ui:
+            case "carve":
+                prompt = f"Choose algorithm:\n| " + '| '.join(carvers) + "\n>"
+                if (ui := input(prompt).strip()) in carvers:
+                    maze = Maze(maze.width, maze.height)
+                    start = time.perf_counter()
+                    carvers[ui](maze)
+                    print(f"<carving took {time.perf_counter()-start:.03f}s>")
+                    print(maze.utf_half())
+                else:
+                    print("<unrecognized carver>")
             case "print":
                 for name,printer in printers.items():
                     print(f"{name}:\n{printer(maze)}")
@@ -371,24 +412,12 @@ def main():
                     maze = Maze(*tuple(map(int, input(prompt).split(','))))
                 except:
                     print("<something went wrong>")
-            case "carve":
-                prompt = f"Choose a carving method:\n| {' | '.join(carvers)}\n>"
-                if (user_input := input(prompt)) in carvers:
-                    maze = Maze(maze.width, maze.height)
-                    start = time.perf_counter()
-                    carvers[user_input](maze)
-                    print(maze.utf_pipe())
-                    print(f"<carving took {time.perf_counter()-start:.03f}s>")
-                else:
-                    print("<carving unsuccessful>")
-            case "sudo":
+            case "exec":
                 try: exec(input(">>> "))
                 except: pass
             case _:
                 print("<invalid option>")
-    print("Goodbye.")
-
-    #help(Maze)
+    print("goodbye")
 
 if __name__=="__main__": main()
 
