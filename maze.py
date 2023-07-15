@@ -122,12 +122,18 @@ class Maze:
         - wall, air : a string (or callable object that produces a string) to be used as wall/air texture
         """
         # Sort out default arguments
-        if wall is None: make_wall = lambda: '##'
-        elif callable(wall): make_wall = wall
-        else: make_wall = lambda: wall
-        if air is None: make_air = lambda: ' '*len(make_wall())
-        elif callable(air): make_air = air
-        else: make_air = lambda: air
+        if wall is None:
+            make_wall = lambda: '##'
+        elif callable(wall):
+            make_wall = wall
+        else:
+            make_wall = lambda: wall
+        if air is None:
+            make_air = lambda: ' '*len(make_wall())
+        elif callable(air):
+            make_air = air
+        else:
+            make_air = lambda: air
         if bitmap is None:
             bitmap = self.bitmap()
         # Produce actual string
@@ -290,9 +296,9 @@ class Maze:
         """
         (x,y) = node.coordinates
         neighbors = []
-        if 0 < x: neighbors.append(self.node_at(x-1,y))
-        if x < self.width-1: neighbors.append(self.node_at(x+1,y))
-        if 0 < y: neighbors.append(self.node_at(x,y-1))
+        if 0 < x:             neighbors.append(self.node_at(x-1,y))
+        if x < self.width-1:  neighbors.append(self.node_at(x+1,y))
+        if 0 < y:             neighbors.append(self.node_at(x,y-1))
         if y < self.height-1: neighbors.append(self.node_at(x,y+1))
         return neighbors
 
@@ -301,13 +307,20 @@ class Maze:
 
 # FUNCTIONS BEGIN
 
-def concat(*iterators):
+def concat(*iterables):
     """Concatenate iterators.
     "Roughly equivalent" to itertools.chain
     """
-    for iterator in iterators:
-        for element in iterator:
+    for iterable in iterables:
+        for element in iterable:
             yield element
+
+def randomized(iterable):
+    """Randomize a (finite) iterable's elements.
+    """
+    temp = list(iterable)
+    random.shuffle(temp)
+    return temp
 
 def bogus(maze):
     """Carve complete bogus into a maze by essentially randomizing it.
@@ -315,14 +328,13 @@ def bogus(maze):
     for node in maze:
         node.toggle_edge(random.randint(0b0000,0b1111))
 
-def backtracker(maze):
+def recursive_backtracker(maze):
     """Carve a maze using simple randomized depth-first-search.
-    Prone to recursion limit for large mazes.
+    * Prone to function recursion limit for large mazes.
+    * Simple implementation and tries to fill out every unvisited node.
     """
     def dfs(node):
-        neighbors = maze.neighbors_of(node)
-        random.shuffle(neighbors)
-        for neighbor in neighbors:
+        for neighbor in randomized(maze.neighbors_of(node)):
             if not neighbor.flag:
                 neighbor.flag = True
                 maze.connect(node,neighbor)
@@ -331,6 +343,44 @@ def backtracker(maze):
         if not node.flag:
             node.flag = True
             dfs(node)
+
+def growingtree(maze, start=None, choose_index=None):
+    """Carve a maze using the 'growing binary tree' algorithm.
+    - start : origin `Node`
+    - choose_index : callable that returns a valid index given an indexable `bucket`
+    * Note that this carver can be made equivalent to other algorithms by tweaking `choose_index`:
+      - always `-1` (newest element) is recursive backtracker / depth first search
+      - always `0` (oldest element) is breadth first search
+      - always random is randomized prim's algorithm.
+    """
+    if start is None:
+        start = next(iter(randomized(filter(lambda node: not node.flag, randomized(maze)))))
+    if choose_index is None:
+        choose_index = lambda bucket: random.choices([-1,0,random.randint(0,len(bucket)-1)],[3,1,1])[0]
+    start.flag = True
+    bucket = [start]
+    while bucket:
+        n = choose_index(bucket)
+        node = bucket[n]
+        for neighbor in randomized(maze.neighbors_of(node)):
+            if neighbor.flag: continue
+            neighbor.flag = True
+            maze.connect(node,neighbor)
+            bucket.append(neighbor)
+            break
+        else:
+            bucket.pop(n)
+
+def backtracker(maze):
+    """Carve a maze using simple randomized depth-first-search.
+    * More robust than `backtracker` for larger mazes.
+    """
+    growingtree(maze, choose_index=lambda bucket: -1)
+
+def randomprim(maze):
+    """Carve a maze using randomized Prim's algorithm.
+    """
+    growingtree(maze, choose_index=lambda bucket: random.random.randint(0,len(bucket)-1))
 
 # FUNCTIONS END
 
@@ -354,7 +404,7 @@ def main():
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     ]
     maze = from_mask(template)
-    backtracker(maze)
+    recursive_backtracker(maze)
     print(maze.utf_pipe())
     import time # perf_counter
     import textwrap # remove source code multiline string indents
@@ -377,12 +427,14 @@ def main():
     carvers = {c.__name__:c for c in (
         bogus,
         backtracker,
+        growingtree,
+        randomprim,
     )}
     maze = Maze(10,10)
     while ui := input(main_menu_text).strip():
         match ui:
             case "carve":
-                prompt = f"Choose algorithm:\n| " + '| '.join(carvers) + "\n>"
+                prompt = f"Choose algorithm:\n| " + ' | '.join(carvers) + "\n>"
                 if (ui := input(prompt).strip()) in carvers:
                     maze = Maze(maze.width, maze.height)
                     start = time.perf_counter()
@@ -402,7 +454,7 @@ def main():
                     print("<something went wrong>")
             case "exec":
                 try: exec(input(">>> "))
-                except: pass
+                except: print("<error>")
             case _:
                 print("<invalid option>")
     print("goodbye")
