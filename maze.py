@@ -11,8 +11,7 @@ Work in Progress:
   * Kruskal
   * Recursive division
 - Printers:
-  * utf_thin
-  * utf_quarter: ▘▯▝▯▀▯▖▯▌▯▞▯▛▯▗▯▚▯▐▯▜▯▄▯▙▯▟▯█
+  * png
 - ETC Dreams:
   * Maze navigator (w/ curses)
   * Interactive picker: distance by color
@@ -26,41 +25,69 @@ Work in Progress:
 
 import random
 import pprint
+import itertools
 
 # IMPORTS END
 
 
+# CONSTANTS BEGIN
+
+# Directions
+RIGHT = 0b0001
+UP    = 0b0010
+LEFT  = 0b0100
+DOWN  = 0b1000
+
+# CONSTANTS END
+
+
 # CLASSES BEGIN
+
+class Node:
+    """
+    A class to abstract over a grid cell/node.
+    """
+    def __init__(self):
+        self._connectivity = 0
+
+    def __repr__(self):
+        return self._connectivity.__repr__()
+
+    def __str__(self):
+        return " ╶╵└╴─┘┴╷┌│├┐┬┤┼"[self._connectivity%0b10000]
+
+    def put_edge(self, direction):
+        """
+        Add an edge into some direction.
+        - direction : one of {RIGHT,UP,LEFT,DOWN}
+        """
+        self._connectivity |= direction
+
+    def has_edge(self, direction):
+        """
+        Check whether there is an edge into some direction.
+        - direction : one of {RIGHT,UP,LEFT,DOWN}
+        """
+        return bool(self._connectivity & direction)
 
 class Maze:
     """
     A class to store and interact with a maze grid.
     """
-
-    # Direction constants/flags
-    RIGHT = 0b0001
-    UP    = 0b0010
-    LEFT  = 0b0100
-    DOWN  = 0b1000
-    DIRECTIONS = [RIGHT,UP,LEFT,DOWN]
-
     def __init__(self, width_, height_):
         assert(width_ > 0 and height_ > 0)
         self.width  = width_
         self.height = height_
-        self.grid = [[random.randint(0b0000,0b1111) for _ in range(width_)] for _ in range(height_)]
+        self.grid = [[Node() for _ in range(width_)] for _ in range(height_)]
 
     def __repr__(self):
-        return "[" + ',\n'.join(map(repr,self.grid)) + "]"
+        return self.grid.__repr__()
 
-    #def __format__(self, *args):
-        #if args[0] == '':
-            #return self.ascii_thin()
-        #else:
-            #return self.ascii_block(wall=args[0])
+    def __str__(self):
+        return self.ascii_block()
 
     def bitmap(self, columnated=True):
-        has_wall, [RIGHT,UP,LEFT,DOWN] = self.has_wall, self.DIRECTIONS
+        has_wall = self.has_wall
         wall, air = True, False
         if columnated: column = lambda x,y: True
         else:
@@ -107,7 +134,7 @@ class Maze:
         """
         Produce a 'compact' ASCII representation.
         """
-        wall, [RIGHT,UP,LEFT,DOWN] = self.has_wall, self.DIRECTIONS
+        wall = self.has_wall
         # Corner cases are nasty, man
         """ ,___, ,___, ,___, ,___,
             |   | | __| | | | | |_|
@@ -205,7 +232,7 @@ class Maze:
             string  += '\n'
             strbelow = "\n"
             for x,node in enumerate(row):
-                [r,u,l,d] = [self.has_wall(x,y,dir) for dir in self.DIRECTIONS]
+                [r,u,l,d] = [self.has_wall(x,y,dir) for dir in (RIGHT,UP,LEFT,DOWN)]
                 [nr,nu,nl,nd] = [not val for val in (r,u,l,d)]
                 string += (make_tile(u,nu,nl,l) + 2*make_tile(u,0,u,0) + make_tile(nr,nu,u,r))
                 strbelow += make_tile(d,l,nl,nd) + 2*make_tile(d,0,d,0) + make_tile(nr,r,d,nd)
@@ -216,7 +243,7 @@ class Maze:
         """
         Produce a 'compact' unicode representation.
         """
-        wall, [RIGHT,UP,LEFT,DOWN] = self.has_wall, self.DIRECTIONS
+        wall = self.has_wall
         tiles = " ╶╵└╴─┘┴╷┌│├┐┬┤┼"
         make_tile = lambda a,b,c,d: tiles[8*d + 4*c + 2*b + 1*a]
         # Top-left corner
@@ -234,35 +261,25 @@ class Maze:
                 string += make_tile(x<self.width-1 and wall(x+1,y,DOWN),wall(x,y,RIGHT),wall(x,y,DOWN),y<self.height-1 and wall(x,y+1,RIGHT))
         return string
 
-
     def utf_network(self):
         """
         Display the node connections in the maze.
         """
-        tiles = " ╶╵└╴─┘┴╷┌│├┐┬┤┼"
-        #get_tile = lambda n: tiles[n]+tiles[5*(n%2)]
-        get_tile = lambda n: tiles[n]
-        return '\n'.join(''.join(get_tile(node) for node in row) for row in self.grid)
-
-    def edge_toward(self, node_coordinate, direction): # TODO bad idea?..
-        """
-        Check whether there is an edge from a specified node into some direction.
-        - node_coordinate : (x,y) where 0<=x<width && 0<=y<height
-        - direction : one of self.DIRECTIONS
-        """
-        (x,y) = node_coordinate
-        return bool(self.grid[y][x] & direction)
+        return '\n'.join(''.join(str(node) for node in row) for row in self.grid)
 
     def has_wall(self, x, y, direction):
-        return not self.edge_toward((x,y), direction)
+        """
+        Check whether there is a wall in that direction.
+        - node_coordinate : (x,y) where 0<=x<width && 0<=y<height
+        - direction : one of {RIGHT,UP,LEFT,DOWN}
+        """
+        return not self.grid[y][x].has_edge(direction)
 
 # CLASSES END
 
 
 # FUNCTIONS BEGIN
 
-#def carve_binary_tree(maze):
-    # TODO
 
 # FUNCTIONS END
 
