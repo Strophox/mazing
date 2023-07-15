@@ -23,9 +23,6 @@ Work in Progress:
 # IMPORTS BEGIN
 
 import random
-import pprint
-import itertools
-import time
 
 # IMPORTS END
 
@@ -59,15 +56,13 @@ class Node:
         return " ╶╵└╴─┘┴╷┌│├┐┬┤┼"[self._connectivity%0b10000]
 
     def has_edge(self, direction):
-        """
-        Check whether there is an edge into some direction.
+        """Check whether there is an edge into some direction.
         - direction : one of {RIGHT,UP,LEFT,DOWN}
         """
         return bool(self._connectivity & direction)
 
     def toggle_edge(self, direction):
-        """
-        Add or remove an edge into some direction.
+        """Add or remove an edge into some direction.
         - direction : one of {RIGHT,UP,LEFT,DOWN}
         """
         self._connectivity ^= direction
@@ -89,11 +84,10 @@ class Maze:
         return self.ascii_bitmap()
 
     def __iter__(self):
-        return itertools.chain(*self.grid)
+        return concat(*self.grid)
 
     def bitmap(self, corridorwidth=1, columnated=True):
-        """
-        Return a simple bitmap drawing of the maze.
+        """Return a simple bitmap drawing of the maze.
         - columnated : bool to determine whether to draw free-standing columns in the maze
         - corridorwidth : how wide the corridors should be in relation to the walls
         """
@@ -123,8 +117,7 @@ class Maze:
         return bmap
 
     def ascii_bitmap(self, wall=None, air=None, bitmap=None):
-        """
-        Produce a canonical, 'blocky' ASCII representation of the maze.
+        """Produce a canonical, 'blocky' ASCII representation of the maze.
         Keyword arguments `wall`/`air` may also be functions that produce random texture instead of a fixed string.
         - wall, air : a string (or callable object that produces a string) to be used as wall/air texture
         """
@@ -142,11 +135,10 @@ class Maze:
         return string
 
     def ascii_thin(self):
-        """
-        Produce a 'compact' ASCII representation.
+        """Produce a 'compact' ASCII representation.
         """
         wall = self.has_wall
-        # Corner cases are nasty, man
+        # Corner cases are nasty, dude;
         """ ,___, ,___, ,___, ,___,
             |   | | __| | | | | |_|
             |___| |___| |___| |___|
@@ -195,8 +187,7 @@ class Maze:
         return string
 
     def utf_half(self):
-        """
-        Produce blocky unicode art to represent the maze, at half the size.
+        """Produce blocky unicode art to represent the maze, at half the size.
         """
         tiles = " ▄▀█"
         bmap = self.bitmap(columnated=True)
@@ -206,8 +197,7 @@ class Maze:
         return string
 
     def utf_quarter(self):
-        """
-        Produce blocky unicode art to represent the maze, at quarter the size.
+        """Produce blocky unicode art to represent the maze, at quarter the size.
         """
         #tiles = " ▯▘▯▝▯▀▯▖▯▌▯▞▯▛▯▗▯▚▯▐▯▜▯▄▯▙▯▟▯█"
         tiles = " ▘▝▀▖▌▞▛▗▚▐▜▄▙▟█"
@@ -224,8 +214,7 @@ class Maze:
         return string
 
     def utf_pipe(self):
-        """
-        Produce pipe-like unicode art to represent the maze.
+        """Produce pipe-like unicode art to represent the maze.
         """
         tiles = " ╶╺╵└┕╹┖┗╴─╼┘┴┶┚┸┺╸╾━┙┵┷┛┹┻╷┌┍│├┝╿┞┡┐┬┮┤┼┾┦╀╄┑┭┯┥┽┿┩╃╇╻┎┏╽┟┢┃┠┣┒┰┲┧╁╆┨╂╊┓┱┳┪╅╈┫╉╋"
         make_tile = lambda a,b,c,d: tiles[27*d + 9*c + 3*b + 1*a]
@@ -242,8 +231,7 @@ class Maze:
         return string
 
     def utf_thin(self):
-        """
-        Produce a 'compact' unicode representation.
+        """Produce a 'compact' unicode representation.
         """
         wall = self.has_wall
         tiles = " ╶╵└╴─┘┴╷┌│├┐┬┤┼"
@@ -264,29 +252,25 @@ class Maze:
         return string
 
     def utf_nodes(self):
-        """
-        Display the node connections in the maze.
+        """Display the node connections in the maze.
         """
         return '\n'.join(''.join(str(node) for node in row) for row in self.grid)
 
     def has_wall(self, x, y, direction):
-        """
-        Check whether there is a wall in that direction.
+        """Check whether there is a wall in that direction.
         - x, y : integers where 0<=x<width && 0<=y<height
         - direction : one of {RIGHT,UP,LEFT,DOWN}
         """
         return not self.node_at(x,y).has_edge(direction)
 
     def node_at(self, x, y):
-        """
-        Provide direct access to a grid node.
+        """Provide direct access to a grid node.
         - x, y : integers where 0<=x<width && 0<=y<height
         """
         return self.grid[y][x]
 
     def connect(self, source, destination):
-        """
-        Connect two nodes in the maze.
+        """Connect two nodes in the maze.
         - source, destination : `Node`s
         """
         (x0,y0), (x1,y1) = source.coordinates, destination.coordinates
@@ -301,8 +285,7 @@ class Maze:
             self.node_at(x1,y1).toggle_edge(dir1)
 
     def neighbors_of(self, node):
-        """
-        Get the available neighbors to a node.
+        """Get the available neighbors to a node.
         - node : `Node`
         """
         (x,y) = node.coordinates
@@ -318,16 +301,22 @@ class Maze:
 
 # FUNCTIONS BEGIN
 
-def bogus(maze):
+def concat(iterators):
+    """Concatenate iterators.
+    "Roughly equivalent" to itertools.chain
     """
-    Carve complete bogus into a maze by essentially randomizing it.
+    for iterator in iterators:
+        for element in iterator:
+            yield element
+
+def bogus(maze):
+    """Carve complete bogus into a maze by essentially randomizing it.
     """
     for node in maze:
         node.toggle_edge(random.randint(0b0000,0b1111))
 
 def backtracker(maze):
-    """
-    Carve a maze using simple randomized depth-first-search.
+    """Carve a maze using simple randomized depth-first-search.
     Prone to recursion limit for large mazes.
     """
     def dfs(node):
@@ -352,8 +341,7 @@ def main():
     def from_mask(template):
         assert((height:=len(template)) > 0 and (width:=len(template[0])) > 0)
         maze = Maze(width, height)
-        temp = itertools.chain(*template)
-        for (node,mask) in zip(maze,temp):
+        for (node,mask) in zip(maze,concat(template)):
             node.flag = not mask
             node.toggle_edge(0b1111 * (not mask))
         return maze
@@ -369,8 +357,9 @@ def main():
     maze = from_mask(template)
     backtracker(maze)
     print(maze.utf_pipe())
-    from textwrap import dedent # removes source code multiline string indents
-    main_menu_text = dedent(f"""
+    import time # perf_counter
+    import textwrap # remove source code multiline string indents
+    main_menu_text = textwrap.dedent(f"""
         Sandbox / fiddle around with mazes
         | carve  (new maze)
         | print  (current maze, ascii/utf)
