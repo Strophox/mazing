@@ -4,8 +4,10 @@
 # A small script to generate some mazes
 """
 Work in Progress:
-- Printers:
-  * png
+- Carvers:
+  * wilsons,
+  * kruskal
+  * recursive division
 - ETC Dreams:
   * Maze navigator (w/ curses) wall=lambda:random.choice(['##','#@','%#']
   * Interactive picker: distance by color
@@ -42,8 +44,8 @@ class Node:
     """
     def __init__(self, x, y):
         self.coordinates = (self.x, self.y) = (x, y)
-        self._connectivity = 0
         self.flag = 0
+        self._connectivity = 0
 
     def __repr__(self):
         return self._connectivity.__repr__()
@@ -324,8 +326,8 @@ class Maze:
         if not node1.has_edge(dir1):
             node1.toggle_edge(dir1)
 
-    def neighbors_of(self, node):
-        """Get the available neighbors to a node.
+    def adjacent_to(self, node):
+        """Get the adjacent cells to a node.
         - node : `Node`
         """
         (x,y) = node.coordinates
@@ -380,7 +382,7 @@ def growingtree(maze, start=None, choose_index=None):
     while bucket:
         n = choose_index(bucket)
         node = bucket[n]
-        for neighbor in randomized(maze.neighbors_of(node)):
+        for neighbor in randomized(maze.adjacent_to(node)):
             if neighbor.flag: continue
             neighbor.flag = True
             maze.connect(node,neighbor)
@@ -396,7 +398,7 @@ def randomprim(maze):
 
 def backtracker(maze):
     """Carve a maze using simple randomized depth-first-search.
-    * More robust than `backtracker` for larger mazes.
+    * More robust than `recursive backtracker` for larger mazes.
     """
     growingtree(maze, choose_index=lambda bucket: -1)
 
@@ -406,7 +408,7 @@ def recursive_backtracker(maze):
     * Simple standalone implementation and tries to fill out every unvisited node.
     """
     def dfs(node):
-        for neighbor in randomized(maze.neighbors_of(node)):
+        for neighbor in randomized(maze.adjacent_to(node)):
             if not neighbor.flag:
                 neighbor.flag = True
                 maze.connect(node,neighbor)
@@ -469,9 +471,6 @@ def main():
         backtracker,
         growingtree,
         randomprim,
-        #TODO wilsons,
-        #TODO kruskal
-        #TODO recursive division
     )}
     maze = Maze(10,10)
     while ui := input(main_menu_text).strip():
