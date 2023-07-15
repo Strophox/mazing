@@ -269,20 +269,20 @@ class Maze:
         """
         return self.grid[y][x]
 
-    def connect(self, source, destination):
+    def connect(self, node0, node1):
         """Connect two nodes in the maze.
-        - source, destination : `Node`s
+        - node0, node1 : `Node`s
         """
-        (x0,y0), (x1,y1) = source.coordinates, destination.coordinates
-        dx,dy = x1-x0, y1-y0
+        (x0,y0), (x1,y1) = node0.coordinates, node1.coordinates
+        dx, dy = x1-x0, y1-y0
         if abs(dx) + abs(dy) != 1:
             raise ValueError("can't connect non-neighboring nodes")
         get_dir = lambda dx,dy: (None,RIGHT,LEFT)[dx] if dx else (None,DOWN,UP)[dy]
-        dir0,dir1 = get_dir(dx,dy), get_dir(-dx,-dy)
-        if not self.node_at(x0,y0).has_edge(dir0):
-            self.node_at(x0,y0).toggle_edge(dir0)
-        if not self.node_at(x1,y1).has_edge(dir1):
-            self.node_at(x1,y1).toggle_edge(dir1)
+        dir0, dir1 = get_dir(dx,dy), get_dir(-dx,-dy)
+        if not node0.has_edge(dir0):
+            node0.toggle_edge(dir0)
+        if not node1.has_edge(dir1):
+            node1.toggle_edge(dir1)
 
     def neighbors_of(self, node):
         """Get the available neighbors to a node.
@@ -301,7 +301,7 @@ class Maze:
 
 # FUNCTIONS BEGIN
 
-def concat(iterators):
+def concat(*iterators):
     """Concatenate iterators.
     "Roughly equivalent" to itertools.chain
     """
@@ -341,7 +341,7 @@ def main():
     def from_mask(template):
         assert((height:=len(template)) > 0 and (width:=len(template[0])) > 0)
         maze = Maze(width, height)
-        for (node,mask) in zip(maze,concat(template)):
+        for (node,mask) in zip(maze,concat(*template)):
             node.flag = not mask
             node.toggle_edge(0b1111 * (not mask))
         return maze
@@ -353,7 +353,6 @@ def main():
         [1,0,1,0,1,0,1,0,1,0,0,0,1,1,0,0,1],
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     ]
-
     maze = from_mask(template)
     backtracker(maze)
     print(maze.utf_pipe())
