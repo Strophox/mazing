@@ -56,12 +56,12 @@ class Node:
     def __str__(self):
         return " ╶╵└╴─┘┴╷┌│├┐┬┤┼"[self._connectivity%0b10000]
 
-    def put_edge(self, direction):
+    def toggle_edge(self, direction):
         """
-        Add an edge into some direction.
+        Add or remove an edge into some direction.
         - direction : one of {RIGHT,UP,LEFT,DOWN}
         """
-        self._connectivity |= direction
+        self._connectivity ^= direction
 
     def has_edge(self, direction):
         """
@@ -84,7 +84,10 @@ class Maze:
         return self.grid.__repr__()
 
     def __str__(self):
-        return self.ascii_block()
+        return self.ascii_block(wall='##', air='  ')
+
+    def __iter__(self):
+        return itertools.chain(*self.grid)
 
     def bitmap(self, columnated=True):
         has_wall = self.has_wall
@@ -119,7 +122,7 @@ class Maze:
         Keyword arguments `wall`/`air` may also be functions that produce random texture instead of a fixed string.
         """
         # Sort out non-/default wall/air texture,
-        if wall is None: make_wall = lambda: '##'
+        if wall is None: make_wall = lambda: random.choice(['##','#@','%#'])
         elif callable(wall): make_wall = wall
         else: make_wall = lambda: wall
         if air is None: make_air = lambda: ' '*len(make_wall())
@@ -280,6 +283,23 @@ class Maze:
 
 # FUNCTIONS BEGIN
 
+def bogus(maze):
+    """
+    Carve complete bogus into a maze by essentially randomizing it.
+    """
+    for node in maze:
+        random_directions = random.randint(0b0000,0b1111)
+        node.toggle_edge(random_directions)
+
+def depth_first_search(maze):
+    stack = [start]
+    start.visited = True
+    def dfs(node):
+        for neighbor in node.neighbors:
+            if not neighbor.visited:
+                neighbor.visited = True
+                node.connectto(neighbor)
+                dfs(neighbor)
 
 # FUNCTIONS END
 
@@ -287,16 +307,50 @@ class Maze:
 # MAIN BEGIN
 
 def main():
+    from textwrap import dedent # removes source code multiline string indents
+    main_menu_text = '\n' + dedent(f"""
+        Sandbox - fiddle around with mazes
+        * [print] current maze (ascii/utf)
+        * [resize] maze
+        * [carve] new maze
+        >
+    """).strip()
+    printers = [
+        repr,
+        Maze.ascii_block,
+        Maze.ascii_thin,
+        Maze.utf_block,
+        Maze.utf_half,
+        Maze.utf_quarter,
+        Maze.utf_pipe,
+        Maze.utf_thin,
+        Maze.utf_network,
+    ]
+    carvers = [
+        bogus,
+        depth_first_search,
+    ]
     maze = Maze(10,10)
-    print(f"repr:\n{repr(maze)}")
-    print(f"ascii_block:\n{maze.ascii_block(wall=lambda:random.choice(['##','#@','%#']))}")
-    print(f"ascii_thin:\n{maze.ascii_thin()}")
-    print(f"utf_block:\n{maze.utf_block()}")
-    print(f"utf_half:\n{maze.utf_half()}")
-    print(f"utf_quarter:\n{maze.utf_quarter()}")
-    print(f"utf_pipe:\n{maze.utf_pipe()}")
-    print(f"utf_thin:\n{maze.utf_thin()}")
-    print(f"utf_network:\n{maze.utf_network()}")
+    while user_input := input(main_menu_text).strip():
+        match user_input:
+            case "print":
+                for p in printers:
+                    print(f"{p.__name__}:\n{p(maze)}")
+            case "resize":
+                try:
+                    prompt = "Dimensions X,Y >"
+                    maze = Maze(*tuple(map(int, input(prompt).split(','))))
+                except:
+                    print("<something went wrong>")
+            case "carve":
+                prompt = f"Choose a carving method:\n| {' | '.join(c.__name__ for c in carvers)}\n>"
+                {c.__name__:c for c in carvers}.get(input(prompt), lambda _: print("<carving unsuccessful"))(maze)
+            case "sudo":
+                try: exec(input())
+                except: pass
+            case _:
+                print("<invalid option>")
+    print("Goodbye.")
 
     #help(Maze)
 
