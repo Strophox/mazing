@@ -21,6 +21,7 @@ Work in Progress:
 
 import random
 from PIL import Image
+import time # perf_counter
 
 # IMPORTS END
 
@@ -374,22 +375,25 @@ def growingtree(maze, start=None, choose_index=None):
       - always random is randomized prim's algorithm.
     """
     if start is None:
-        start = next(iter(randomized(filter(lambda node: not node.flag, randomized(maze)))))
+        start = next(filter(lambda node: not node.flag, randomized(maze)))
+        #start = next(iter(randomized(filter(lambda node: not node.flag, randomized(maze)))))
     if choose_index is None:
-        choose_index = lambda bucket: random.choices([-1,0,random.randint(0,len(bucket)-1)],[3,1,1])[0]
+        choose_index = lambda bucket: -1 if random.random()<0.8 else random.randrange(len(bucket))
     start.flag = True
     bucket = [start]
     while bucket:
         n = choose_index(bucket)
         node = bucket[n]
-        for neighbor in randomized(maze.adjacent_to(node)):
-            if neighbor.flag: continue
-            neighbor.flag = True
+        neighbors = tuple(nb for nb in maze.adjacent_to(node) if not nb.flag)
+        if neighbors:
+            neighbor = random.choice(neighbors)
             maze.connect(node,neighbor)
+            neighbor.flag = True
             bucket.append(neighbor)
-            break
         else:
-            bucket.pop(n)
+            if len(bucket) > 1:
+                bucket[n],bucket[-1] = bucket[-1],bucket[n]
+            bucket.pop()
 
 def randomprim(maze):
     """Carve a maze using randomized Prim's algorithm.
@@ -418,9 +422,11 @@ def recursive_backtracker(maze):
             node.flag = True
             dfs(node)
 
-"""def wilsons(maze):
-    Carve a maze using Wilson's random uniform spanning tree algorithm.
-TODO """
+    #def wilsons(maze, start1=None, start2=None):
+    #"""Carve a maze using Wilson's random uniform spanning tree algorithm.
+    #"""
+    #start1.flag
+
 
 # FUNCTIONS END
 
@@ -446,7 +452,6 @@ def main():
     maze = from_mask(template)
     recursive_backtracker(maze)
     print(maze.utf_pipe())
-    import time # perf_counter
     import textwrap # remove source code multiline string indents
     main_menu_text = textwrap.dedent(f"""
         Sandbox / fiddle around with mazes
@@ -505,6 +510,14 @@ def main():
                 print("<invalid option>")
     print("goodbye")
 
-if __name__=="__main__": main()
+def benchmark():
+    start = time.perf_counter()
+    n = 2**9
+    maze = Maze(n,n)
+    growingtree(maze,)
+    maze.save_image("maze_benchmark.png")
+    print(f"[benchmark completed in {time.perf_counter() - start}s]")
+
+if __name__=="__main__": benchmark()#main()
 
 # MAIN END
