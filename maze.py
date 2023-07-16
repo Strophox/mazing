@@ -54,6 +54,9 @@ class Node:
     def __str__(self):
         return " ╶╵└╴─┘┴╷┌│├┐┬┤┼"[self._connectivity%0b10000]
 
+    def has_wall(self, direction):
+        return not (self._connectivity & direction)
+
     def has_edge(self, direction):
         """Check whether there is an edge into some direction.
         - direction : one of {RIGHT,UP,LEFT,DOWN}
@@ -81,6 +84,7 @@ class Maze:
         self.width  = width
         self.height = height
         self.grid = [[Node(x,y) for x in range(width)] for y in range(height)]
+        #self.grid = [Node(z%width,y) for z in range(width*height)] TODO
 
     def __repr__(self):
         return self.grid.__repr__()
@@ -104,18 +108,18 @@ class Maze:
         bmap = [[wall]]
         # Top wall
         for x,node in enumerate(self.grid[0]):
-            bmap[0] += [has_wall(x,0,UP)] * w
+            bmap[0] += [node.has_wall(UP)] * w
             bmap[0] += [wall]
         # Middle and bottom rows of string
         for y,row in enumerate(self.grid):
             # Left wall
-            brow1 = [has_wall(0,y,LEFT)]
+            brow1 = [row[0].has_wall(LEFT)]
             brow2 = [wall]
             # Middle and bottom walls (2 blocks/node)
             for x,node in enumerate(row):
                 brow1 += [air] * w
-                brow1 += [has_wall(x,y,RIGHT)]
-                brow2 += [has_wall(x,y,DOWN)] * w
+                brow1 += [node.has_wall(RIGHT)]
+                brow2 += [node.has_wall(DOWN)] * w
                 brow2 += [column(x,y)]
             bmap += [brow1] * w
             bmap += [brow2]
@@ -183,16 +187,16 @@ class Maze:
         # Top-left corner
         string = cornersegment_top_left()
         # Top wall
-        for x,node in enumerate(self.grid[0]):
+        for x in range(self.width):
             string += '_' if wall(x,0,UP) else ' '
             string += cornersegment_top(x)
         # Middle and bottom rows of string
-        for y,row in enumerate(self.grid):
+        for y in range(self.height):
             # Left wall
             string += '\n'
             string += cornersegment_left(y)
             # Middle and right walls (2 chars/node)
-            for x,node in enumerate(row):
+            for x in range(self.width):
                 string += '_' if wall(x,y,DOWN) else ' '
                 string += cornersegment(x,y)
         return string
@@ -230,11 +234,11 @@ class Maze:
         tiles = " ╶╺╵└┕╹┖┗╴─╼┘┴┶┚┸┺╸╾━┙┵┷┛┹┻╷┌┍│├┝╿┞┡┐┬┮┤┼┾┦╀╄┑┭┯┥┽┿┩╃╇╻┎┏╽┟┢┃┠┣┒┰┲┧╁╆┨╂╊┓┱┳┪╅╈┫╉╋"
         make_tile = lambda a,b,c,d: tiles[27*d + 9*c + 3*b + 1*a]
         string = ""
-        for y,row in enumerate(self.grid):
+        for row in self.grid:
             string  += '\n'
             strbelow = "\n"
-            for x,node in enumerate(row):
-                [r,u,l,d] = [self.has_wall(x,y,dir) for dir in (RIGHT,UP,LEFT,DOWN)]
+            for node in row:
+                [r,u,l,d] = [node.has_wall(dir) for dir in (RIGHT,UP,LEFT,DOWN)]
                 [nr,nu,nl,nd] = [not val for val in (r,u,l,d)]
                 string += (make_tile(u,nu,nl,l) + 2*make_tile(u,0,u,0) + make_tile(nr,nu,u,r))
                 strbelow += make_tile(d,l,nl,nd) + 2*make_tile(d,0,d,0) + make_tile(nr,r,d,nd)
@@ -250,15 +254,15 @@ class Maze:
         # Top-left corner
         string = make_tile(wall(0,0,UP),False,False,wall(0,0,LEFT))
         # Top wall
-        for x,node in enumerate(self.grid[0]):
+        for x in range(self.width):
             string += make_tile(x<self.width-1 and wall(x+1,0,UP),False,wall(x,0,UP),wall(x,0,RIGHT))
         # Middle and bottom rows of string
-        for y,row in enumerate(self.grid):
+        for y in range(self.height):
             # Left wall
             string += '\n'
             string += make_tile(wall(0,y,DOWN),wall(0,y,LEFT),False,y<self.height-1 and wall(0,y+1,LEFT))
             # Middle and right walls (2 chars/node)
-            for x,node in enumerate(row):
+            for x in range(self.width):
                 string += make_tile(x<self.width-1 and wall(x+1,y,DOWN),wall(x,y,RIGHT),wall(x,y,DOWN),y<self.height-1 and wall(x,y+1,RIGHT))
         return string
 
@@ -304,7 +308,7 @@ class Maze:
         - x, y : integers where 0<=x<width && 0<=y<height
         - direction : one of {RIGHT,UP,LEFT,DOWN}
         """
-        return not self.node_at(x,y).has_edge(direction)
+        return self.node_at(x,y).has_wall(direction)
 
     def node_at(self, x, y):
         """Provide direct access to a grid node.
@@ -332,12 +336,10 @@ class Maze:
         - node : `Node`
         """
         (x,y) = node.coordinates
-        neighbors = []
-        if 0 < x:             neighbors.append(self.node_at(x-1,y))
-        if x < self.width-1:  neighbors.append(self.node_at(x+1,y))
-        if 0 < y:             neighbors.append(self.node_at(x,y-1))
-        if y < self.height-1: neighbors.append(self.node_at(x,y+1))
-        return neighbors
+        if 0 < x:             yield self.node_at(x-1,y)
+        if x < self.width-1:  yield self.node_at(x+1,y)
+        if 0 < y:             yield self.node_at(x,y-1)
+        if y < self.height-1: yield self.node_at(x,y+1)
 
 # CLASSES END
 
@@ -365,7 +367,7 @@ def bogus(maze):
     for node in maze:
         node.toggle_edge(random.randint(0b0000,0b1111))
 
-def growingtree(maze, start=None, choose_index=None):
+def growingtree(maze, start=None, choose_index=None, optimize_pop=False):
     """Carve a maze using the 'growing binary tree' algorithm.
     - start : origin `Node`
     - choose_index : callable that returns a valid index given an indexable `bucket`
@@ -384,21 +386,24 @@ def growingtree(maze, start=None, choose_index=None):
     while bucket:
         n = choose_index(bucket)
         node = bucket[n]
-        neighbors = tuple(nb for nb in maze.adjacent_to(node) if not nb.flag)
+        neighbors = [nb for nb in maze.adjacent_to(node) if not nb.flag]
         if neighbors:
             neighbor = random.choice(neighbors)
             maze.connect(node,neighbor)
             neighbor.flag = True
             bucket.append(neighbor)
         else:
-            if len(bucket) > 1:
-                bucket[n],bucket[-1] = bucket[-1],bucket[n]
-            bucket.pop()
+            if optimize_pop:
+                if len(bucket) > 1 and n!=-1:
+                    bucket[n],bucket[-1] = bucket[-1],bucket[n]
+                bucket.pop()
+            else:
+                bucket.pop(n)
 
 def randomprim(maze):
     """Carve a maze using randomized Prim's algorithm.
     """
-    growingtree(maze, choose_index=lambda bucket: random.randint(0,len(bucket)-1))
+    growingtree(maze, choose_index=lambda bucket: random.randrange(len(bucket)))
 
 def backtracker(maze):
     """Carve a maze using simple randomized depth-first-search.
@@ -511,13 +516,15 @@ def main():
     print("goodbye")
 
 def benchmark():
+    """Run `python3 -m scalene maze.py`
+    """
     start = time.perf_counter()
-    n = 2**9
+    n = 2**10
     maze = Maze(n,n)
-    growingtree(maze,)
+    growingtree(maze,optimize_pop=True)
     maze.save_image("maze_benchmark.png")
     print(f"[benchmark completed in {time.perf_counter() - start}s]")
 
-if __name__=="__main__": benchmark()#main()
+if __name__=="__main__": main()
 
 # MAIN END
