@@ -7,6 +7,8 @@ Work in Progress:
 - Carvers:
   * wilsons,
   * recursive division
+- Solvers:
+  * A* pathfinder
 - ETC Dreams:
   * Maze navigator (w/ curses)
   * Interactive picker: distance by color
@@ -339,7 +341,7 @@ class Maze:
         return self.grid[y][x]
 
     def connect(self, node0, node1):
-        """Connect two nodes in the maze.
+        """Toggle the connection between two nodes in the maze.
         - node0, node1 : `Node`s
         """
         (x0,y0), (x1,y1) = node0.coordinates, node1.coordinates
@@ -347,42 +349,29 @@ class Maze:
         if abs(dx) + abs(dy) != 1:
             raise ValueError("nodes to connect must be neighbors")
         get_dir = lambda dx,dy: (LEFT if dx<0 else RIGHT) if dx else (UP if dy<0 else DOWN)
-        node0.put_edge(get_dir(dx,dy))
-        node1.put_edge(get_dir(-dx,-dy))
+        node0.toggle_edge(get_dir(dx,dy))
+        node1.toggle_edge(get_dir(-dx,-dy))
 
-    def adjacent_to(self, node, connected=False, unflagged=False):
+    def adjacent_to(self, node, connected=False):
         """Get the adjacent cells to a node.
         - node : `Node`
         """
         (x,y) = node.coordinates
-        if not (connected or unflagged):
-            if 0<x: yield self.node_at(x-1,y)
-            if x<self.width-1:yield self.node_at(x+1,y)
-            if 0<y:yield self.node_at(x,y-1)
-            if y<self.height-1:yield self.node_at(x,y+1)
+        if connected:
+            if 0<x             and node.has_edge(LEFT):  yield self.node_at(x-1,y)
+            if x<self.width-1  and node.has_edge(RIGHT): yield self.node_at(x+1,y)
+            if 0<y             and node.has_edge(UP):    yield self.node_at(x,y-1)
+            if y<self.height-1 and node.has_edge(DOWN):  yield self.node_at(x,y+1)
         else:
-            f = lambda x,y: not unflagged or not self.node_at(x,y).flag
-            c = lambda dir: not connected or node.has_edge(dir)
-            if 0<x and f(x-1,y) and c(LEFT):
-                yield self.node_at(x-1,y)
-            if x<self.width-1 and f(x+1,y) and c(RIGHT):
-                yield self.node_at(x+1,y)
-            if 0<y and f(x,y-1) and c(UP):
-                yield self.node_at(x,y-1)
-            if y<self.height-1 and f(x,y+1) and c(DOWN):
-                yield self.node_at(x,y+1)
+            if 0<x:             yield self.node_at(x-1,y)
+            if x<self.width-1:  yield self.node_at(x+1,y)
+            if 0<y:             yield self.node_at(x,y-1)
+            if y<self.height-1: yield self.node_at(x,y+1)
 
 # CLASSES END
 
 
 # FUNCTIONS BEGIN
-
-def randomized(iterable):
-    """Randomize a (finite) iterable's elements.
-    """
-    temp = list(iterable)
-    random.shuffle(temp)
-    return temp
 
 def bogus(maze):
     """Carve complete bogus into a maze by essentially randomizing it.
@@ -422,13 +411,13 @@ def growingtree(maze, start=None, choose_index=None, optimize_pop=False):
                 bucket.pop()
             else:
                 bucket.pop(n)
-    maze.set_name("growingtree")
+    maze.set_name("growing-tree")
 
 def randomprim(maze):
     """Carve a maze using randomized Prim's algorithm.
     """
     growingtree(maze, choose_index=lambda bucket: random.randrange(len(bucket)))
-    maze.set_name("randomprim")
+    maze.set_name("prim")
 
 def backtracker(maze):
     """Carve a maze using simple randomized depth-first-search.
@@ -442,6 +431,7 @@ def recursive_backtracker(maze):
     * Prone to function recursion limit for large mazes.
     * Simple standalone implementation and tries to fill out every unvisited node.
     """
+    randomized = lambda it: random.shuffle(ls:=list(it)) or ls # randomize iterator
     def dfs(node):
         for neighbor in randomized(maze.adjacent_to(node)):
             if not neighbor.flag:
@@ -480,32 +470,44 @@ def randomkruskal(maze):
                 node.color = bigger.color
                 bigger.color.members.append(node)
             if len(bigger.color.members)==maze.width*maze.height: break
-    maze.set_name("randomkruskal")
+    maze.set_name("kruskal")
 
 def wilson(maze, start=None):
     """Carve a maze using Wilson's random uniform spanning tree algorithm.
     """
-    def erase_path(origin, tail_end):
-        while tail_end != origin:
-            predecessor = maze.adjacent_to(tail_end,connected=True)[0]
-            tail_end.set_edges(0)
-            tail_end.flag = 0
-            tail_end = predecessor
+    def backtrack_walk(tail_node, origin):
+        while tail_node != origin:
+            prev_node = next(maze.adjacent_to(tail_node,connected=True))
+            maze.connect(tail_node,prev_node) # DANGER actually disconnecting
+            tail_node.flag = 0
+            tail_node = prev_node
     if start is None:
         start = maze.node_at(maze.width//2,maze.height//2)
     nodes = list(maze)
     nodes.remove(start)
-    current_gen = 1
-    start.flag = current_gen
+    generation = 1
+    start.flag = generation
     random.shuffle(nodes)
     for node in nodes:
         if not node.flag:
-            current_gen += 1
-            node.flag = current_gen
+            generation += 1
+            node.flag = generation
+            curr_node = node
             while True:
-                #neighbor = maze.adjacent_to(node,)
-                pass
-    #maze.set_name("wilson")
+                next_node = random.choice(list(maze.adjacent_to(curr_node)))
+                if not next_node.flag:
+                    next_node.flag = generation
+                    maze.connect(curr_node,next_node)
+                    curr_node = next_node
+                elif next_node.flag == generation:
+                    backtrack_walk(curr_node,next_node)
+                    curr_node = next_node
+                elif next_node.flag < generation:
+                    maze.connect(curr_node,next_node)
+                    break
+
+
+    maze.set_name("wilson")
 
 # FUNCTIONS END
 
@@ -623,9 +625,9 @@ def benchmark():
         print(f"<run completed in {time.perf_counter() - start}s>")
         maze.save_image()
         print(f"<saved '{maze.name}'>")
-    N = 2**10
     configs = [
-        (N, lambda maze:growingtree(maze,optimize_pop=True)),
+        #(2**10, lambda maze:growingtree(maze,optimize_pop=True)),
+        (2**9, wilson)
     ]
     for config in configs: run(*config)
 
