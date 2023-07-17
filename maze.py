@@ -354,25 +354,23 @@ class Maze:
         """Get the adjacent cells to a node.
         - node : `Node`
         """
-        """
-        conn = lambda dir: not connected and node.has_edge(dir)
-        flag = lambda x,y: not unflagged and not self.node_at(x,y).flag
         (x,y) = node.coordinates
-        if 0<x and flag(x-1,y) and conn(LEFT):
-            yield self.node_at(x-1,y)
-        if x<self.width-1 and flag(x+1,y) and conn(LEFT):
-            yield self.node_at(x+1,y)
-        if 0<y and flag(x,y-1) and conn(UP):
-            yield self.node_at(x,y-1)
-        if y<self.height-1 and flag(x,y+1) and conn(DOWN):
-            yield self.node_at(x,y+1)
-        """
-        (x,y) = node.coordinates
-        if 0<x: yield self.node_at(x-1,y)
-        if x<self.width-1:yield self.node_at(x+1,y)
-        if 0<y:yield self.node_at(x,y-1)
-        if y<self.height-1:yield self.node_at(x,y+1)
-        ""
+        if not (connected or unflagged):
+            if 0<x: yield self.node_at(x-1,y)
+            if x<self.width-1:yield self.node_at(x+1,y)
+            if 0<y:yield self.node_at(x,y-1)
+            if y<self.height-1:yield self.node_at(x,y+1)
+        else:
+            f = lambda x,y: not unflagged or not self.node_at(x,y).flag
+            c = lambda dir: not connected or node.has_edge(dir)
+            if 0<x and f(x-1,y) and c(LEFT):
+                yield self.node_at(x-1,y)
+            if x<self.width-1 and f(x+1,y) and c(RIGHT):
+                yield self.node_at(x+1,y)
+            if 0<y and f(x,y-1) and c(UP):
+                yield self.node_at(x,y-1)
+            if y<self.height-1 and f(x,y+1) and c(DOWN):
+                yield self.node_at(x,y+1)
 
 # CLASSES END
 
