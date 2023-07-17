@@ -19,6 +19,7 @@ Work in Progress:
 # IMPORTS BEGIN
 
 import random
+import itertools # chain
 import time # perf_counter
 from PIL import Image
 
@@ -60,13 +61,19 @@ class Node:
         """Check whether there is an edge into some direction.
         - direction : one of {RIGHT,UP,LEFT,DOWN}
         """
-        return bool(self._connectivity & direction)
+        return self._connectivity & direction
 
     def set_edges(self, direction):
         """Change connectivity of a node.
         - direction : one of {RIGHT,UP,LEFT,DOWN}
         """
         self._connectivity = direction
+
+    def put_edge(self, direction):
+        """Add an edge into some direction.
+        - direction : one of {RIGHT,UP,LEFT,DOWN}
+        """
+        self._connectivity |= direction
 
     def toggle_edge(self, direction):
         """Add or remove an edge into some direction.
@@ -84,19 +91,24 @@ class Maze:
         self.height = height
         self.grid = [[Node(x,y) for x in range(width)] for y in range(height)]
         #self.grid = [Node(z%width,z//width) for z in range(width*height)] TODO
-        self.info = dict()
+        self.name = f"maze_{self.width}x{self.height}_blank"
 
     def __repr__(self):
         return self.grid.__repr__() # "["+ ','.join("["+ ','.join(str(n._connectivity) for n in row) +"]" for row in self.grid) + "]"
 
     def __iter__(self):
-        return concat(self.grid)
+        return itertools.chain(*self.grid)
 
     def clear(self):
         for y,row in enumerate(self.grid):
             for x,node in enumerate(row):
                 row[x] = Node(x,y)
         self.info = dict()
+
+    def set_name(self, carver_name):
+        size = f"{self.width}" if self.width==self.height else f"{self.width}x{self.height}"
+        timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
+        self.name = f"maze_{carver_name}_{size}_{timestamp}"
 
     def bitmap(self, corridorwidth=1, columnated=True):
         """Return a simple bitmap drawing of the maze.
@@ -288,8 +300,8 @@ class Maze:
         if bitmap is None:
             bitmap = self.bitmap()
         width,height = len(bitmap[0]),len(bitmap)
-        to_rgb = lambda b: ((255,255,255),(0,0,0))[b]
-        img = tuple(to_rgb(b) for b in concat(bitmap))
+        bit_to_rgb = lambda bit: (0,0,0) if bit else (255,255,255)
+        img = tuple(bit_to_rgb(bit) for bit in itertools.chain(*bitmap))
         # Convert to Image
         self.image = Image.new('RGB', (width,height))
         self.image.putdata(img)
@@ -299,7 +311,7 @@ class Maze:
         - filename : str of image filename including extension (-> PIL)
         """
         if filename is None:
-            filename = f"maze_{self.info.get('carver','unknown-carver')}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.png"
+            filename = f"{self.name}.png"
         # Generate image if not done yet
         if getattr(self, 'image', None) is None:
             self.generate_image()
@@ -333,36 +345,39 @@ class Maze:
         (x0,y0), (x1,y1) = node0.coordinates, node1.coordinates
         dx, dy = x1-x0, y1-y0
         if abs(dx) + abs(dy) != 1:
-            raise ValueError("can't connect non-neighboring nodes")
-        get_dir = lambda dx,dy: (None,RIGHT,LEFT)[dx] if dx else (None,DOWN,UP)[dy]
-        dir0, dir1 = get_dir(dx,dy), get_dir(-dx,-dy)
-        if not node0.has_edge(dir0):
-            node0.toggle_edge(dir0)
-        if not node1.has_edge(dir1):
-            node1.toggle_edge(dir1)
+            raise ValueError("nodes to connect must be neighbors")
+        get_dir = lambda dx,dy: (LEFT if dx<0 else RIGHT) if dx else (UP if dy<0 else DOWN)
+        node0.put_edge(get_dir(dx,dy))
+        node1.put_edge(get_dir(-dx,-dy))
 
-    def adjacent_to(self, node):
+    def adjacent_to(self, node, connected=False, unflagged=False):
         """Get the adjacent cells to a node.
         - node : `Node`
         """
+        """
+        conn = lambda dir: not connected and node.has_edge(dir)
+        flag = lambda x,y: not unflagged and not self.node_at(x,y).flag
         (x,y) = node.coordinates
-        if 0 < x:             yield self.node_at(x-1,y)
-        if x < self.width-1:  yield self.node_at(x+1,y)
-        if 0 < y:             yield self.node_at(x,y-1)
-        if y < self.height-1: yield self.node_at(x,y+1)
+        if 0<x and flag(x-1,y) and conn(LEFT):
+            yield self.node_at(x-1,y)
+        if x<self.width-1 and flag(x+1,y) and conn(LEFT):
+            yield self.node_at(x+1,y)
+        if 0<y and flag(x,y-1) and conn(UP):
+            yield self.node_at(x,y-1)
+        if y<self.height-1 and flag(x,y+1) and conn(DOWN):
+            yield self.node_at(x,y+1)
+        """
+        (x,y) = node.coordinates
+        if 0<x: yield self.node_at(x-1,y)
+        if x<self.width-1:yield self.node_at(x+1,y)
+        if 0<y:yield self.node_at(x,y-1)
+        if y<self.height-1:yield self.node_at(x,y+1)
+        ""
 
 # CLASSES END
 
 
 # FUNCTIONS BEGIN
-
-def concat(iterables):
-    """Concatenate iterators.
-    "Roughly equivalent" to itertools.chain
-    """
-    for iterable in iterables:
-        for element in iterable:
-            yield element
 
 def randomized(iterable):
     """Randomize a (finite) iterable's elements.
@@ -376,7 +391,7 @@ def bogus(maze):
     """
     for node in maze:
         node.toggle_edge(random.randint(0b0000,0b1111))
-    maze.info['carver'] = "bogus"
+    maze.set_name("bogus")
 
 def growingtree(maze, start=None, choose_index=None, optimize_pop=False):
     """Carve a maze using the 'growing binary tree' algorithm.
@@ -390,7 +405,7 @@ def growingtree(maze, start=None, choose_index=None, optimize_pop=False):
     if start is None:
         start = random.choice(list(maze))
     if choose_index is None:
-        choose_index = lambda bucket: -1 if random.random()<0.9 else random.randrange(len(bucket))
+        choose_index = lambda bucket: -1 if random.random()<0.95 else random.randrange(len(bucket))
     start.flag = True
     bucket = [start]
     while bucket:
@@ -409,20 +424,20 @@ def growingtree(maze, start=None, choose_index=None, optimize_pop=False):
                 bucket.pop()
             else:
                 bucket.pop(n)
-    maze.info['carver'] = "growingtree"
+    maze.set_name("growingtree")
 
 def randomprim(maze):
     """Carve a maze using randomized Prim's algorithm.
     """
     growingtree(maze, choose_index=lambda bucket: random.randrange(len(bucket)))
-    maze.info['carver'] = "randomprim"
+    maze.set_name("randomprim")
 
 def backtracker(maze):
     """Carve a maze using simple randomized depth-first-search.
     * More robust than `recursive backtracker` for larger mazes.
     """
     growingtree(maze, choose_index=lambda bucket: -1)
-    maze.info['carver'] = "backtracker"
+    maze.set_name("backtracker")
 
 def recursive_backtracker(maze):
     """Carve a maze using simple randomized depth-first-search.
@@ -439,7 +454,7 @@ def recursive_backtracker(maze):
         if not node.flag:
             node.flag = True
             dfs(node)
-    maze.info['carver'] = "recursive_backtracker"
+    maze.set_name("recursive_backtracker")
 
 def randomkruskal(maze):
     """Carve a maze using randomized Kruskal's algorithm.
@@ -467,13 +482,32 @@ def randomkruskal(maze):
                 node.color = bigger.color
                 bigger.color.members.append(node)
             if len(bigger.color.members)==maze.width*maze.height: break
-    maze.info['carver'] = "randomkruskal"
+    maze.set_name("randomkruskal")
 
-#def wilsons(maze, start1=None, start2=None):
-    #"""Carve a maze using Wilson's random uniform spanning tree algorithm.
-    #"""
-    #start1.flag
-
+def wilson(maze, start=None):
+    """Carve a maze using Wilson's random uniform spanning tree algorithm.
+    """
+    def erase_path(origin, tail_end):
+        while tail_end != origin:
+            predecessor = maze.adjacent_to(tail_end,connected=True)[0]
+            tail_end.set_edges(0)
+            tail_end.flag = 0
+            tail_end = predecessor
+    if start is None:
+        start = maze.node_at(maze.width//2,maze.height//2)
+    nodes = list(maze)
+    nodes.remove(start)
+    current_gen = 1
+    start.flag = current_gen
+    random.shuffle(nodes)
+    for node in nodes:
+        if not node.flag:
+            current_gen += 1
+            node.flag = current_gen
+            while True:
+                #neighbor = maze.adjacent_to(node,)
+                pass
+    #maze.set_name("wilson")
 
 # FUNCTIONS END
 
@@ -484,9 +518,10 @@ def title_art():
     def from_mask(template):
         assert((height:=len(template)) > 0 and (width:=len(template[0])) > 0)
         maze = Maze(width, height)
-        for (node,mask) in zip(maze,concat(template)):
-            node.flag = not mask
-            node.toggle_edge(0b1111 * (not mask))
+        mask = itertools.chain(*template)
+        for (node,bit) in zip(maze,mask):
+            node.flag = not bit
+            node.toggle_edge(0b1111 * (not bit))
         return maze
     template = [
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -504,12 +539,12 @@ def main():
     print(title_art())
     import textwrap # remove source code multiline string indents
     main_menu_text = textwrap.dedent(f"""
-        Sandbox / fiddle around with mazes
-        [Editing]
+        Maze Sandbox
+        -- Editing
         | carve  (new maze pattern)
         | resize (maze)
         | load   (maze str repr)
-        [Viewing]
+        -- Viewing
         | print  (latest maze, ascii art)
         | show   (latest maze, external png)
         | save   (external png)
@@ -531,6 +566,7 @@ def main():
         growingtree,
         randomprim,
         randomkruskal,
+        wilson,
     )}
     N = 16
     maze = Maze(N,N)
@@ -582,20 +618,22 @@ def main():
 def benchmark():
     """Run `python3 -m scalene maze.py`
     """
-    start = time.perf_counter()
-    n = 2**10
-    maze = Maze(n,n)
-    growingtree(maze,optimize_pop=True)
-    maze.save_image("maze_benchmark.png")
-    print(f"[benchmark completed in {time.perf_counter() - start}s]")
+    def run(n, carver):
+        maze = Maze(n,n)
+        start = time.perf_counter()
+        carver(maze)
+        print(f"<run completed in {time.perf_counter() - start}s>")
+        maze.save_image()
+        print(f"<saved '{maze.name}'>")
+    N = 2**10
+    configs = [
+        (N, lambda maze:growingtree(maze,optimize_pop=True)),
+    ]
+    for config in configs: run(*config)
 
 if __name__=="__main__":
-    main()
-    #benchmark()
-
-#[[9, 5, 13, 5, 13, 4, 9, 5, 5, 12], [11, 4, 3, 12, 2, 9, 6, 8, 1, 6], [10, 9, 12, 3, 12, 10, 1, 7, 5, 12], [10, 10, 3, 5, 6, 3, 12, 9, 5, 6], [2, 3, 5, 12, 9, 5, 6, 11, 5, 12], [9, 5, 5, 14, 10, 1, 13, 6, 9, 14], [10, 9, 4, 10, 3, 12, 3, 4, 10, 10], [10, 11, 5, 7, 4, 3, 12, 9, 6, 10], [10, 2, 9, 5, 5, 12, 10, 3, 12, 10], [3, 5, 7, 5, 4, 3, 7, 5, 6, 2]]
-
-#[[9, 12, 9, 5, 12, 1, 13, 12, 9, 12], [10, 3, 14, 1, 15, 5, 6, 10, 2, 10], [10, 8, 3, 12, 3, 5, 4, 10, 9, 6], [10, 10, 9, 6, 9, 5, 12, 2, 3, 12], [11, 6, 10, 9, 6, 8, 10, 9, 5, 14], [2, 9, 7, 7, 12, 3, 7, 6, 8, 10], [9, 7, 5, 4, 11, 5, 12, 1, 14, 10], [3, 4, 9, 5, 7, 4, 3, 12, 3, 14], [9, 12, 11, 4, 9, 5, 12, 3, 12, 10], [2, 3, 6, 1, 7, 4, 3, 5, 6, 2]]
+    #main()
+    benchmark()
 
 #[[8,9,13,5,5,5,12,1,5,13,13,5,5,4,9,12],[11,6,2,9,12,1,7,5,5,14,2,9,13,5,6,10],[3,12,9,6,3,5,5,5,12,10,9,6,3,12,9,6],[9,14,3,12,1,13,4,9,6,2,10,1,5,6,10,8],[10,3,5,6,9,7,12,3,5,5,6,8,9,5,6,10],[10,9,5,4,10,8,3,5,12,9,5,6,3,12,9,6],[10,11,5,5,6,3,13,4,10,11,5,5,12,10,3,12],[10,3,12,8,9,13,6,1,6,10,1,12,3,14,9,14],[3,12,10,10,10,3,5,12,1,7,12,3,12,3,6,10],[9,14,11,14,11,5,12,3,5,4,10,9,7,4,9,6],[10,10,2,10,10,1,14,8,8,9,6,10,1,12,10,8],[10,3,12,10,10,8,11,6,10,3,5,7,4,3,6,10],[10,8,11,7,14,10,3,12,11,5,5,13,12,8,9,14],[10,10,10,9,6,10,9,6,10,1,13,6,3,6,2,10],[10,10,10,2,9,6,10,1,7,12,3,5,12,1,13,14],[3,6,3,5,6,1,7,5,5,6,1,5,7,5,6,2]]
 
