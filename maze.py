@@ -49,7 +49,7 @@ class Node:
         self._connectivity = 0
 
     def __repr__(self):
-        return f"<{self.x},{self.y};{self._connectivity}>"
+        return self._connectivity.__repr__()
 
     def __str__(self):
         return " ╶╵└╴─┘┴╷┌│├┐┬┤┼"[self._connectivity%0b10000]
@@ -87,10 +87,7 @@ class Maze:
         #self.grid = [Node(z%width,z//width) for z in range(width*height)] TODO
 
     def __repr__(self):
-        return self.grid.__repr__()
-
-    def __str__(self):
-        return self.ascii_bitmap()
+        return self.grid.__repr__() # "["+ ','.join("["+ ','.join(str(n._connectivity) for n in row) +"]" for row in self.grid) + "]"
 
     def __iter__(self):
         return concat(self.grid)
@@ -125,12 +122,14 @@ class Maze:
             bmap += [brow2]
         return bmap
 
-    def ascii_bitmap(self, wall=None, air=None, bitmap=None):
-        """Produce a canonical, 'blocky' ASCII representation of the maze.
+    def str_bitmap(self, wall=None, air=None, bitmap=None):
+        """Produce 'canonical' bitmap string art of the maze.
         Keyword arguments `wall`/`air` may also be functions that produce random texture instead of a fixed string.
         - wall, air : a string (or callable object that produces a string) to be used as wall/air texture
         """
         # Sort out default arguments
+        if bitmap is None:
+            bitmap = self.bitmap()
         if wall is None:
             make_wall = lambda: '##'
         elif callable(wall):
@@ -143,14 +142,83 @@ class Maze:
             make_air = air
         else:
             make_air = lambda: air
-        if bitmap is None:
-            bitmap = self.bitmap()
         # Produce actual string
         string = '\n'.join(''.join(make_wall() if b else make_air() for b in row) for row in bitmap)
         return string
 
-    def ascii_thin(self):
-        """Produce a 'compact' ASCII representation.
+    def str_block(self):
+        """Produce full-block (unicode) bitmap art of the maze.
+        """
+        return self.str_bitmap(wall='█',air=' ')
+
+    def str_halfblock(self):
+        """Produce half-block (unicode) bitmap art of the maze.
+        """
+        tiles = " ▄▀█"
+        bmap = self.bitmap()
+        if len(bmap)%2!=0:
+            bmap.append([False for _ in bmap[0]])
+        string = '\n'.join(''.join(tiles[2*hi + 1*lo] for (hi,lo) in zip(bmap[y],bmap[y+1])) for y in range(0,len(bmap),2))
+        return string
+
+    def str_quarterblock(self):
+        """Produce quarter-block (unicode) bitmap art of the maze.
+        """
+        #tiles = " ▯▘▯▝▯▀▯▖▯▌▯▞▯▛▯▗▯▚▯▐▯▜▯▄▯▙▯▟▯█"
+        tiles = " ▘▝▀▖▌▞▛▗▚▐▜▄▙▟█"
+        bmap = self.bitmap()
+        if len(bmap)%2!=0:
+            bmap.append([False for _ in bmap[0]])
+        if len(bmap[0])%2!=0:
+            for row in bmap: row.append(False)
+        string = ""
+        for y in range(0,len(bmap),2):
+            string += '\n'
+            for x in range(0,len(bmap[0]),2):
+                string += tiles[8*bmap[y+1][x+1] + 4*bmap[y+1][x] + 2*bmap[y][x+1] + 1*bmap[y][x]]
+        return string
+
+    def str_pipes(self):
+        """Produce pipe-like unicode art of the maze.
+        """
+        tiles = " ╶╺╵└┕╹┖┗╴─╼┘┴┶┚┸┺╸╾━┙┵┷┛┹┻╷┌┍│├┝╿┞┡┐┬┮┤┼┾┦╀╄┑┭┯┥┽┿┩╃╇╻┎┏╽┟┢┃┠┣┒┰┲┧╁╆┨╂╊┓┱┳┪╅╈┫╉╋"
+        make_tile = lambda a,b,c,d: tiles[27*d + 9*c + 3*b + 1*a]
+        string = ""
+        for row in self.grid:
+            string  += '\n'
+            strbelow = "\n"
+            for node in row:
+                [r,u,l,d] = [node.has_wall(dir) for dir in (RIGHT,UP,LEFT,DOWN)]
+                [nr,nu,nl,nd] = [not val for val in (r,u,l,d)]
+                string += (make_tile(u,nu,nl,l) + 2*make_tile(u,0,u,0) + make_tile(nr,nu,u,r))
+                strbelow += make_tile(d,l,nl,nd) + 2*make_tile(d,0,d,0) + make_tile(nr,r,d,nd)
+            string += strbelow
+        return string
+
+    def str_frame(self, slim=False):
+        """Produce outline/frame (unicode) art of the maze.
+        """
+        wall = self.has_wall
+        tiles = " ╶╵└╴─┘┴╷┌│├┐┬┤┼"
+        make_tile = lambda a,b,c,d: tiles[8*d + 4*c + 2*b + 1*a] + tiles[5*a]
+        if slim: make_tile = lambda a,b,c,d: tiles[8*d + 4*c + 2*b + 1*a]
+        # Top-left corner
+        string = make_tile(wall(0,0,UP),False,False,wall(0,0,LEFT))
+        # Top wall
+        for x in range(self.width):
+            string += make_tile(x<self.width-1 and wall(x+1,0,UP),False,wall(x,0,UP),wall(x,0,RIGHT))
+        # Middle and bottom rows of string
+        for y in range(self.height):
+            # Left wall
+            string += '\n'
+            string += make_tile(wall(0,y,DOWN),wall(0,y,LEFT),False,y<self.height-1 and wall(0,y+1,LEFT))
+            # Middle and right walls (2 chars/node)
+            for x in range(self.width):
+                string += make_tile(x<self.width-1 and wall(x+1,y,DOWN),wall(x,y,RIGHT),wall(x,y,DOWN),y<self.height-1 and wall(x,y+1,RIGHT))
+        return string
+
+    def str_ascii(self):
+        """Produce a 'minimal/compact' ASCII art of the maze.
         """
         wall = self.has_wall
         # Corner cases are nasty, dude;
@@ -202,72 +270,7 @@ class Maze:
                 string.append(cornersegment(x,y))
         return ''.join(string)
 
-    def utf_half(self):
-        """Produce blocky unicode art to represent the maze, at half the size.
-        """
-        tiles = " ▄▀█"
-        bmap = self.bitmap(columnated=True)
-        if len(bmap)%2!=0:
-            bmap.append([False for _ in bmap[0]])
-        string = '\n'.join(''.join(tiles[2*hi + 1*lo] for (hi,lo) in zip(bmap[y],bmap[y+1])) for y in range(0,len(bmap),2))
-        return string
-
-    def utf_quarter(self):
-        """Produce blocky unicode art to represent the maze, at quarter the size.
-        """
-        #tiles = " ▯▘▯▝▯▀▯▖▯▌▯▞▯▛▯▗▯▚▯▐▯▜▯▄▯▙▯▟▯█"
-        tiles = " ▘▝▀▖▌▞▛▗▚▐▜▄▙▟█"
-        bmap = self.bitmap(columnated=True)
-        if len(bmap)%2!=0:
-            bmap.append([False for _ in bmap[0]])
-        if len(bmap[0])%2!=0:
-            for row in bmap: row.append(False)
-        string = ""
-        for y in range(0,len(bmap),2):
-            string += '\n'
-            for x in range(0,len(bmap[0]),2):
-                string += tiles[8*bmap[y+1][x+1] + 4*bmap[y+1][x] + 2*bmap[y][x+1] + 1*bmap[y][x]]
-        return string
-
-    def utf_pipe(self):
-        """Produce pipe-like unicode art to represent the maze.
-        """
-        tiles = " ╶╺╵└┕╹┖┗╴─╼┘┴┶┚┸┺╸╾━┙┵┷┛┹┻╷┌┍│├┝╿┞┡┐┬┮┤┼┾┦╀╄┑┭┯┥┽┿┩╃╇╻┎┏╽┟┢┃┠┣┒┰┲┧╁╆┨╂╊┓┱┳┪╅╈┫╉╋"
-        make_tile = lambda a,b,c,d: tiles[27*d + 9*c + 3*b + 1*a]
-        string = ""
-        for row in self.grid:
-            string  += '\n'
-            strbelow = "\n"
-            for node in row:
-                [r,u,l,d] = [node.has_wall(dir) for dir in (RIGHT,UP,LEFT,DOWN)]
-                [nr,nu,nl,nd] = [not val for val in (r,u,l,d)]
-                string += (make_tile(u,nu,nl,l) + 2*make_tile(u,0,u,0) + make_tile(nr,nu,u,r))
-                strbelow += make_tile(d,l,nl,nd) + 2*make_tile(d,0,d,0) + make_tile(nr,r,d,nd)
-            string += strbelow
-        return string
-
-    def utf_thin(self):
-        """Produce a 'compact' unicode representation.
-        """
-        wall = self.has_wall
-        tiles = " ╶╵└╴─┘┴╷┌│├┐┬┤┼"
-        make_tile = lambda a,b,c,d: tiles[8*d + 4*c + 2*b + 1*a]
-        # Top-left corner
-        string = make_tile(wall(0,0,UP),False,False,wall(0,0,LEFT))
-        # Top wall
-        for x in range(self.width):
-            string += make_tile(x<self.width-1 and wall(x+1,0,UP),False,wall(x,0,UP),wall(x,0,RIGHT))
-        # Middle and bottom rows of string
-        for y in range(self.height):
-            # Left wall
-            string += '\n'
-            string += make_tile(wall(0,y,DOWN),wall(0,y,LEFT),False,y<self.height-1 and wall(0,y+1,LEFT))
-            # Middle and right walls (2 chars/node)
-            for x in range(self.width):
-                string += make_tile(x<self.width-1 and wall(x+1,y,DOWN),wall(x,y,RIGHT),wall(x,y,DOWN),y<self.height-1 and wall(x,y+1,RIGHT))
-        return string
-
-    def utf_nodes(self):
+    def str_connections(self):
         """Display the node connections in the maze.
         """
         return '\n'.join(''.join(str(node) for node in row) for row in self.grid)
@@ -378,8 +381,7 @@ def growingtree(maze, start=None, choose_index=None, optimize_pop=False):
       - always random is randomized prim's algorithm.
     """
     if start is None:
-        start = next(iter(randomized(node for node in maze if not node.flag)))
-        #start = next(node for node in maze if not node.flag)
+        start = random.choice(list(maze))
     if choose_index is None:
         choose_index = lambda bucket: -1 if random.random()<0.9 else random.randrange(len(bucket))
     start.flag = True
@@ -429,6 +431,8 @@ def recursive_backtracker(maze):
             dfs(node)
 
 def randomkruskal(maze):
+    """Carve a maze using randomized Kruskal's algorithm.
+    """
     edges = []
     rows = maze.grid
     for row in rows:
@@ -482,25 +486,26 @@ def main():
     ]
     maze = from_mask(template)
     recursive_backtracker(maze)
-    print(maze.utf_pipe())
+    print(maze.str_pipes())
     import textwrap # remove source code multiline string indents
     main_menu_text = textwrap.dedent(f"""
         Sandbox / fiddle around with mazes
         | carve  (new maze)
-        | print  (current maze, ascii/utf)
-        | view   (current maze, external program)
-        | save   (maze image)
+        | print  (current maze, ascii art)
+        | view   (current maze, external png)
+        | save   (external png)
         | resize (new maze)
         >""")
     printers = {p.__name__:p for p in (
         repr,
-        Maze.ascii_bitmap,
-        Maze.ascii_thin,
-        Maze.utf_half,
-        Maze.utf_quarter,
-        Maze.utf_pipe,
-        Maze.utf_thin,
-        Maze.utf_nodes,
+        Maze.str_bitmap,
+        Maze.str_block,
+        Maze.str_halfblock,
+        Maze.str_quarterblock,
+        Maze.str_pipes,
+        Maze.str_frame,
+        Maze.str_ascii,
+        Maze.str_connections,
     )}
     carvers = {c.__name__:c for c in (
         bogus,
@@ -509,7 +514,8 @@ def main():
         randomprim,
         randomkruskal,
     )}
-    maze = Maze(10,10)
+    N = 16
+    maze = Maze(N,N)
     while ui := input(main_menu_text).strip():
         match ui:
             case "carve":
@@ -519,7 +525,7 @@ def main():
                     start = time.perf_counter()
                     carvers[ui](maze)
                     print(f"<carve completed in {time.perf_counter()-start:.03f}s>")
-                    print(maze.utf_half() if maze.width*maze.height<10000 else f"<no print (cellcount {maze.width*maze.height})>")
+                    print(maze.str_frame() if maze.width*maze.height<10000 else f"<no print (cellcount {maze.width*maze.height})>")
                 else:
                     print("<unrecognized carver>")
             case "print":
@@ -559,5 +565,7 @@ if __name__=="__main__":
 #[[9, 5, 13, 5, 13, 4, 9, 5, 5, 12], [11, 4, 3, 12, 2, 9, 6, 8, 1, 6], [10, 9, 12, 3, 12, 10, 1, 7, 5, 12], [10, 10, 3, 5, 6, 3, 12, 9, 5, 6], [2, 3, 5, 12, 9, 5, 6, 11, 5, 12], [9, 5, 5, 14, 10, 1, 13, 6, 9, 14], [10, 9, 4, 10, 3, 12, 3, 4, 10, 10], [10, 11, 5, 7, 4, 3, 12, 9, 6, 10], [10, 2, 9, 5, 5, 12, 10, 3, 12, 10], [3, 5, 7, 5, 4, 3, 7, 5, 6, 2]]
 
 #[[9, 12, 9, 5, 12, 1, 13, 12, 9, 12], [10, 3, 14, 1, 15, 5, 6, 10, 2, 10], [10, 8, 3, 12, 3, 5, 4, 10, 9, 6], [10, 10, 9, 6, 9, 5, 12, 2, 3, 12], [11, 6, 10, 9, 6, 8, 10, 9, 5, 14], [2, 9, 7, 7, 12, 3, 7, 6, 8, 10], [9, 7, 5, 4, 11, 5, 12, 1, 14, 10], [3, 4, 9, 5, 7, 4, 3, 12, 3, 14], [9, 12, 11, 4, 9, 5, 12, 3, 12, 10], [2, 3, 6, 1, 7, 4, 3, 5, 6, 2]]
+
+#[[8,9,13,5,5,5,12,1,5,13,13,5,5,4,9,12],[11,6,2,9,12,1,7,5,5,14,2,9,13,5,6,10],[3,12,9,6,3,5,5,5,12,10,9,6,3,12,9,6],[9,14,3,12,1,13,4,9,6,2,10,1,5,6,10,8],[10,3,5,6,9,7,12,3,5,5,6,8,9,5,6,10],[10,9,5,4,10,8,3,5,12,9,5,6,3,12,9,6],[10,11,5,5,6,3,13,4,10,11,5,5,12,10,3,12],[10,3,12,8,9,13,6,1,6,10,1,12,3,14,9,14],[3,12,10,10,10,3,5,12,1,7,12,3,12,3,6,10],[9,14,11,14,11,5,12,3,5,4,10,9,7,4,9,6],[10,10,2,10,10,1,14,8,8,9,6,10,1,12,10,8],[10,3,12,10,10,8,11,6,10,3,5,7,4,3,6,10],[10,8,11,7,14,10,3,12,11,5,5,13,12,8,9,14],[10,10,10,9,6,10,9,6,10,1,13,6,3,6,2,10],[10,10,10,2,9,6,10,1,7,12,3,5,12,1,13,14],[3,6,3,5,6,1,7,5,5,6,1,5,7,5,6,2]]
 
 # MAIN END
