@@ -6,7 +6,6 @@
 Work in Progress:
 - Carvers:
   * wilsons,
-  * kruskal
   * recursive division
 - ETC Dreams:
   * Maze navigator (w/ curses)
@@ -97,6 +96,7 @@ class Maze:
         for y,row in enumerate(self.grid):
             for x,node in enumerate(row):
                 row[x] = Node(x,y)
+        self.info = dict()
 
     def bitmap(self, corridorwidth=1, columnated=True):
         """Return a simple bitmap drawing of the maze.
@@ -505,11 +505,14 @@ def main():
     import textwrap # remove source code multiline string indents
     main_menu_text = textwrap.dedent(f"""
         Sandbox / fiddle around with mazes
-        | carve  (new maze)
-        | print  (current maze, ascii art)
-        | show   (current maze, external png)
+        [Editing]
+        | carve  (new maze pattern)
+        | resize (maze)
+        | load   (maze str repr)
+        [Viewing]
+        | print  (latest maze, ascii art)
+        | show   (latest maze, external png)
         | save   (external png)
-        | resize (new maze)
         >""")
     printers = {p.__name__:p for p in (
         Maze.str_bitmap,
@@ -542,7 +545,24 @@ def main():
                     print(f"<carve completed in {time.perf_counter()-start:.03f}s>")
                     print(maze.str_frame() if maze.width*maze.height<10000 else f"<no print (cellcount {maze.width*maze.height})>")
                 else:
-                    print("<unrecognized carver>")
+                    print("<carver not found>")
+            case "resize":
+                try:
+                    prompt = "Dimensions X,Y >"
+                    maze = Maze(*tuple(map(int, input(prompt).split(','))))
+                except Exception as e:
+                    print(f"<something went wrong: {e}>")
+            case "load":
+                try:
+                    prompt = "Maze grid repr >"
+                    grid = eval(input())
+                    width,height = len(grid[0]),len(grid)
+                    maze = Maze(width,height)
+                    for x in range(height):
+                        for y in range(width):
+                            maze.node_at(x,y).set_edges(grid[y][x])
+                except Exception as e:
+                    print(f"<something went wrong: {e}>")
             case "print":
                 for name,printer in printers.items():
                     print(f"{name}:\n{printer(maze)}")
@@ -550,15 +570,11 @@ def main():
                 maze.show_image()
             case "save":
                 maze.save_image()
-            case "resize":
-                try:
-                    prompt = "Dimensions X,Y >"
-                    maze = Maze(*tuple(map(int, input(prompt).split(','))))
-                except:
-                    print("<something went wrong>")
             case "exec":
-                try: exec(input(">>> "))
-                except Exception as e: print(f"<exception <{e}>>")
+                try:
+                    exec(input(">>> "))
+                except Exception as e:
+                    print(f"<exception: {e}>")
             case _:
                 print("<invalid option>")
     print("goodbye")
