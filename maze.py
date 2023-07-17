@@ -9,7 +9,7 @@ Work in Progress:
   * kruskal
   * recursive division
 - ETC Dreams:
-  * Maze navigator (w/ curses) wall=lambda:random.choice(['##','#@','%#']
+  * Maze navigator (w/ curses)
   * Interactive picker: distance by color
   * Doom (curses) █▯▓▯▒▯░
 """
@@ -85,12 +85,18 @@ class Maze:
         self.height = height
         self.grid = [[Node(x,y) for x in range(width)] for y in range(height)]
         #self.grid = [Node(z%width,z//width) for z in range(width*height)] TODO
+        self.info = dict()
 
     def __repr__(self):
         return self.grid.__repr__() # "["+ ','.join("["+ ','.join(str(n._connectivity) for n in row) +"]" for row in self.grid) + "]"
 
     def __iter__(self):
         return concat(self.grid)
+
+    def clear(self):
+        for y,row in enumerate(self.grid):
+            for x,node in enumerate(row):
+                row[x] = Node(x,y)
 
     def bitmap(self, corridorwidth=1, columnated=True):
         """Return a simple bitmap drawing of the maze.
@@ -131,7 +137,7 @@ class Maze:
         if bitmap is None:
             bitmap = self.bitmap()
         if wall is None:
-            make_wall = lambda: '##'
+            make_wall = lambda: random.choice(['##','#@','%#'])
         elif callable(wall):
             make_wall = wall
         else:
@@ -293,7 +299,7 @@ class Maze:
         - filename : str of image filename including extension (-> PIL)
         """
         if filename is None:
-            filename = f"maze_{hash(self)}.png"
+            filename = f"maze_{self.info.get('carver','unknown-carver')}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.png"
         # Generate image if not done yet
         if getattr(self, 'image', None) is None:
             self.generate_image()
@@ -370,6 +376,7 @@ def bogus(maze):
     """
     for node in maze:
         node.toggle_edge(random.randint(0b0000,0b1111))
+    maze.info['carver'] = "bogus"
 
 def growingtree(maze, start=None, choose_index=None, optimize_pop=False):
     """Carve a maze using the 'growing binary tree' algorithm.
@@ -402,17 +409,20 @@ def growingtree(maze, start=None, choose_index=None, optimize_pop=False):
                 bucket.pop()
             else:
                 bucket.pop(n)
+    maze.info['carver'] = "growingtree"
 
 def randomprim(maze):
     """Carve a maze using randomized Prim's algorithm.
     """
     growingtree(maze, choose_index=lambda bucket: random.randrange(len(bucket)))
+    maze.info['carver'] = "randomprim"
 
 def backtracker(maze):
     """Carve a maze using simple randomized depth-first-search.
     * More robust than `recursive backtracker` for larger mazes.
     """
     growingtree(maze, choose_index=lambda bucket: -1)
+    maze.info['carver'] = "backtracker"
 
 def recursive_backtracker(maze):
     """Carve a maze using simple randomized depth-first-search.
@@ -429,6 +439,7 @@ def recursive_backtracker(maze):
         if not node.flag:
             node.flag = True
             dfs(node)
+    maze.info['carver'] = "recursive_backtracker"
 
 def randomkruskal(maze):
     """Carve a maze using randomized Kruskal's algorithm.
@@ -456,6 +467,7 @@ def randomkruskal(maze):
                 node.color = bigger.color
                 bigger.color.members.append(node)
             if len(bigger.color.members)==maze.width*maze.height: break
+    maze.info['carver'] = "randomkruskal"
 
 #def wilsons(maze, start1=None, start2=None):
     #"""Carve a maze using Wilson's random uniform spanning tree algorithm.
@@ -468,7 +480,7 @@ def randomkruskal(maze):
 
 # MAIN BEGIN
 
-def main():
+def title_art():
     def from_mask(template):
         assert((height:=len(template)) > 0 and (width:=len(template[0])) > 0)
         maze = Maze(width, height)
@@ -486,18 +498,20 @@ def main():
     ]
     maze = from_mask(template)
     recursive_backtracker(maze)
-    print(maze.str_pipes())
+    return maze.str_pipes()
+
+def main():
+    print(title_art())
     import textwrap # remove source code multiline string indents
     main_menu_text = textwrap.dedent(f"""
         Sandbox / fiddle around with mazes
         | carve  (new maze)
         | print  (current maze, ascii art)
-        | view   (current maze, external png)
+        | show   (current maze, external png)
         | save   (external png)
         | resize (new maze)
         >""")
     printers = {p.__name__:p for p in (
-        repr,
         Maze.str_bitmap,
         Maze.str_block,
         Maze.str_halfblock,
@@ -506,6 +520,7 @@ def main():
         Maze.str_frame,
         Maze.str_ascii,
         Maze.str_connections,
+        repr,
     )}
     carvers = {c.__name__:c for c in (
         bogus,
@@ -520,10 +535,10 @@ def main():
         match ui:
             case "carve":
                 prompt = f"Choose algorithm:\n| " + ' | '.join(carvers) + "\n>"
-                if (ui := input(prompt).strip()) in carvers:
-                    maze = Maze(maze.width, maze.height)
+                if carver := carvers.get(input(prompt).strip()):
+                    maze.clear()
                     start = time.perf_counter()
-                    carvers[ui](maze)
+                    carver(maze)
                     print(f"<carve completed in {time.perf_counter()-start:.03f}s>")
                     print(maze.str_frame() if maze.width*maze.height<10000 else f"<no print (cellcount {maze.width*maze.height})>")
                 else:
@@ -531,7 +546,7 @@ def main():
             case "print":
                 for name,printer in printers.items():
                     print(f"{name}:\n{printer(maze)}")
-            case "view":
+            case "show":
                 maze.show_image()
             case "save":
                 maze.save_image()
@@ -543,7 +558,7 @@ def main():
                     print("<something went wrong>")
             case "exec":
                 try: exec(input(">>> "))
-                except: print("<error>")
+                except Exception as e: print(f"<exception <{e}>>")
             case _:
                 print("<invalid option>")
     print("goodbye")
