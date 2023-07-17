@@ -20,8 +20,8 @@ Work in Progress:
 # IMPORTS BEGIN
 
 import random
-from PIL import Image
 import time # perf_counter
+from PIL import Image
 
 # IMPORTS END
 
@@ -45,11 +45,11 @@ class Node:
     """
     def __init__(self, x, y):
         self.coordinates = (self.x, self.y) = (x, y)
-        self.flag = 0
+        self.flag = None
         self._connectivity = 0
 
     def __repr__(self):
-        return self._connectivity.__repr__()
+        return f"<{self.x},{self.y};{self._connectivity}>"
 
     def __str__(self):
         return " ╶╵└╴─┘┴╷┌│├┐┬┤┼"[self._connectivity%0b10000]
@@ -84,7 +84,7 @@ class Maze:
         self.width  = width
         self.height = height
         self.grid = [[Node(x,y) for x in range(width)] for y in range(height)]
-        #self.grid = [Node(z%width,y) for z in range(width*height)] TODO
+        #self.grid = [Node(z%width,z//width) for z in range(width*height)] TODO
 
     def __repr__(self):
         return self.grid.__repr__()
@@ -184,22 +184,23 @@ class Maze:
             elif y<self.height-1 and wall(x,y+1,RIGHT) and not (wall(x,y,DOWN) and x<self.width-1 and wall(x+1,y,DOWN)): return ','
             elif wall(x,y,DOWN) or (x<self.width-1 and wall(x+1,y,DOWN)): return '_'
             else: return '.'
+        string = [] # Here we instead add chars to a list and join at the end, for fun
         # Top-left corner
-        string = cornersegment_top_left()
+        string.append(cornersegment_top_left())
         # Top wall
         for x in range(self.width):
-            string += '_' if wall(x,0,UP) else ' '
-            string += cornersegment_top(x)
+            string.append('_' if wall(x,0,UP) else ' ')
+            string.append(cornersegment_top(x))
         # Middle and bottom rows of string
         for y in range(self.height):
             # Left wall
-            string += '\n'
-            string += cornersegment_left(y)
+            string.append('\n')
+            string.append(cornersegment_left(y))
             # Middle and right walls (2 chars/node)
             for x in range(self.width):
-                string += '_' if wall(x,y,DOWN) else ' '
-                string += cornersegment(x,y)
-        return string
+                string.append('_' if wall(x,y,DOWN) else ' ')
+                string.append(cornersegment(x,y))
+        return ''.join(string)
 
     def utf_half(self):
         """Produce blocky unicode art to represent the maze, at half the size.
@@ -377,10 +378,10 @@ def growingtree(maze, start=None, choose_index=None, optimize_pop=False):
       - always random is randomized prim's algorithm.
     """
     if start is None:
-        start = next(filter(lambda node: not node.flag, randomized(maze)))
-        #start = next(iter(randomized(filter(lambda node: not node.flag, randomized(maze)))))
+        start = next(iter(randomized(node for node in maze if not node.flag)))
+        #start = next(node for node in maze if not node.flag)
     if choose_index is None:
-        choose_index = lambda bucket: -1 if random.random()<0.8 else random.randrange(len(bucket))
+        choose_index = lambda bucket: -1 if random.random()<0.9 else random.randrange(len(bucket))
     start.flag = True
     bucket = [start]
     while bucket:
@@ -427,7 +428,32 @@ def recursive_backtracker(maze):
             node.flag = True
             dfs(node)
 
-    #def wilsons(maze, start1=None, start2=None):
+def randomkruskal(maze):
+    edges = []
+    rows = maze.grid
+    for row in rows:
+        row_right = iter(row) ; next(row_right)
+        edges.extend(zip(row,row_right))
+    rows_below = iter(rows) ; next(rows_below)
+    for row,row_below in zip(rows,rows_below):
+        edges.extend(zip(row,row_below))
+    random.shuffle(edges)
+    for (node0,node1) in edges:
+        if not getattr(node0,'color',None):
+            node0.color, node0.members = node0, [node0]
+        if not getattr(node1,'color',None):
+            node1.color, node1.members = node1, [node1]
+        if node0.color != node1.color:
+            maze.connect(node0,node1)
+            if len(node0.color.members) < len(node1.color.members):
+                smaller,bigger = node0,node1
+            else: smaller,bigger = node1,node0
+            for node in smaller.color.members:
+                node.color = bigger.color
+                bigger.color.members.append(node)
+            if len(bigger.color.members)==maze.width*maze.height: break
+
+#def wilsons(maze, start1=None, start2=None):
     #"""Carve a maze using Wilson's random uniform spanning tree algorithm.
     #"""
     #start1.flag
@@ -481,6 +507,7 @@ def main():
         backtracker,
         growingtree,
         randomprim,
+        randomkruskal,
     )}
     maze = Maze(10,10)
     while ui := input(main_menu_text).strip():
@@ -525,6 +552,12 @@ def benchmark():
     maze.save_image("maze_benchmark.png")
     print(f"[benchmark completed in {time.perf_counter() - start}s]")
 
-if __name__=="__main__": main()
+if __name__=="__main__":
+    main()
+    #benchmark()
+
+#[[9, 5, 13, 5, 13, 4, 9, 5, 5, 12], [11, 4, 3, 12, 2, 9, 6, 8, 1, 6], [10, 9, 12, 3, 12, 10, 1, 7, 5, 12], [10, 10, 3, 5, 6, 3, 12, 9, 5, 6], [2, 3, 5, 12, 9, 5, 6, 11, 5, 12], [9, 5, 5, 14, 10, 1, 13, 6, 9, 14], [10, 9, 4, 10, 3, 12, 3, 4, 10, 10], [10, 11, 5, 7, 4, 3, 12, 9, 6, 10], [10, 2, 9, 5, 5, 12, 10, 3, 12, 10], [3, 5, 7, 5, 4, 3, 7, 5, 6, 2]]
+
+#[[9, 12, 9, 5, 12, 1, 13, 12, 9, 12], [10, 3, 14, 1, 15, 5, 6, 10, 2, 10], [10, 8, 3, 12, 3, 5, 4, 10, 9, 6], [10, 10, 9, 6, 9, 5, 12, 2, 3, 12], [11, 6, 10, 9, 6, 8, 10, 9, 5, 14], [2, 9, 7, 7, 12, 3, 7, 6, 8, 10], [9, 7, 5, 4, 11, 5, 12, 1, 14, 10], [3, 4, 9, 5, 7, 4, 3, 12, 3, 14], [9, 12, 11, 4, 9, 5, 12, 3, 12, 10], [2, 3, 6, 1, 7, 4, 3, 5, 6, 2]]
 
 # MAIN END
