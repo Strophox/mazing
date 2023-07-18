@@ -5,7 +5,6 @@
 """
 Work in Progress:
 - Carvers:
-  * wilsons,
   * recursive division
 - Solvers:
   * A* pathfinder
@@ -442,7 +441,7 @@ def recursive_backtracker(maze):
         if not node.flag:
             node.flag = True
             dfs(node)
-    maze.set_name("recursive_backtracker")
+    maze.set_name("backtracker")
 
 def randomkruskal(maze):
     """Carve a maze using randomized Kruskal's algorithm.
@@ -505,9 +504,45 @@ def wilson(maze, start=None):
                 elif next_node.flag < generation:
                     maze.connect(curr_node,next_node)
                     break
-
-
     maze.set_name("wilson")
+
+def division(maze):
+    def divide(topleft, bottomright):
+        (x0,y0), (x1,y1) = topleft, bottomright
+        if x0==x1 or y0==y1: return
+        (xP,yP) = (random.randrange(x0,x1),random.randrange(y0,y1))
+        for x in range(x0,x1+1):
+            maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1))
+        for y in range(y0,y1+1):
+            maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y))
+        dice = random.randint(1,4)
+        if dice != 1:
+            x = random.randint(x0,xP)
+            maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1))
+        if dice != 2:
+            x = random.randint(xP+1,x1)
+            maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1))
+        if dice != 3:
+            y = random.randint(y0,yP)
+            maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y))
+        if dice != 4:
+            y = random.randint(yP+1,y1)
+            maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y))
+        divide((x0,y0), (xP,yP))
+        divide((xP+1,y0), (x1,yP))
+        divide((x0,yP+1), (xP,y1))
+        divide((xP+1,yP+1), (x1,y1))
+    for y,row in enumerate(maze.grid):
+        for x,node in enumerate(row):
+            dir = 0b0000
+            if 0<x:             dir |= LEFT
+            if x<maze.width-1:  dir |= RIGHT
+            if 0<y:             dir |= UP
+            if y<maze.height-1: dir |= DOWN
+            node.put_edge(dir)
+    divide((0,0), (maze.width-1,maze.height-1))
+    maze.set_name("divide")
+
 
 # FUNCTIONS END
 
@@ -567,6 +602,7 @@ def main():
         randomprim,
         randomkruskal,
         wilson,
+        division,
     )}
     N = 16
     maze = Maze(N,N)
@@ -626,14 +662,15 @@ def benchmark():
         maze.save_image()
         print(f"<saved '{maze.name}'>")
     configs = [
-        #(2**10, lambda maze:growingtree(maze,optimize_pop=True)),
-        (2**9, wilson)
+        (2**9, lambda maze:growingtree(maze,optimize_pop=True)),
+        #(2**9, wilson)
     ]
     for config in configs: run(*config)
+    print(f"<{len(configs)} benchmark(s) completed>")
 
 if __name__=="__main__":
-    #main()
-    benchmark()
+    main()
+    #benchmark()
 
 #[[8,9,13,5,5,5,12,1,5,13,13,5,5,4,9,12],[11,6,2,9,12,1,7,5,5,14,2,9,13,5,6,10],[3,12,9,6,3,5,5,5,12,10,9,6,3,12,9,6],[9,14,3,12,1,13,4,9,6,2,10,1,5,6,10,8],[10,3,5,6,9,7,12,3,5,5,6,8,9,5,6,10],[10,9,5,4,10,8,3,5,12,9,5,6,3,12,9,6],[10,11,5,5,6,3,13,4,10,11,5,5,12,10,3,12],[10,3,12,8,9,13,6,1,6,10,1,12,3,14,9,14],[3,12,10,10,10,3,5,12,1,7,12,3,12,3,6,10],[9,14,11,14,11,5,12,3,5,4,10,9,7,4,9,6],[10,10,2,10,10,1,14,8,8,9,6,10,1,12,10,8],[10,3,12,10,10,8,11,6,10,3,5,7,4,3,6,10],[10,8,11,7,14,10,3,12,11,5,5,13,12,8,9,14],[10,10,10,9,6,10,9,6,10,1,13,6,3,6,2,10],[10,10,10,2,9,6,10,1,7,12,3,5,12,1,13,14],[3,6,3,5,6,1,7,5,5,6,1,5,7,5,6,2]]
 
