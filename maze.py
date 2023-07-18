@@ -4,9 +4,11 @@
 # A small script to generate some mazes
 """
 Work in Progress:
-- Carvers:
-  * recursive division solo
+- Refactor:
+  * maze naming internals
+- Carvers: All done!
 - Solvers:
+  * BFS
   * A* pathfinder
 - ETC Dreams:
   * Maze navigator (w/ curses)
@@ -413,7 +415,7 @@ class Maze:
 
 # FUNCTIONS BEGIN
 
-def bogus(dimensions):
+def bogus_maze(dimensions):
     """Build a complete bogus maze by randomizing every node.
     """
     maze = Maze(*dimensions)
@@ -422,7 +424,7 @@ def bogus(dimensions):
     maze.set_name("bogus")
     return maze
 
-def growingtree(dimensions, start_coord=None, index_choice=None, fast_pop=False):
+def growing_tree_maze(dimensions, start_coord=None, index_choice=None, fast_pop=False):
     """Build a maze using the 'growing binary tree' algorithm.
     - start : origin `Node`
     - index_choice : callable that returns a valid index given an indexable `bucket`
@@ -458,40 +460,22 @@ def growingtree(dimensions, start_coord=None, index_choice=None, fast_pop=False)
     maze.set_name("growing-tree")
     return maze
 
-def randomprim(dimensions, start_coord=None):
+def prim_maze(dimensions, start_coord=None):
     """Build a maze using randomized Prim's algorithm.
     """
-    maze = growingtree(dimensions, start_coord, index_choice=lambda bucket: random.randrange(len(bucket)))
+    maze = growing_tree_maze(dimensions, start_coord, index_choice=lambda bucket: random.randrange(len(bucket)))
     maze.set_name("prim")
     return maze
 
-def backtracker(dimensions, start_coord=None):
+def backtracker_maze(dimensions, start_coord=None):
     """Build a maze using simple randomized depth-first-search.
     * More robust than `recursive backtracker` for larger mazes.
     """
-    maze = growingtree(dimensions, start_coord, index_choice=lambda bucket: -1)
+    maze = growing_tree_maze(dimensions, start_coord, index_choice=lambda bucket: -1)
     maze.set_name("backtracker")
     return maze
 
-def recursive_backtracker(maze):
-    """Carve a maze using simple randomized depth-first-search.
-    * Prone to function recursion limit for large mazes.
-    * Simple standalone implementation and tries to fill out every unvisited node.
-    """
-    randomized = lambda it: random.shuffle(ls:=list(it)) or ls # randomize iterator
-    def dfs(node):
-        for neighbor in randomized(maze.adjacent_to(node)):
-            if not neighbor.flag:
-                neighbor.flag = True
-                maze.connect(node,neighbor)
-                dfs(neighbor)
-    for node in maze:
-        if not node.flag:
-            node.flag = True
-            dfs(node)
-    maze.set_name("backtracker")
-
-def randomkruskal(dimensions):
+def kruskal_maze(dimensions):
     """Build a maze using randomized Kruskal's algorithm.
     """
     maze = Maze(*dimensions)
@@ -521,7 +505,7 @@ def randomkruskal(dimensions):
     maze.set_name("kruskal")
     return maze
 
-def wilson(dimensions, start_coord=None):
+def wilson_maze(dimensions, start_coord=None):
     """Build a maze using Wilson's random uniform spanning tree algorithm.
     """
     maze = Maze(*dimensions)
@@ -560,7 +544,7 @@ def wilson(dimensions, start_coord=None):
     maze.set_name("wilson")
     return maze
 
-def division_quarters(dimensions):
+def quarter_division_maze(dimensions):
     """Build a maze using a divide-and-conquer approach.
     """
     maze = Maze(*dimensions)
@@ -601,7 +585,7 @@ def division_quarters(dimensions):
     maze.set_name("divide-q")
     return maze
 
-def division(dimensions, slice_bias=1.0, pivot_choice=None):
+def division_maze(dimensions, slice_bias=1.0, pivot_choice=None):
     """Build a maze using a divide-and-conquer approach.
     """
     maze = Maze(*dimensions)
@@ -645,8 +629,26 @@ def division(dimensions, slice_bias=1.0, pivot_choice=None):
     maze.set_name("divide")
     return maze
 
-def braid(maze):
-    """Convert a maze into a 'braided' maze with no dead ends.
+def recursive_backtracker(maze):
+    """Carve a maze using simple randomized depth-first-search.
+    * Prone to function recursion limit for large mazes.
+    * Simple standalone implementation and tries to fill out every unvisited node.
+    """
+    randomized = lambda it: random.shuffle(ls:=list(it)) or ls # randomize iterator
+    def dfs(node):
+        for neighbor in randomized(maze.adjacent_to(node)):
+            if not neighbor.flag:
+                neighbor.flag = True
+                maze.connect(node,neighbor)
+                dfs(neighbor)
+    for node in maze:
+        if not node.flag:
+            node.flag = True
+            dfs(node)
+    maze.set_name("backtracker")
+
+def unicursal(maze):
+    """Convert a maze into a unicursal/'braided' maze with no dead ends.
     """
     for node in maze:
         dirs = [dir for dir in (RIGHT,UP,LEFT,DOWN) if node.has_wall(dir)]
@@ -683,11 +685,25 @@ def maze_maze():
     recursive_backtracker(maze)
     return maze
 
+def autocomplete(input_word, full_words):
+    candidates = [w for w in full_words if w.startswith(input_word)]
+    if len(candidates) == 1:
+        return candidates[0]
+    else:
+        return input_word
+
 def run_and_time(f):
     start_time = time.perf_counter()
     result = f()
     time_taken = time.perf_counter() - start_time
     return (result, time_taken)
+
+def display(maze, limit=100*100):
+    cellcount = maze.width*maze.height
+    if cellcount <= limit:
+        print(maze.str_frame())
+    else:
+        print(f"[no print (cellcount {cellcount})]")
 
 # FUNCTIONS END
 
@@ -695,93 +711,97 @@ def run_and_time(f):
 # MAIN BEGIN
 
 def main():
+    main_dimensions = (16,16)
+    main_maze = maze_maze()#Maze(*dimensions)
     import textwrap # remove source code multiline string indents
     help_menu_text = textwrap.dedent("""
-        A Mazing Sandbox
+       A Mazing Sandbox
         | help  : show this menu
-        Editing-
+       Editing
         | make  : new maze
         | braid : modify maze
         | size  : for next maze
-        | parse : maze from repr string
-        Viewing-
+        | load  : maze from string
+       Viewing
         | print : latest maze, ascii art
         | show  : latest maze, external png
         | save  : external png
-        >""")
-    menu_text = """| help | make | braid | size | parse | print | show | save >"""
-    printers = {p.__name__:p for p in (
-        Maze.str_bitmap,
-        lambda maze: maze.str_bitmap(wall='██',air='  ',bitmap=maze.bitmap(columnated=False)),
-        Maze.str_block,
-        Maze.str_half_block,
-        Maze.str_quarter_block,
-        Maze.str_pipes,
-        Maze.str_frame,
-        Maze.str_ascii_frame,
-        Maze.str_ascii_frame_small,
-        repr,
-    )}
-    builders = {b.__name__:b for b in (
-        bogus,
-        backtracker,
-        growingtree,
-        randomprim,
-        randomkruskal,
-        wilson,
-        division,
-        division_quarters,
-    )}
-    dimensions = (16,16)
-    main_maze = maze_maze()#Maze(*dimensions)
-    user_input = input(help_menu_text).strip()
-    print_main_maze = lambda: print(main_maze.str_frame() if (cellcount:=main_maze.width*main_maze.height)<10000 else f"[no print (cellcount {cellcount})]")
-    while user_input:
-        match user_input:
+       >""")
+    commands = ["help","make","braid","size","load","print","show","save"]
+    command = "help"
+    while command:
+        match command:
             case "help":
-                user_input = input(help_menu_text).strip()
+                user_input = input(help_menu_text)
+                command = autocomplete(user_input.strip(), commands)
                 continue
             case "make":
-                try:
-                    builder = builders[input(f"Choose algorithm:\n| " + ' | '.join(builders) + "\n>").strip()]
-                    (main_maze, secs) = run_and_time(lambda: builder(dimensions))
-                    print(f"[build completed in {secs:.03f}s]")
-                    print_main_maze()
-                except Exception as e:
-                    print(f"[exception: {e}]")
+                builders = {x.__name__:x for x in [
+                    bogus_maze,
+                    backtracker_maze,
+                    growing_tree_maze,
+                    prim_maze,
+                    kruskal_maze,
+                    wilson_maze,
+                    division_maze,
+                    quarter_division_maze,
+                ]}
+                user_input = input(f"Enter algorithm:\n| " + ' | '.join(builders) + "\n>")
+                name = autocomplete(user_input.strip(),builders)
+                if name in builders:
+                    (main_maze, secs) = run_and_time(lambda: builders[name](main_dimensions))
+                    print(f"[{name} completed in {secs:.03f}s]")
+                    display(main_maze)
+                else:
+                    print(f"[unrecognized algorithm '{name}']")
             case "braid":
-                try:
-                    braid(main_maze)
-                except Exception as e:
-                    print(f"[exception: {e}]")
-                print_main_maze()
+                unicursal(main_maze)
+                print(f"[braiding completed in {secs:.03f}s]")
+                display(main_maze)
             case "size":
+                user_input = input("Enter dimensions X,Y >")
                 try:
-                    dimensions = tuple(map(int, input("Dimensions X,Y >").split(',')))
+                    main_dimensions = (_, _) = tuple(map(int, user_input.strip().split(',')))
                 except Exception as e:
-                    print(f"[something went wrong: {e}]")
-            case "parse":
+                    print(f"[invalid dimensions: {e}]")
+            case "load":
+                user_input = input("Enter string `repr`esentation (e.g. '[[9,5..]]') >")
                 try:
-                    main_maze = Maze.from_grid(eval(input("Maze repr string >")))
-                    print_main_maze()
+                    main_maze = Maze.from_grid(eval(user_input.strip()))
+                    display(main_maze)
                 except Exception as e:
-                    print(f"[something went wrong: {e}]")
+                    print(f"[could not load maze: {e}]")
             case "print":
+                printers = {x.__name__:x for x in [
+                    Maze.str_bitmap,
+                    lambda maze: maze.str_bitmap(wall='██',air='  ',bitmap=maze.bitmap(columnated=False)),
+                    Maze.str_block,
+                    Maze.str_half_block,
+                    Maze.str_quarter_block,
+                    Maze.str_pipes,
+                    Maze.str_frame,
+                    Maze.str_ascii_frame,
+                    Maze.str_ascii_frame_small,
+                    repr,
+                ]}
                 for name,printer in printers.items():
                     print(f"{name}:\n{printer(main_maze)}")
             case "show":
+                print(f"[showing maze in external program]")
                 main_maze.show_image()
             case "save":
                 main_maze.save_image()
                 print(f"[saved '{main_maze.name}']")
             case "exec":
+                user_input = input(">>> ")
                 try:
-                    exec(input(">>> "))
-                except Exception as e:
-                    print(f"<exception: {e}>")
+                    exec(user_input)
+                except Exception as e:i
+                    print(f"<error: {e}>")
             case _:
-                print("[invalid option]")
-        user_input = input(menu_text).strip()
+                print("[unrecognized option]")
+        user_input = input(f"""| {' | '.join(commands)} >""")
+        command = autocomplete(user_input.strip(), commands)
     print("goodbye")
 
 def mini_benchmark():
@@ -789,7 +809,7 @@ def mini_benchmark():
     """
     actions = [
         (lambda: division((2**9,2**9))),
-        #(lambda: growingtree((2**9,2**9),optimize_pop=True)),
+        #(lambda: growing_tree_maze((2**9,2**9),optimize_pop=True)),
         #(lambda: wilson((2**7,2**7))),
     ]
     for action in actions:
