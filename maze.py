@@ -11,7 +11,7 @@ Work in Progress:
 - ETC Dreams:
   * Maze navigator (w/ curses)
   * Interactive picker: distance by color
-  * Doom (curses) █▯▓▯▒▯░
+  * Doom (curses) █▯▓▯▒▯░ ".,-~:;=!*#$@"
 """
 
 # OUTLINE END
@@ -554,7 +554,7 @@ def wilson(dimensions, start_coord=None):
     maze.set_name("wilson")
     return maze
 
-def division(dimensions):
+def division_quarters(dimensions):
     """Build a maze using a divide-and-conquer approach.
     """
     maze = Maze(*dimensions)
@@ -563,9 +563,9 @@ def division(dimensions):
         if x0==x1 or y0==y1: return
         (xP,yP) = (random.randrange(x0,x1),random.randrange(y0,y1))
         for x in range(x0,x1+1):
-            maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1))
+            maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1)) # DANGER actually disconnect
         for y in range(y0,y1+1):
-            maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y))
+            maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y)) # DANGER actually disconnect
         dice = random.randint(1,4)
         if dice != 1:
             x = random.randint(x0,xP)
@@ -592,6 +592,50 @@ def division(dimensions):
             if y<maze.height-1: dir |= DOWN
             node.put_edge(dir)
     divide((0,0), (maze.width-1,maze.height-1))
+    maze.set_name("divide-q")
+    return maze
+
+def division(dimensions, slice_bias=1.0, pivot_choice=None):
+    """Build a maze using a divide-and-conquer approach.
+    """
+    maze = Maze(*dimensions)
+    if pivot_choice is None:
+        pivot_choice = lambda l,r: (l+r)//2
+        #pivot_choice = lambda l,r: min(max(l,int(random.gauss((l+r)/2,(l+r)/2**6))),r)
+        #pivot_choice = lambda l,r: random.triangular(l,r)
+        #pivot_choice = lambda l,r: random.randint(l,r)
+    def divide(topleft, bottomright, prev_horz):
+        (x0,y0), (x1,y1) = topleft, bottomright
+        if x0==x1 or y0==y1: return
+        horizontal_cut = random.getrandbits(1)
+        while prev_horz==horizontal_cut and random.random() < slice_bias:
+            horizontal_cut = random.getrandbits(1)
+        if horizontal_cut:
+            yP = pivot_choice(y0,y1-1)
+            for x in range(x0,x1+1):
+                maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1)) # DANGER actually disconnect
+            x = random.randint(x0,x1)
+            maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1))
+            divide((x0,y0), (x1,yP), True)
+            divide((x0,yP+1), (x1,y1), True)
+        else:
+            xP = pivot_choice(x0,x1-1)
+            for y in range(y0,y1+1):
+                maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y)) # DANGER actually disconnect
+            y = random.randint(y0,y1)
+            maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y))
+            divide((x0,y0), (xP,y1), False)
+            divide((xP+1,y0), (x1,y1), False)
+        #print(maze.str_frame())
+    for y,row in enumerate(maze.grid):
+        for x,node in enumerate(row):
+            dir = 0b0000
+            if 0<x:             dir |= LEFT
+            if x<maze.width-1:  dir |= RIGHT
+            if 0<y:             dir |= UP
+            if y<maze.height-1: dir |= DOWN
+            node.put_edge(dir)
+    divide((0,0), (maze.width-1,maze.height-1), maze.width)
     maze.set_name("divide")
     return maze
 
@@ -607,6 +651,8 @@ def braid(maze):
             if y==0: dirs.remove(UP)
             if y==maze.height-1: dirs.remove(DOWN)
             maze.connect_to(node, random.choice(dirs))
+    maze.image = None
+    maze.name += "_braided" # TODO
 
 def maze_maze():
     """Creates a custom maze that spells 'MAZE'.
@@ -678,6 +724,7 @@ def main():
         randomkruskal,
         wilson,
         division,
+        division_quarters,
     )}
     dimensions = (16,16)
     main_maze = maze_maze()#Maze(*dimensions)
@@ -725,6 +772,7 @@ def main():
                 main_maze.show_image()
             case "save":
                 main_maze.save_image()
+                print(f"[saved '{main_maze.name}']")
             case "exec":
                 try:
                     exec(input(">>> "))
@@ -739,8 +787,9 @@ def mini_benchmark():
     """Run `python3 -m scalene maze.py`
     """
     actions = [
-        (lambda: growingtree((2**9,2**9),optimize_pop=True)),
-        (lambda: wilson((2**7,2**7))),
+        (lambda: division((2**9,2**9))),
+        #(lambda: growingtree((2**9,2**9),optimize_pop=True)),
+        #(lambda: wilson((2**7,2**7))),
     ]
     for action in actions:
         (maze, secs) = run_and_time(action)
