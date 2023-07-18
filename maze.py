@@ -156,51 +156,62 @@ class Maze:
         # Sort out default arguments
         if bitmap is None:
             bitmap = self.bitmap()
-        if wall is None:
-            make_wall = lambda: random.choice(['##','#@','%#'])
-        elif callable(wall):
-            make_wall = wall
-        else:
-            make_wall = lambda: wall
-        if air is None:
-            make_air = lambda: ' '*len(make_wall())
-        elif callable(air):
-            make_air = air
-        else:
-            make_air = lambda: air
+        if wall is None:     make_wall = lambda: random.choice(['##','#@','%#'])
+        elif callable(wall): make_wall = wall
+        else:                make_wall = lambda: wall
+        if air is None:     make_air = lambda: ' '*len(make_wall())
+        elif callable(air): make_air = air
+        else:               make_air = lambda: air
         # Produce actual string
-        string = '\n'.join(''.join(make_wall() if b else make_air() for b in row) for row in bitmap)
+        string = '\n'.join(
+            ''.join(
+                make_wall() if b else make_air() for b in row
+            ) for row in bitmap
+        )
         return string
+
+    def str_block_double(self):
+        """Produce double-block (unicode) bitmap art of the maze.
+        """
+        return self.str_bitmap(wall='██',air='  ')
 
     def str_block(self):
         """Produce full-block (unicode) bitmap art of the maze.
         """
         return self.str_bitmap(wall='█',air=' ')
 
-    def str_half_block(self):
+    def str_block_half(self):
         """Produce half-block (unicode) bitmap art of the maze.
         """
-        tiles = " ▄▀█"
         bmap = self.bitmap()
+        # Pad bitmap to even height
         if len(bmap)%2!=0:
             bmap.append([False for _ in bmap[0]])
-        string = '\n'.join(''.join(tiles[2*hi + 1*lo] for (hi,lo) in zip(bmap[y],bmap[y+1])) for y in range(0,len(bmap),2))
+        # String is just a join of row strings (which are also join)
+        tiles = " ▄▀█"
+        string = '\n'.join(
+            ''.join(
+                tiles[2*hi + 1*lo] for (hi,lo) in zip(bmap[y],bmap[y+1])
+            ) for y in range(0,len(bmap),2)
+        )
         return string
 
-    def str_quarter_block(self):
+    def str_block_quarter(self):
         """Produce quarter-block (unicode) bitmap art of the maze.
         """
-        tiles = " ▘▝▀▖▌▞▛▗▚▐▜▄▙▟█" # ▯▘▯▝▯▀▯▖▯▌▯▞▯▛▯▗▯▚▯▐▯▜▯▄▯▙▯▟▯█
         bmap = self.bitmap()
+        # Pad bitmap to even height and width
         if len(bmap)%2!=0:
             bmap.append([False for _ in bmap[0]])
         if len(bmap[0])%2!=0:
             for row in bmap: row.append(False)
-        string = ""
-        for y in range(0,len(bmap),2):
-            string += '\n'
-            for x in range(0,len(bmap[0]),2):
-                string += tiles[8*bmap[y+1][x+1] + 4*bmap[y+1][x] + 2*bmap[y][x+1] + 1*bmap[y][x]]
+        # String is just a join of row strings (which are also join)
+        tiles = " ▘▝▀▖▌▞▛▗▚▐▜▄▙▟█" # ▯▘▯▝▯▀▯▖▯▌▯▞▯▛▯▗▯▚▯▐▯▜▯▄▯▙▯▟▯█
+        string = '\n'.join(
+            ''.join(
+                tiles[8*bmap[y+1][x+1] + 4*bmap[y+1][x] + 2*bmap[y][x+1] + 1*bmap[y][x]] for x in range(0,len(bmap[0]),2)
+            ) for y in range(0,len(bmap),2)
+        )
         return string
 
     def str_pipes(self):
@@ -243,7 +254,7 @@ class Maze:
                 string += make_tile(x<self.width-1 and wall(x+1,y,DOWN),wall(x,y,RIGHT),wall(x,y,DOWN),y<self.height-1 and wall(x,y+1,RIGHT))
         return string
 
-    def str_ascii_frame(self, corridorwidth=1):
+    def str_frame_ascii(self, corridorwidth=1):
         # Top-left corner
         linestr = [['+']]
         # Top wall
@@ -265,7 +276,7 @@ class Maze:
             linestr += [row2]
         return '\n'.join(''.join(line) for line in linestr)
 
-    def str_ascii_frame_small(self):
+    def str_frame_ascii_small(self):
         """Produce a 'minimal/compact' ASCII art of the maze.
         """
         wall = self.has_wall
@@ -647,8 +658,8 @@ def recursive_backtracker(maze):
             dfs(node)
     maze.set_name("backtracker")
 
-def unicursal(maze):
-    """Convert a maze into a unicursal/'braided' maze with no dead ends.
+def make_unicursal(maze):
+    """Convert a maze into a unicursal/'braided' maze by joining/removing no dead ends.
     """
     for node in maze:
         dirs = [dir for dir in (RIGHT,UP,LEFT,DOWN) if node.has_wall(dir)]
@@ -718,8 +729,8 @@ def main():
        A Mazing Sandbox
         | help  : show this menu
        Editing
-        | make  : new maze
-        | braid : modify maze
+        | build : new maze
+        | join  : /remove dead ends
         | size  : for next maze
         | load  : maze from string
        Viewing
@@ -727,7 +738,7 @@ def main():
         | show  : latest maze, external png
         | save  : external png
        >""")
-    commands = ["help","make","braid","size","load","print","show","save"]
+    commands = ["help","build","join","size","load","print","show","save"]
     command = "help"
     while command:
         match command:
@@ -735,9 +746,8 @@ def main():
                 user_input = input(help_menu_text)
                 command = autocomplete(user_input.strip(), commands)
                 continue
-            case "make":
+            case "build":
                 builders = {x.__name__:x for x in [
-                    bogus_maze,
                     backtracker_maze,
                     growing_tree_maze,
                     prim_maze,
@@ -746,7 +756,7 @@ def main():
                     division_maze,
                     quarter_division_maze,
                 ]}
-                user_input = input(f"Enter algorithm:\n| " + ' | '.join(builders) + "\n>")
+                user_input = input(f"Choose method:\n| " + ' | '.join(builders) + "\n>")
                 name = autocomplete(user_input.strip(),builders)
                 if name in builders:
                     (main_maze, secs) = run_and_time(lambda: builders[name](main_dimensions))
@@ -754,14 +764,14 @@ def main():
                     display(main_maze)
                 else:
                     print(f"[unrecognized algorithm '{name}']")
-            case "braid":
-                (_, secs) = run_and_time(lambda: unicursal(main_maze))
-                print(f"[braiding completed in {secs:.03f}s]")
+            case "join":
+                (_, secs) = run_and_time(lambda: make_unicursal(main_maze))
+                print(f"[joining completed in {secs:.03f}s]")
                 display(main_maze)
             case "size":
-                user_input = input("Enter dimensions X,Y >")
+                user_input = input("Enter dimensions 'X Y' >")
                 try:
-                    main_dimensions = (_, _) = tuple(map(int, user_input.strip().split(',')))
+                    main_dimensions = (_, _) = tuple(map(int, user_input.split()))
                 except Exception as e:
                     print(f"[invalid dimensions: {e}]")
             case "load":
@@ -774,14 +784,14 @@ def main():
             case "print":
                 printers = {x.__name__:x for x in [
                     Maze.str_bitmap,
-                    lambda maze: maze.str_bitmap(wall='██',air='  ',bitmap=maze.bitmap(columnated=False)),
+                    Maze.str_block_double,
                     Maze.str_block,
-                    Maze.str_half_block,
-                    Maze.str_quarter_block,
+                    Maze.str_block_half,
+                    Maze.str_block_quarter,
                     Maze.str_pipes,
                     Maze.str_frame,
-                    Maze.str_ascii_frame,
-                    Maze.str_ascii_frame_small,
+                    Maze.str_frame_ascii,
+                    Maze.str_frame_ascii_small,
                     repr,
                 ]}
                 for name,printer in printers.items():
@@ -799,7 +809,7 @@ def main():
                 except Exception as e:
                     print(f"<error: {e}>")
             case _:
-                print("[unrecognized option]")
+                print("[unrecognized command]")
         user_input = input(f"""| {' | '.join(commands)} >""")
         command = autocomplete(user_input.strip(), commands)
     print("goodbye")
