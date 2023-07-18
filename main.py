@@ -18,7 +18,7 @@ Work in Progress:
 
 # IMPORTS BEGIN
 
-from maze_building_algorithms import *
+from maze import Maze
 import time
 
 # IMPORTS END
@@ -60,22 +60,21 @@ def display(maze, limit=100*100):
 def benchmark():
     """Run `python3 -m scalene maze.py`
     """
-    sq = lambda n: (n,n)
     # Execute actions
     benchmark_maze = Maze(1,1)
     for (title,action) in [
           ("BEGIN", lambda maze:
             maze
         ),("div-cqr", lambda maze:
-             division_maze(sq(2**9))
+             Maze.division_maze(2**9,2**9)
         ),("grow w/fastpop", lambda maze:
-            growing_tree_maze(sq(2**9),fast_pop=True)
+            Maze.growing_tree_maze(2**9,2**9,fast_pop=True)
         ),("wilson", lambda maze:
-            wilson_maze(sq(2**7))
+            Maze.wilson_maze(2**7,2**7)
         ),("save image", lambda maze:
             maze.generate_image().save(f"{maze.make_name()}.png") and()or maze
         ),("join", lambda maze:
-            make_unicursal(maze) and()or maze # cursed sequential composition
+            maze.make_unicursal() and()or maze # cursed sequential composition
         ),("save image", lambda maze:
             maze.generate_image().save(f"{maze.make_name()}.png") and()or maze
         ),("END  ", lambda maze:
@@ -91,7 +90,7 @@ def sandbox():
     main_maze = Maze(*main_dimensions)
     main_image = None
     import textwrap # remove source code multiline string indents
-    help_menu_text = textwrap.dedent("""
+    help_text = textwrap.dedent("""
         A Mazing Sandbox
         | help  : show this menu
         Editing
@@ -103,49 +102,50 @@ def sandbox():
         | print : latest maze, ascii art
         | show  : latest maze, external png
         | save  : external png
-        >""")
+        Enter blank command to exit
+        """).strip()
     commands = ["help","build","join","size","load","print","show","save"]
     command = "help"
-    while command:
+    while True:
+        print(main_dimensions)
         match command:
             case "help":
-                user_input = input(help_menu_text)
-                command = autocomplete(user_input.strip(), commands)
-                continue
+                print(help_text)
             case "build":
                 builders = {x.__name__:x for x in [
-                    backtracker_maze,
-                    growing_tree_maze,
-                    prim_maze,
-                    kruskal_maze,
-                    wilson_maze,
-                    division_maze,
-                    quarter_division_maze,
+                    Maze.backtracker_maze,
+                    Maze.growing_tree_maze,
+                    Maze.prim_maze,
+                    Maze.kruskal_maze,
+                    Maze.wilson_maze,
+                    Maze.division_maze,
+                    Maze.quarter_division_maze,
                 ]}
-                user_input = input(f"Choose method:\n| " + ' | '.join(builders) + "\n>")
+                user_input = input(f"Choose method:\n| " + '\n| '.join(builders) + "\n> ")
                 name = autocomplete(user_input.strip(),builders)
                 if name in builders:
-                    (main_maze, secs) = run_and_time(lambda: builders[name](main_dimensions))
+                    (main_maze, secs) = run_and_time(lambda: builders[name](*main_dimensions))
                     print(f"[{name} completed in {secs:.03f}s]")
                     main_cached_image = None
                     display(main_maze)
                 else:
                     print(f"[unrecognized algorithm '{name}']")
             case "join":
-                (_, secs) = run_and_time(lambda: make_unicursal(main_maze))
+                (_, secs) = run_and_time(lambda: main_maze.make_unicursal())
                 print(f"[joining completed in {secs:.03f}s]")
                 main_cached_image = None
                 display(main_maze)
             case "size":
-                user_input = input("Enter dimensions 'X Y' >")
+                user_input = input(f"Enter new dimensions 'X Y' (currently: {main_dimensions[0]} {main_dimensions[1]}) > ")
                 try:
-                    main_dimensions = (_, _) = tuple(map(int, user_input.split()))
+                    (x,y) = tuple(map(int, user_input.split()))
+                    main_dimensions = (x,y)
                 except Exception as e:
                     print(f"[invalid dimensions: {e}]")
             case "load":
-                user_input = input("Enter string `repr`esentation (e.g. '[[9,5..]]') >")
+                user_input = input("Enter maze `repr` string > ")
                 try:
-                    main_maze = Maze.from_grid(eval(user_input.strip()))
+                    main_maze = Maze.from_template(eval(user_input.strip()))
                     display(main_maze)
                 except Exception as e:
                     print(f"[could not load maze: {e}]")
@@ -183,11 +183,14 @@ def sandbox():
                     print(f"<error: {e}>")
             case _:
                 print("[unrecognized command]")
-        user_input = input(f"""| {' | '.join(commands)} >""")
+        user_input = input(f"| {' | '.join(commands)} > ")
+        if not user_input.strip():
+            print("goodbye")
+            break
         command = autocomplete(user_input.strip(), commands)
-    print("goodbye")
+        if command != user_input:
+            print(f"-> {command}")
     return None
-
 # FUNCTIONS END
 
 
