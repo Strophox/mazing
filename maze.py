@@ -5,7 +5,7 @@
 """
 Work in Progress:
 - Carvers:
-  * recursive division
+  * recursive division solo
 - Solvers:
   * A* pathfinder
 - ETC Dreams:
@@ -416,7 +416,7 @@ def growingtree(dimensions, start_coord=None, index_choice=None, fast_pop=False)
 def randomprim(dimensions, start_coord=None):
     """Build a maze using randomized Prim's algorithm.
     """
-    maze = growingtree(dimensions, start_coord, choose_index=lambda bucket: random.randrange(len(bucket)))
+    maze = growingtree(dimensions, start_coord, index_choice=lambda bucket: random.randrange(len(bucket)))
     maze.set_name("prim")
     return maze
 
@@ -424,7 +424,7 @@ def backtracker(dimensions, start_coord=None):
     """Build a maze using simple randomized depth-first-search.
     * More robust than `recursive backtracker` for larger mazes.
     """
-    maze = growingtree(dimensions, choose_index=lambda bucket: -1)
+    maze = growingtree(dimensions, start_coord, index_choice=lambda bucket: -1)
     maze.set_name("backtracker")
     return maze
 
@@ -477,7 +477,7 @@ def randomkruskal(dimensions):
     maze.set_name("kruskal")
     return maze
 
-def wilson(dimensions, start=None):
+def wilson(dimensions, start_coord=None):
     """Build a maze using Wilson's random uniform spanning tree algorithm.
     """
     maze = Maze(*dimensions)
@@ -487,10 +487,10 @@ def wilson(dimensions, start=None):
             maze.connect(tail_node,prev_node) # DANGER actually disconnecting
             tail_node.flag = 0
             tail_node = prev_node
-    if start is None:
+    if start_coord is None:
         start = maze.node_at(maze.width//2,maze.height//2)
     else:
-        start = maze.node_at(*start)
+        start = maze.node_at(*start_coord)
     nodes = list(maze)
     nodes.remove(start)
     generation = 1
@@ -644,12 +644,12 @@ def main():
             case "load":
                 try:
                     prompt = "Maze repr string >"
-                    grid = eval(input(promp))
+                    grid = eval(input(prompt))
                     dimensions = (len(grid[0]),len(grid))
-                    main_maze = Maze(width,height)
-                    for x in range(height):
-                        for y in range(width):
-                            maze.node_at(x,y).set_edges(grid[y][x])
+                    main_maze = Maze(*dimensions)
+                    for x in range(main_maze.height):
+                        for y in range(main_maze.width):
+                            main_maze.node_at(x,y).set_edges(grid[y][x])
                 except Exception as e:
                     print(f"<something went wrong: {e}>")
             case "print":
@@ -668,7 +668,7 @@ def main():
                 print("<invalid option>")
     print("goodbye")
 
-def benchmark():
+def mini_benchmark():
     """Run `python3 -m scalene maze.py`
     """
     actions = [
@@ -680,11 +680,10 @@ def benchmark():
         print(f"<completed in {secs}s>")
         maze.save_image()
         print(f"<saved '{maze.name}'>")
-    print(f"<{len(actions)} benchmark(s) completed>")
 
 if __name__=="__main__":
     main()
-    #benchmark()
+    #mini_benchmark()
 
 #[[8,9,13,5,5,5,12,1,5,13,13,5,5,4,9,12],[11,6,2,9,12,1,7,5,5,14,2,9,13,5,6,10],[3,12,9,6,3,5,5,5,12,10,9,6,3,12,9,6],[9,14,3,12,1,13,4,9,6,2,10,1,5,6,10,8],[10,3,5,6,9,7,12,3,5,5,6,8,9,5,6,10],[10,9,5,4,10,8,3,5,12,9,5,6,3,12,9,6],[10,11,5,5,6,3,13,4,10,11,5,5,12,10,3,12],[10,3,12,8,9,13,6,1,6,10,1,12,3,14,9,14],[3,12,10,10,10,3,5,12,1,7,12,3,12,3,6,10],[9,14,11,14,11,5,12,3,5,4,10,9,7,4,9,6],[10,10,2,10,10,1,14,8,8,9,6,10,1,12,10,8],[10,3,12,10,10,8,11,6,10,3,5,7,4,3,6,10],[10,8,11,7,14,10,3,12,11,5,5,13,12,8,9,14],[10,10,10,9,6,10,9,6,10,1,13,6,3,6,2,10],[10,10,10,2,9,6,10,1,7,12,3,5,12,1,13,14],[3,6,3,5,6,1,7,5,5,6,1,5,7,5,6,2]]
 
