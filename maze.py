@@ -100,13 +100,9 @@ class Maze:
     def __iter__(self):
         return itertools.chain(*self.grid)
 
-    def clear(self):
-        for y,row in enumerate(self.grid):
-            for x,node in enumerate(row):
-                row[x] = Node(x,y)
-        self.info = dict()
-
     def set_name(self, carver_name):
+        """Set an internal name for the maze object.
+        """
         size = f"{self.width}" if self.width==self.height else f"{self.width}x{self.height}"
         timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
         self.name = f"maze_{carver_name}_{size}_{timestamp}"
@@ -372,30 +368,34 @@ class Maze:
 
 # FUNCTIONS BEGIN
 
-def bogus(maze):
-    """Carve complete bogus into a maze by essentially randomizing it.
+def bogus(dimensions):
+    """Build a complete bogus maze by randomizing every node.
     """
+    maze = Maze(*dimensions)
     for node in maze:
         node.toggle_edge(random.randint(0b0000,0b1111))
     maze.set_name("bogus")
+    return maze
 
-def growingtree(maze, start=None, choose_index=None, optimize_pop=False):
-    """Carve a maze using the 'growing binary tree' algorithm.
+def growingtree(dimensions, start_coord=None, index_choice=None, fast_pop=False):
+    """Build a maze using the 'growing binary tree' algorithm.
     - start : origin `Node`
-    - choose_index : callable that returns a valid index given an indexable `bucket`
-    * Note that this carver can be made equivalent to other algorithms by tweaking `choose_index`:
+    - index_choice : callable that returns a valid index given an indexable `bucket`
+    * Note that this carver can be made equivalent to other algorithms by tweaking `index_choice`:
       - always `-1` (newest element) is recursive backtracker / depth first search
       - always `0` (oldest element) is breadth first search
       - always random is randomized prim's algorithm.
     """
-    if start is None:
-        start = random.choice(list(maze))
-    if choose_index is None:
-        choose_index = lambda bucket: -1 if random.random()<0.95 else random.randrange(len(bucket))
+    maze = Maze(*dimensions)
+    if start_coord is None:
+        start_coord = (random.randrange(maze.width),random.randrange(maze.height))
+    start = maze.node_at(*start_coord)
+    if index_choice is None:
+        index_choice = lambda bucket: -1 if random.random()<0.95 else random.randrange(len(bucket))
     start.flag = True
     bucket = [start]
     while bucket:
-        n = choose_index(bucket)
+        n = index_choice(bucket)
         node = bucket[n]
         neighbors = [nb for nb in maze.adjacent_to(node) if not nb.flag]
         if neighbors:
@@ -404,26 +404,29 @@ def growingtree(maze, start=None, choose_index=None, optimize_pop=False):
             neighbor.flag = True
             bucket.append(neighbor)
         else:
-            if optimize_pop:
-                if len(bucket) > 1 and n!=-1:
+            if fast_pop:
+                if len(bucket) > 1 and n != -1:
                     bucket[n],bucket[-1] = bucket[-1],bucket[n]
                 bucket.pop()
             else:
                 bucket.pop(n)
     maze.set_name("growing-tree")
+    return maze
 
-def randomprim(maze):
-    """Carve a maze using randomized Prim's algorithm.
+def randomprim(dimensions, start_coord=None):
+    """Build a maze using randomized Prim's algorithm.
     """
-    growingtree(maze, choose_index=lambda bucket: random.randrange(len(bucket)))
+    maze = growingtree(dimensions, start_coord, choose_index=lambda bucket: random.randrange(len(bucket)))
     maze.set_name("prim")
+    return maze
 
-def backtracker(maze):
-    """Carve a maze using simple randomized depth-first-search.
+def backtracker(dimensions, start_coord=None):
+    """Build a maze using simple randomized depth-first-search.
     * More robust than `recursive backtracker` for larger mazes.
     """
-    growingtree(maze, choose_index=lambda bucket: -1)
+    maze = growingtree(dimensions, choose_index=lambda bucket: -1)
     maze.set_name("backtracker")
+    return maze
 
 def recursive_backtracker(maze):
     """Carve a maze using simple randomized depth-first-search.
@@ -442,10 +445,12 @@ def recursive_backtracker(maze):
             node.flag = True
             dfs(node)
     maze.set_name("backtracker")
+    return maze
 
-def randomkruskal(maze):
-    """Carve a maze using randomized Kruskal's algorithm.
+def randomkruskal(dimensions):
+    """Build a maze using randomized Kruskal's algorithm.
     """
+    maze = Maze(*dimensions)
     edges = []
     rows = maze.grid
     for row in rows:
@@ -470,10 +475,12 @@ def randomkruskal(maze):
                 bigger.color.members.append(node)
             if len(bigger.color.members)==maze.width*maze.height: break
     maze.set_name("kruskal")
+    return maze
 
-def wilson(maze, start=None):
-    """Carve a maze using Wilson's random uniform spanning tree algorithm.
+def wilson(dimensions, start=None):
+    """Build a maze using Wilson's random uniform spanning tree algorithm.
     """
+    maze = Maze(*dimensions)
     def backtrack_walk(tail_node, origin):
         while tail_node != origin:
             prev_node = next(maze.adjacent_to(tail_node,connected=True))
@@ -482,6 +489,8 @@ def wilson(maze, start=None):
             tail_node = prev_node
     if start is None:
         start = maze.node_at(maze.width//2,maze.height//2)
+    else:
+        start = maze.node_at(*start)
     nodes = list(maze)
     nodes.remove(start)
     generation = 1
@@ -505,8 +514,12 @@ def wilson(maze, start=None):
                     maze.connect(curr_node,next_node)
                     break
     maze.set_name("wilson")
+    return maze
 
-def division(maze):
+def division(dimensions):
+    """Build a maze using a divide-and-conquer approach.
+    """
+    maze = Maze(*dimensions)
     def divide(topleft, bottomright):
         (x0,y0), (x1,y1) = topleft, bottomright
         if x0==x1 or y0==y1: return
@@ -542,15 +555,12 @@ def division(maze):
             node.put_edge(dir)
     divide((0,0), (maze.width-1,maze.height-1))
     maze.set_name("divide")
+    return maze
 
-
-# FUNCTIONS END
-
-
-# MAIN BEGIN
-
-def title_art():
-    def from_mask(template):
+def maze_maze():
+    """Creates a custom maze that spells 'MAZE'.
+    """
+    def maze_from_mask(template):
         assert((height:=len(template)) > 0 and (width:=len(template[0])) > 0)
         maze = Maze(width, height)
         mask = itertools.chain(*template)
@@ -558,27 +568,34 @@ def title_art():
             node.flag = not bit
             node.toggle_edge(0b1111 * (not bit))
         return maze
-    template = [
+    return recursive_backtracker(maze_from_mask([
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
         [1,0,0,0,1,1,0,1,1,0,0,0,1,1,0,0,1],
         [1,0,0,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
         [1,0,1,0,1,0,0,0,1,1,0,1,1,0,0,1,1],
         [1,0,1,0,1,0,1,0,1,0,0,0,1,1,0,0,1],
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    ]
-    maze = from_mask(template)
-    recursive_backtracker(maze)
-    return maze.str_pipes()
+    ]))
+
+def run_and_time(f):
+    start_time = time.perf_counter()
+    result = f()
+    time_taken = time.perf_counter() - start_time
+    return (result, time_taken)
+
+# FUNCTIONS END
+
+
+# MAIN BEGIN
 
 def main():
-    print(title_art())
     import textwrap # remove source code multiline string indents
     main_menu_text = textwrap.dedent(f"""
         Maze Sandbox
         -- Editing
-        | carve  (new maze pattern)
-        | resize (maze)
-        | load   (maze str repr)
+        | build (new maze)
+        | size  (of next maze)
+        | load  (maze from repr string)
         -- Viewing
         | print  (latest maze, ascii art)
         | show   (latest maze, external png)
@@ -595,7 +612,7 @@ def main():
         Maze.str_connections,
         repr,
     )}
-    carvers = {c.__name__:c for c in (
+    builders = {b.__name__:b for b in (
         bogus,
         backtracker,
         growingtree,
@@ -604,32 +621,32 @@ def main():
         wilson,
         division,
     )}
-    N = 16
-    maze = Maze(N,N)
+    dimensions = (16,16)
+    main_maze = maze_maze()#Maze(*dimensions)
     while ui := input(main_menu_text).strip():
         match ui:
-            case "carve":
-                prompt = f"Choose algorithm:\n| " + ' | '.join(carvers) + "\n>"
-                if carver := carvers.get(input(prompt).strip()):
-                    maze.clear()
-                    start = time.perf_counter()
-                    carver(maze)
-                    print(f"<carve completed in {time.perf_counter()-start:.03f}s>")
-                    print(maze.str_frame() if maze.width*maze.height<10000 else f"<no print (cellcount {maze.width*maze.height})>")
-                else:
-                    print("<carver not found>")
-            case "resize":
+            case "build":
+                try:
+                    prompt = f"Choose algorithm:\n| " + ' | '.join(builders) + "\n>"
+                    builder = builders[input(prompt).strip()]
+                    maze_creation = lambda: builder(dimensions)
+                    (main_maze, secs) = run_and_time(maze_creation)
+                    print(f"<build completed in {secs:.03f}s>")
+                    print(main_maze.str_frame() if (cellcount:=main_maze.width*main_maze.height)<10000 else f"<no print (cellcount {cellcount})>")
+                except Exception as e:
+                    print(f"<something went wrong: {e}>")
+            case "size":
                 try:
                     prompt = "Dimensions X,Y >"
-                    maze = Maze(*tuple(map(int, input(prompt).split(','))))
+                    width,height = tuple(map(int, input(prompt).split(',')))
                 except Exception as e:
                     print(f"<something went wrong: {e}>")
             case "load":
                 try:
-                    prompt = "Maze grid repr >"
-                    grid = eval(input())
-                    width,height = len(grid[0]),len(grid)
-                    maze = Maze(width,height)
+                    prompt = "Maze repr string >"
+                    grid = eval(input(promp))
+                    dimensions = (len(grid[0]),len(grid))
+                    main_maze = Maze(width,height)
                     for x in range(height):
                         for y in range(width):
                             maze.node_at(x,y).set_edges(grid[y][x])
@@ -637,11 +654,11 @@ def main():
                     print(f"<something went wrong: {e}>")
             case "print":
                 for name,printer in printers.items():
-                    print(f"{name}:\n{printer(maze)}")
+                    print(f"{name}:\n{printer(main_maze)}")
             case "show":
-                maze.show_image()
+                main_maze.show_image()
             case "save":
-                maze.save_image()
+                main_maze.save_image()
             case "exec":
                 try:
                     exec(input(">>> "))
@@ -654,19 +671,16 @@ def main():
 def benchmark():
     """Run `python3 -m scalene maze.py`
     """
-    def run(n, carver):
-        maze = Maze(n,n)
-        start = time.perf_counter()
-        carver(maze)
-        print(f"<run completed in {time.perf_counter() - start}s>")
+    actions = [
+        (lambda: growingtree((2**9,2**9),optimize_pop=True)),
+        (lambda: wilson((2**7,2**7))),
+    ]
+    for action in actions:
+        (maze, secs) = run_and_time(action)
+        print(f"<completed in {secs}s>")
         maze.save_image()
         print(f"<saved '{maze.name}'>")
-    configs = [
-        (2**9, lambda maze:growingtree(maze,optimize_pop=True)),
-        #(2**9, wilson)
-    ]
-    for config in configs: run(*config)
-    print(f"<{len(configs)} benchmark(s) completed>")
+    print(f"<{len(actions)} benchmark(s) completed>")
 
 if __name__=="__main__":
     main()
