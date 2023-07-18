@@ -100,6 +100,9 @@ class Maze:
     def __iter__(self):
         return itertools.chain(*self.grid)
 
+    def parse(self):
+        pass
+
     def set_name(self, carver_name):
         """Set an internal name for the maze object.
         """
@@ -166,7 +169,7 @@ class Maze:
         """
         return self.str_bitmap(wall='█',air=' ')
 
-    def str_halfblock(self):
+    def str_half_block(self):
         """Produce half-block (unicode) bitmap art of the maze.
         """
         tiles = " ▄▀█"
@@ -176,11 +179,10 @@ class Maze:
         string = '\n'.join(''.join(tiles[2*hi + 1*lo] for (hi,lo) in zip(bmap[y],bmap[y+1])) for y in range(0,len(bmap),2))
         return string
 
-    def str_quarterblock(self):
+    def str_quarter_block(self):
         """Produce quarter-block (unicode) bitmap art of the maze.
         """
-        #tiles = " ▯▘▯▝▯▀▯▖▯▌▯▞▯▛▯▗▯▚▯▐▯▜▯▄▯▙▯▟▯█"
-        tiles = " ▘▝▀▖▌▞▛▗▚▐▜▄▙▟█"
+        tiles = " ▘▝▀▖▌▞▛▗▚▐▜▄▙▟█" # ▯▘▯▝▯▀▯▖▯▌▯▞▯▛▯▗▯▚▯▐▯▜▯▄▯▙▯▟▯█
         bmap = self.bitmap()
         if len(bmap)%2!=0:
             bmap.append([False for _ in bmap[0]])
@@ -215,6 +217,7 @@ class Maze:
         """
         wall = self.has_wall
         tiles = " ╶╵└╴─┘┴╷┌│├┐┬┤┼"
+        #tiles = " -+++-++++|+++++"
         make_tile = lambda a,b,c,d: tiles[8*d + 4*c + 2*b + 1*a] + tiles[5*a]
         if slim: make_tile = lambda a,b,c,d: tiles[8*d + 4*c + 2*b + 1*a]
         # Top-left corner
@@ -232,7 +235,29 @@ class Maze:
                 string += make_tile(x<self.width-1 and wall(x+1,y,DOWN),wall(x,y,RIGHT),wall(x,y,DOWN),y<self.height-1 and wall(x,y+1,RIGHT))
         return string
 
-    def str_ascii(self):
+    def str_ascii_frame(self, corridorwidth=1):
+        # Top-left corner
+        linestr = [['+']]
+        # Top wall
+        for node in self.grid[0]:
+            linestr[0] += ['--' if node.has_wall(UP) else '  '] * corridorwidth
+            linestr[0] += ['+']
+        # Middle and bottom rows of string
+        for row in self.grid:
+            # Left wall
+            row1 = ['|' if row[0].has_wall(LEFT) else ' ']
+            row2 = ['+']
+            # Middle and bottom walls (2 blocks/node)
+            for node in row:
+                row1 += ['  '] * corridorwidth
+                row1 += ['|' if node.has_wall(RIGHT) else ' ']
+                row2 += ['--' if node.has_wall(DOWN) else '  '] * corridorwidth
+                row2 += ['+']
+            linestr += [row1] * corridorwidth
+            linestr += [row2]
+        return '\n'.join(''.join(line) for line in linestr)
+
+    def str_ascii_frame_small(self):
         """Produce a 'minimal/compact' ASCII art of the maze.
         """
         wall = self.has_wall
@@ -284,11 +309,6 @@ class Maze:
                 string.append('_' if wall(x,y,DOWN) else ' ')
                 string.append(cornersegment(x,y))
         return ''.join(string)
-
-    def str_connections(self):
-        """Display the node connections in the maze.
-        """
-        return '\n'.join(''.join(str(node) for node in row) for row in self.grid)
 
     def generate_image(self, bitmap=None):
         """Generate an Image of the maze and store it in the instance.
@@ -624,28 +644,30 @@ def run_and_time(f):
 
 def main():
     import textwrap # remove source code multiline string indents
-    main_menu_text = textwrap.dedent(f"""
-        Maze Sandbox
+    help_menu_text = textwrap.dedent("""
+        A Mazing Sandbox
+        | help  : show this menu
         Editing-
         | make  : new maze
         | braid : modify maze
         | size  : for next maze
-        | load  : maze from repr string
+        | parse : maze from repr string
         Viewing-
         | print : latest maze, ascii art
         | show  : latest maze, external png
         | save  : external png
         >""")
+    menu_text = """| help | make | braid | size | parse | print | show | save >"""
     printers = {p.__name__:p for p in (
         Maze.str_bitmap,
         lambda maze: maze.str_bitmap(wall='██',air='  ',bitmap=maze.bitmap(columnated=False)),
         Maze.str_block,
-        Maze.str_halfblock,
-        Maze.str_quarterblock,
+        Maze.str_half_block,
+        Maze.str_quarter_block,
         Maze.str_pipes,
         Maze.str_frame,
-        Maze.str_ascii,
-        Maze.str_connections,
+        Maze.str_ascii_frame,
+        Maze.str_ascii_frame_small,
         repr,
     )}
     builders = {b.__name__:b for b in (
@@ -659,38 +681,43 @@ def main():
     )}
     dimensions = (16,16)
     main_maze = maze_maze()#Maze(*dimensions)
-    while ui := input(main_menu_text).strip():
-        match ui:
+    user_input = input(help_menu_text).strip()
+    print_main_maze = lambda: print(main_maze.str_frame() if (cellcount:=main_maze.width*main_maze.height)<10000 else f"[no print (cellcount {cellcount})]")
+    while user_input:
+        match user_input:
+            case "help":
+                user_input = input(help_menu_text).strip()
+                continue
             case "make":
                 try:
-                    prompt = f"Choose algorithm:\n| " + ' | '.join(builders) + "\n>"
-                    builder = builders[input(prompt).strip()]
-                    maze_creation = lambda: builder(dimensions)
-                    (main_maze, secs) = run_and_time(maze_creation)
-                    print(f"<build completed in {secs:.03f}s>")
-                    print(main_maze.str_frame() if (cellcount:=main_maze.width*main_maze.height)<10000 else f"<no print (cellcount {cellcount})>")
+                    builder = builders[input(f"Choose algorithm:\n| " + ' | '.join(builders) + "\n>").strip()]
+                    (main_maze, secs) = run_and_time(lambda: builder(dimensions))
+                    print(f"[build completed in {secs:.03f}s]")
+                    print_main_maze()
                 except Exception as e:
-                    print(f"<something went wrong: {e}>")
+                    print(f"[exception: {e}]")
             case "braid":
-                braid(main_maze)
-                print(main_maze.str_frame() if (cellcount:=main_maze.width*main_maze.height)<10000 else f"<no print (cellcount {cellcount})>")
+                try:
+                    braid(main_maze)
+                except Exception as e:
+                    print(f"[exception: {e}]")
+                print_main_maze()
             case "size":
                 try:
-                    prompt = "Dimensions X,Y >"
-                    dimensions = tuple(map(int, input(prompt).split(',')))
+                    dimensions = tuple(map(int, input("Dimensions X,Y >").split(',')))
                 except Exception as e:
-                    print(f"<something went wrong: {e}>")
-            case "load":
+                    print(f"[something went wrong: {e}]")
+            case "parse":
                 try:
-                    prompt = "Maze repr string >"
-                    grid = eval(input(prompt))
+                    grid = eval(input("Maze repr string >"))
                     dimensions = (len(grid[0]),len(grid))
                     main_maze = Maze(*dimensions)
                     for x in range(main_maze.height):
                         for y in range(main_maze.width):
                             main_maze.node_at(x,y).set_edges(grid[y][x])
+                    print_main_maze()
                 except Exception as e:
-                    print(f"<something went wrong: {e}>")
+                    print(f"[something went wrong: {e}]")
             case "print":
                 for name,printer in printers.items():
                     print(f"{name}:\n{printer(main_maze)}")
@@ -704,7 +731,8 @@ def main():
                 except Exception as e:
                     print(f"<exception: {e}>")
             case _:
-                print("<invalid option>")
+                print("[invalid option]")
+        user_input = input(menu_text).strip()
     print("goodbye")
 
 def mini_benchmark():
@@ -716,9 +744,9 @@ def mini_benchmark():
     ]
     for action in actions:
         (maze, secs) = run_and_time(action)
-        print(f"<completed in {secs}s>")
+        print(f"[completed in {secs}s]")
         maze.save_image()
-        print(f"<saved '{maze.name}'>")
+        print(f"[saved '{maze.name}']")
 
 if __name__=="__main__":
     main()
