@@ -347,6 +347,25 @@ class Maze:
         node0.toggle_edge(get_dir(dx,dy))
         node1.toggle_edge(get_dir(-dx,-dy))
 
+    def connect_to(self, node, direction):
+        """Toggle the connection between a node and its neighbor in the maze.
+        """
+        (x,y) = node.coordinates
+        [r,u,l,d] = [direction==dir for dir in (RIGHT,UP,LEFT,DOWN)]
+        invalid_direction = (
+            r and x==self.width-1
+            or l and x==0
+            or u and y==0
+            or d and y==self.height-1
+        )
+        if invalid_direction:
+            raise ValueError("cannot connect node outside grid")
+        dx, dy = (1 if r else -1 if l else 0), (1 if d else -1 if u else 0)
+        neighbor = self.node_at(x+dx,y+dy)
+        opposite_direction = {RIGHT:LEFT,UP:DOWN,LEFT:RIGHT,DOWN:UP}[direction]
+        node.toggle_edge(direction)
+        neighbor.toggle_edge(opposite_direction)
+
     def adjacent_to(self, node, connected=False):
         """Get the adjacent cells to a node.
         - node : `Node`
@@ -445,7 +464,6 @@ def recursive_backtracker(maze):
             node.flag = True
             dfs(node)
     maze.set_name("backtracker")
-    return maze
 
 def randomkruskal(dimensions):
     """Build a maze using randomized Kruskal's algorithm.
@@ -557,6 +575,19 @@ def division(dimensions):
     maze.set_name("divide")
     return maze
 
+def braid(maze):
+    """Convert a maze into a 'braided' maze with no dead ends.
+    """
+    for node in maze:
+        dirs = [dir for dir in (RIGHT,UP,LEFT,DOWN) if node.has_wall(dir)]
+        if len(dirs) == 3:
+            (x,y) = node.coordinates
+            if x==0: dirs.remove(LEFT)
+            if x==maze.width-1: dirs.remove(RIGHT)
+            if y==0: dirs.remove(UP)
+            if y==maze.height-1: dirs.remove(DOWN)
+            maze.connect_to(node, random.choice(dirs))
+
 def maze_maze():
     """Creates a custom maze that spells 'MAZE'.
     """
@@ -568,14 +599,17 @@ def maze_maze():
             node.flag = not bit
             node.toggle_edge(0b1111 * (not bit))
         return maze
-    return recursive_backtracker(maze_from_mask([
+    template = [
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
         [1,0,0,0,1,1,0,1,1,0,0,0,1,1,0,0,1],
         [1,0,0,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
         [1,0,1,0,1,0,0,0,1,1,0,1,1,0,0,1,1],
         [1,0,1,0,1,0,1,0,1,0,0,0,1,1,0,0,1],
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    ]))
+    ]
+    maze = maze_from_mask(template)
+    recursive_backtracker(maze)
+    return maze
 
 def run_and_time(f):
     start_time = time.perf_counter()
@@ -592,17 +626,19 @@ def main():
     import textwrap # remove source code multiline string indents
     main_menu_text = textwrap.dedent(f"""
         Maze Sandbox
-        -- Editing
-        | build (new maze)
-        | size  (of next maze)
-        | load  (maze from repr string)
-        -- Viewing
-        | print  (latest maze, ascii art)
-        | show   (latest maze, external png)
-        | save   (external png)
+        Editing-
+        | make  : new maze
+        | braid : modify maze
+        | size  : for next maze
+        | load  : maze from repr string
+        Viewing-
+        | print : latest maze, ascii art
+        | show  : latest maze, external png
+        | save  : external png
         >""")
     printers = {p.__name__:p for p in (
         Maze.str_bitmap,
+        lambda maze: maze.str_bitmap(wall='██',air='  ',bitmap=maze.bitmap(columnated=False)),
         Maze.str_block,
         Maze.str_halfblock,
         Maze.str_quarterblock,
@@ -625,7 +661,7 @@ def main():
     main_maze = maze_maze()#Maze(*dimensions)
     while ui := input(main_menu_text).strip():
         match ui:
-            case "build":
+            case "make":
                 try:
                     prompt = f"Choose algorithm:\n| " + ' | '.join(builders) + "\n>"
                     builder = builders[input(prompt).strip()]
@@ -635,10 +671,13 @@ def main():
                     print(main_maze.str_frame() if (cellcount:=main_maze.width*main_maze.height)<10000 else f"<no print (cellcount {cellcount})>")
                 except Exception as e:
                     print(f"<something went wrong: {e}>")
+            case "braid":
+                braid(main_maze)
+                print(main_maze.str_frame() if (cellcount:=main_maze.width*main_maze.height)<10000 else f"<no print (cellcount {cellcount})>")
             case "size":
                 try:
                     prompt = "Dimensions X,Y >"
-                    width,height = tuple(map(int, input(prompt).split(',')))
+                    dimensions = tuple(map(int, input(prompt).split(',')))
                 except Exception as e:
                     print(f"<something went wrong: {e}>")
             case "load":

@@ -1,12 +1,15 @@
 # mazing
+Generating and playing around with mazes.
+
 ## What it is
-The central `maze.py` script provides a Maze class with methods to display as string or PNG, and separate functions implement different, well-known Maze creation algorithms.
+The central `maze.py` script provides a Maze class with methods to display as string or PNG.
+Separate functions implement different well-known maze creation algorithms.
 
 ## How it's used
-Run `maze.py` as main to directly try stuff out.
+Run `maze.py` as main to directly try stuff out
 
 ## Why
-Graph algorithms are fun, ASCII art is fun, and playing with mazes is lots of fun =)
+Graph algorithms are elegant, ASCII art is interesting, and playing with mazes is lots of fun =)
 
 ## Examples
 ```
@@ -48,4 +51,44 @@ Graph algorithms are fun, ASCII art is fun, and playing with mazes is lots of fu
 |_|_____|___|_________|_|_|_____|
 ```
 ```
+█▀▀▀▀▀▀▀▀▀▀▀█▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█
+█ ▀ █▀▀▀█ █ █ █▀▀▀█ █ ▀▀█▀▀▀▀ █ █
+█ ▀▀█ █ ▀ █ ▀ ▀ ▀ █ █▀▀ ▀ █▀▀▀▀ █
+█ █ ▀ ▀▀▀▀█▀▀▀▀▀█▀▀ █ █▀▀▀▀ █ ▀▀█
+█ ▀▀▀▀▀▀▀ █ ▀▀█ ▀ █▀▀ █ █▀▀▀▀▀▀ █
+█ ▀▀▀▀▀▀█▀▀▀▀ ▀▀█ █ ▀▀█ █ █▀▀▀▀▀█
+█▀▀▀▀▀▀ █ ▀▀▀▀█ ▀ ▀▀▀ █ █ ▀ ▀▀▀ █
+█ ▀▀█▀▀ █ █▀▀ █▀▀▀█▀▀▀▀ ▀▀█ █▀▀ █
+█▀▀ █ ▀▀█ █ ▀▀▀ █ ▀ ▀▀▀ █ █ ▀ █ █
+█ █▀▀▀█ ▀ █ ▀▀▀▀▀▀▀▀▀▀▀▀▀ █ ▀▀▀ █
+█ █ █ ▀▀█ ▀▀▀▀█ █▀▀▀▀▀▀▀▀▀▀ █▀▀ █
+█ ▀ █ █ ▀▀█ ▀ █ █ ▀ █▀▀▀█ ▀▀▀ █ █
+█▀▀▀▀ █ █ ▀ █▀▀ █▀▀▀▀ █ ▀▀▀ █▀▀ █
+█ ▀▀▀▀▀ █▀▀▀▀ ▀▀▀ ▀▀▀▀█ ▀▀█▀▀ █ █
+█ ▀▀█ ▀▀▀ █▀▀▀▀ █▀▀▀▀ █▀▀ █ ▀▀█ █
+█ ▀ ▀▀▀▀▀▀▀ █ ▀▀▀ ▀▀▀▀▀ ▀▀▀ █ ▀ █
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+```
+```
+┌──────────────────────────────┐┌──────┐
+│  ┌────────┐  ┌────────────┐  ││  ┌───┘
+│  │┌───────┘  │┌──────┐┌───┘  ││  └───┐
+│  ││  ┌───────┘│  ┌┐  ││  ┌───┘└───┐  │
+│  ││  └───┐┌───┘  ││  ││  │┌───────┘  │
+└──┘└───┐  │└──────┘│  ││  ││  ┌────┐  │
+┌───────┘  │┌──────┐│  ││  └┘  │┌───┘  │
+│  ┌───────┘│  ┌┐  ││  │└──────┘│  ┌───┘
+│  │┌──────┐│  ││  └┘  │┌───────┘  │┌──┐
+│  ││  ┌┐  ││  │└──────┘│  ┌───────┘│  │
+│  └┘  ││  ││  │┌───────┘  │┌───────┘  │
+└──────┘│  ││  ││  ┌───────┘└───────┐  │
+┌───────┘  ││  └┘  └───┐┌───────────┘  │
+│  ┌───────┘└───────┐  ││  ┌───────────┘
+│  └───────────┐┌───┘  └┘  │┌──────────┐
+│  ┌────────┐  │└──────────┘└───────┐  │
+│  │┌──┐┌───┘  │┌──────────────────┐│  │
+│  ││  ││  ┌───┘│  ┌────────────┐  ││  │
+│  └┘  ││  └────┘  └───────────┐│  └┘  │
+└──────┘└──────────────────────┘└──────┘
+
 ```
