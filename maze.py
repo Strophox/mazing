@@ -94,7 +94,7 @@ class Maze:
         self.height = height
         self.grid = [[Node(x,y) for x in range(width)] for y in range(height)]
         #self.grid = [Node(z%width,z//width) for z in range(width*height)] TODO
-        self.name = f"maze_{self.width}x{self.height}_blank"
+        self._infotags = []
 
     def __repr__(self):
         return self.grid.__repr__() # "["+ ','.join("["+ ','.join(str(n._connectivity) for n in row) +"]" for row in self.grid) + "]"
@@ -111,12 +111,18 @@ class Maze:
         maze.name = f"maze_{maze.width}x{maze.height}_loaded"
         return maze
 
-    def set_name(self, carver_name):
+    def add_info(self, string):
+        self._infotags.append(string)
+        return None
+
+    def make_name(self):
         """Set an internal name for the maze object.
         """
+        info = '-'.join(self._infotags)
         size = f"{self.width}" if self.width==self.height else f"{self.width}x{self.height}"
         timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
-        self.name = f"maze_{carver_name}_{size}_{timestamp}"
+        name = f"maze_{info}_{size}_{timestamp}"
+        return name
 
     def bitmap(self, corridorwidth=1, columnated=True):
         """Return a simple bitmap drawing of the maze.
@@ -337,29 +343,11 @@ class Maze:
             bitmap = self.bitmap()
         width,height = len(bitmap[0]),len(bitmap)
         bit_to_rgb = lambda bit: (0,0,0) if bit else (255,255,255)
-        img = tuple(bit_to_rgb(bit) for bit in itertools.chain(*bitmap))
+        imgdata = tuple(bit_to_rgb(bit) for bit in itertools.chain(*bitmap))
         # Convert to Image
-        self.image = Image.new('RGB', (width,height))
-        self.image.putdata(img)
-
-    def save_image(self, filename=None):
-        """Save the image of the maze to file.
-        - filename : str of image filename including extension (-> PIL)
-        """
-        if filename is None:
-            filename = f"{self.name}.png"
-        # Generate image if not done yet
-        if getattr(self, 'image', None) is None:
-            self.generate_image()
-        # Save image
-        self.image.save(filename)
-
-    def show_image(self):
-        """Show an image of the maze.
-        """
-        if getattr(self, 'image', None) is None:
-            self.generate_image()
-        self.image.show()
+        image = Image.new('RGB', (width,height))
+        image.putdata(imgdata)
+        return image
 
     def has_wall(self, x, y, direction):
         """Check whether there is a wall in that direction.
@@ -385,6 +373,7 @@ class Maze:
         get_dir = lambda dx,dy: (LEFT if dx<0 else RIGHT) if dx else (UP if dy<0 else DOWN)
         node0.toggle_edge(get_dir(dx,dy))
         node1.toggle_edge(get_dir(-dx,-dy))
+        return None
 
     def connect_to(self, node, direction):
         """Toggle the connection between a node and its neighbor in the maze.
@@ -404,6 +393,7 @@ class Maze:
         opposite_direction = {RIGHT:LEFT,UP:DOWN,LEFT:RIGHT,DOWN:UP}[direction]
         node.toggle_edge(direction)
         neighbor.toggle_edge(opposite_direction)
+        return None
 
     def adjacent_to(self, node, connected=False):
         """Get the adjacent cells to a node.
@@ -432,7 +422,7 @@ def bogus_maze(dimensions):
     maze = Maze(*dimensions)
     for node in maze:
         node.toggle_edge(random.randint(0b0000,0b1111))
-    maze.set_name("bogus")
+    maze.add_info("bogus")
     return maze
 
 def growing_tree_maze(dimensions, start_coord=None, index_choice=None, fast_pop=False):
@@ -468,14 +458,14 @@ def growing_tree_maze(dimensions, start_coord=None, index_choice=None, fast_pop=
                 bucket.pop()
             else:
                 bucket.pop(n)
-    maze.set_name("growing-tree")
+    maze.add_info("growing-tree")
     return maze
 
 def prim_maze(dimensions, start_coord=None):
     """Build a maze using randomized Prim's algorithm.
     """
     maze = growing_tree_maze(dimensions, start_coord, index_choice=lambda bucket: random.randrange(len(bucket)))
-    maze.set_name("prim")
+    maze.add_info("prim")
     return maze
 
 def backtracker_maze(dimensions, start_coord=None):
@@ -483,7 +473,7 @@ def backtracker_maze(dimensions, start_coord=None):
     * More robust than `recursive backtracker` for larger mazes.
     """
     maze = growing_tree_maze(dimensions, start_coord, index_choice=lambda bucket: -1)
-    maze.set_name("backtracker")
+    maze.add_info("backtracker")
     return maze
 
 def kruskal_maze(dimensions):
@@ -513,7 +503,7 @@ def kruskal_maze(dimensions):
                 node.color = bigger.color
                 bigger.color.members.append(node)
             if len(bigger.color.members)==maze.width*maze.height: break
-    maze.set_name("kruskal")
+    maze.add_info("kruskal")
     return maze
 
 def wilson_maze(dimensions, start_coord=None):
@@ -552,7 +542,7 @@ def wilson_maze(dimensions, start_coord=None):
                 elif next_node.flag < generation:
                     maze.connect(curr_node,next_node)
                     break
-    maze.set_name("wilson")
+    maze.add_info("wilson")
     return maze
 
 def quarter_division_maze(dimensions):
@@ -593,7 +583,7 @@ def quarter_division_maze(dimensions):
             if y<maze.height-1: dir |= DOWN
             node.put_edge(dir)
     divide((0,0), (maze.width-1,maze.height-1))
-    maze.set_name("divide-q")
+    maze.add_info("divide-q")
     return maze
 
 def division_maze(dimensions, slice_bias=1.0, pivot_choice=None):
@@ -637,7 +627,7 @@ def division_maze(dimensions, slice_bias=1.0, pivot_choice=None):
             if y<maze.height-1: dir |= DOWN
             node.put_edge(dir)
     divide((0,0), (maze.width-1,maze.height-1), maze.width)
-    maze.set_name("divide")
+    maze.add_info("divide-n-conquer")
     return maze
 
 def recursive_backtracker(maze):
@@ -656,7 +646,8 @@ def recursive_backtracker(maze):
         if not node.flag:
             node.flag = True
             dfs(node)
-    maze.set_name("backtracker")
+    maze.add_info("backtracked")
+    return None
 
 def make_unicursal(maze):
     """Convert a maze into a unicursal/'braided' maze by joining/removing no dead ends.
@@ -670,8 +661,8 @@ def make_unicursal(maze):
             if y==0: dirs.remove(UP)
             if y==maze.height-1: dirs.remove(DOWN)
             maze.connect_to(node, random.choice(dirs))
-    maze.image = None
-    maze.name += "_braided" # TODO
+    maze.add_info("joined")
+    return None
 
 def maze_maze():
     """Creates a custom maze that spells 'MAZE'.
@@ -715,6 +706,7 @@ def display(maze, limit=100*100):
         print(maze.str_frame())
     else:
         print(f"[no print (cellcount {cellcount})]")
+    return None
 
 # FUNCTIONS END
 
@@ -724,6 +716,7 @@ def display(maze, limit=100*100):
 def main():
     main_dimensions = (16,16)
     main_maze = maze_maze()#Maze(*dimensions)
+    main_image = None
     import textwrap # remove source code multiline string indents
     help_menu_text = textwrap.dedent("""
        A Mazing Sandbox
@@ -761,12 +754,14 @@ def main():
                 if name in builders:
                     (main_maze, secs) = run_and_time(lambda: builders[name](main_dimensions))
                     print(f"[{name} completed in {secs:.03f}s]")
+                    main_cached_image = None
                     display(main_maze)
                 else:
                     print(f"[unrecognized algorithm '{name}']")
             case "join":
                 (_, secs) = run_and_time(lambda: make_unicursal(main_maze))
                 print(f"[joining completed in {secs:.03f}s]")
+                main_cached_image = None
                 display(main_maze)
             case "size":
                 user_input = input("Enter dimensions 'X Y' >")
@@ -797,12 +792,17 @@ def main():
                 for name,printer in printers.items():
                     print(f"{name}:\n{printer(main_maze)}")
             case "show":
+                if main_cached_image is None:
+                    main_cached_image = main_maze.generate_image()
                 print(f"[showing maze in external program]")
-                main_maze.show_image()
+                main_cached_image.show()
             case "save":
-                main_maze.save_image()
-                print(f"[saved '{main_maze.name}']")
-            case "exec":
+                if main_cached_image is None:
+                    main_cached_image = main_maze.generate_image()
+                filename = f"{main_maze.make_name()}.png"
+                main_cached_image.save(filename)
+                print(f"[saved '{filename}']")
+            case cmd if cmd in {"debug","exec","sudo","dev","py"}:
                 user_input = input(">>> ")
                 try:
                     exec(user_input)
@@ -814,23 +814,37 @@ def main():
         command = autocomplete(user_input.strip(), commands)
     print("goodbye")
 
-def mini_benchmark():
+def my_benchmark():
     """Run `python3 -m scalene maze.py`
     """
-    actions = [
-        (lambda: division((2**9,2**9))),
-        #(lambda: growing_tree_maze((2**9,2**9),optimize_pop=True)),
-        #(lambda: wilson((2**7,2**7))),
-    ]
-    for action in actions:
-        (maze, secs) = run_and_time(action)
-        print(f"[completed in {secs}s]")
-        maze.save_image()
-        print(f"[saved '{maze.name}']")
+    sq = lambda n: (n,n)
+    # Execute actions
+    benchmark_maze = Maze(1,1)
+    for (title,action) in [
+          ("BEGIN", lambda maze:
+            maze
+        ),("div-cqr", lambda maze:
+             division_maze(sq(2**9))
+        ),("grow w/fastpop", lambda maze:
+            growing_tree_maze(sq(2**9),fast_pop=True)
+        ),("wilson", lambda maze:
+            wilson_maze(sq(2**7))
+        ),("save image", lambda maze:
+            maze.generate_image().save(f"{maze.make_name()}.png") and()or maze
+        ),("join", lambda maze:
+            make_unicursal(maze) and()or maze # cursed sequential composition
+        ),("save image", lambda maze:
+            maze.generate_image().save(f"{maze.make_name()}.png") and()or maze
+        ),("END  ", lambda maze:
+            maze
+        ),
+    ]:
+        (benchmark_maze, secs) = run_and_time(lambda:action(benchmark_maze))
+        print(f"['{title}' completed in {secs:.03f}s]")
 
 if __name__=="__main__":
     main()
-    #mini_benchmark()
+    #my_benchmark()
 
 #[[8,9,13,5,5,5,12,1,5,13,13,5,5,4,9,12],[11,6,2,9,12,1,7,5,5,14,2,9,13,5,6,10],[3,12,9,6,3,5,5,5,12,10,9,6,3,12,9,6],[9,14,3,12,1,13,4,9,6,2,10,1,5,6,10,8],[10,3,5,6,9,7,12,3,5,5,6,8,9,5,6,10],[10,9,5,4,10,8,3,5,12,9,5,6,3,12,9,6],[10,11,5,5,6,3,13,4,10,11,5,5,12,10,3,12],[10,3,12,8,9,13,6,1,6,10,1,12,3,14,9,14],[3,12,10,10,10,3,5,12,1,7,12,3,12,3,6,10],[9,14,11,14,11,5,12,3,5,4,10,9,7,4,9,6],[10,10,2,10,10,1,14,8,8,9,6,10,1,12,10,8],[10,3,12,10,10,8,11,6,10,3,5,7,4,3,6,10],[10,8,11,7,14,10,3,12,11,5,5,13,12,8,9,14],[10,10,10,9,6,10,9,6,10,1,13,6,3,6,2,10],[10,10,10,2,9,6,10,1,7,12,3,5,12,1,13,14],[3,6,3,5,6,1,7,5,5,6,1,5,7,5,6,2]]
 
