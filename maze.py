@@ -100,8 +100,14 @@ class Maze:
     def __iter__(self):
         return itertools.chain(*self.grid)
 
-    def parse(self):
-        pass
+    def from_grid(grid):
+        dimensions = (len(grid[0]),len(grid))
+        maze = Maze(*dimensions)
+        for x in range(maze.height):
+            for y in range(maze.width):
+                maze.node_at(x,y).set_edges(grid[y][x])
+        maze.name = f"maze_{maze.width}x{maze.height}_loaded"
+        return maze
 
     def set_name(self, carver_name):
         """Set an internal name for the maze object.
@@ -756,12 +762,7 @@ def main():
                     print(f"[something went wrong: {e}]")
             case "parse":
                 try:
-                    grid = eval(input("Maze repr string >"))
-                    dimensions = (len(grid[0]),len(grid))
-                    main_maze = Maze(*dimensions)
-                    for x in range(main_maze.height):
-                        for y in range(main_maze.width):
-                            main_maze.node_at(x,y).set_edges(grid[y][x])
+                    main_maze = Maze.from_grid(eval(input("Maze repr string >")))
                     print_main_maze()
                 except Exception as e:
                     print(f"[something went wrong: {e}]")
