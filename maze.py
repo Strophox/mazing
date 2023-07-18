@@ -755,7 +755,7 @@ def main():
                 else:
                     print(f"[unrecognized algorithm '{name}']")
             case "braid":
-                unicursal(main_maze)
+                (_, secs) = run_and_time(lambda: unicursal(main_maze))
                 print(f"[braiding completed in {secs:.03f}s]")
                 display(main_maze)
             case "size":
@@ -796,7 +796,7 @@ def main():
                 user_input = input(">>> ")
                 try:
                     exec(user_input)
-                except Exception as e:i
+                except Exception as e:
                     print(f"<error: {e}>")
             case _:
                 print("[unrecognized option]")
