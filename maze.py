@@ -1,7 +1,20 @@
 
 # OUTLINE BEGIN
 """
-This file contains the main `Maze` class, which stores and allows for interaction with a maze.
+Contains the main `Maze` class,
+
+This file contains all important maze-relation implementations to store, create and modify grid mazes.
+
+Notes to self / Work in Progress:
+- Solvers:
+    * BFS
+    * A* pathfinder
+- Printers:
+    * Colored image (generated_image)
+- ETC Dreams:
+    * Maze navigator (w/ curses)
+    * Interactive picker: distance by color
+    * Doom (curses) █▯▓▯▒▯░ ".,-~:;=!*#$@"
 """
 # OUTLINE END
 
@@ -31,9 +44,10 @@ DOWN  = 0b1000
 
 class Node:
     """
-    A class to abstract over a grid cell/node.
+    A class representing a maze grid cell/node.
     """
     def __init__(self, x, y):
+        """Initialize a node by its grid coordinates."""
         self.coordinates = (self.x, self.y) = (x, y)
         self.flag = None
         self._connectivity = 0
@@ -41,65 +55,79 @@ class Node:
     def __repr__(self):
         return self._connectivity.__repr__()
 
-    def __str__(self):
-        return " ╶╵└╴─┘┴╷┌│├┐┬┤┼"[self._connectivity%0b10000]
+#    def __str__(self):
+#        return " ╶╵└╴─┘┴╷┌│├┐┬┤┼"[self._connectivity%0b10000]
 
     def has_wall(self, direction):
+        """Check whether there is a wall in a certain direction from the node."""
         return not (self._connectivity & direction)
 
     def has_edge(self, direction):
-        """Check whether there is an edge into some direction.
-        - direction : one of {RIGHT,UP,LEFT,DOWN}
-        """
+        """Check whether there is an edge in a certain direction from the node."""
         return self._connectivity & direction
 
     def set_edges(self, direction):
-        """Change connectivity of a node.
-        - direction : one of {RIGHT,UP,LEFT,DOWN}
-        """
+        """Set node to be connected exactly into the given directions."""
         self._connectivity = direction
 
     def put_edge(self, direction):
-        """Add an edge into some direction.
-        - direction : one of {RIGHT,UP,LEFT,DOWN}
-        """
+        """Connect the node into the given directions."""
         self._connectivity |= direction
 
     def toggle_edge(self, direction):
-        """Add or remove an edge into some direction.
-        - direction : one of {RIGHT,UP,LEFT,DOWN}
-        """
+        """Connect/disconnect the node into the given directions."""
         self._connectivity ^= direction
 
 class Maze:
     """
     A class to store and interact with a maze grid.
+
+    All methods of this class fall into these broad categories:
+    - Primitive Interaction
+        * __init__, __iter__, __repr__
+        * add_info, generate_name
+        * adjacent_to, connect, connect_to, has_wall, node_at
+    - Sophisticated maze presentation
+        * bitmap
+        * str_bitmap
+        * str_block, str_block_double, str_block_half, str_block_quarter
+        * str_frame, str_frame_ascii, str_frame_ascii_small
+        * str_pipes
+        * generate_image
+    - Generation algorithms (static methods)
+        * from_template
+        * backtracker, bogus, divide_conquer, growing_tree, kruskal, prim, quad_divide_conquer, wilson
+    - Maze modification
+        * make_unicursal
     """
-    def stuff():
-        print('hi')
-    BUILDERS = (stuff)
 
     def __init__(self, width, height):
-        assert(width > 0 and height > 0)
+        """Initialize a node by its size.
+
+        Args:
+            width, height (int): Positive integer dimensions of desired maze
+        """
+        if not (width > 0 and height > 0):
+            raise ValueError("Maze must have positive width and height")
         self.width  = width
         self.height = height
-        self.grid = [[Node(x,y) for x in range(width)] for y in range(height)]
-        #self.grid = [Node(z%width,z//width) for z in range(width*height)] TODO
+        self.grid = [[Node(x,y) for x in range(width)] for y in range(height)] # TODO make private (self._grid)?
         self._infotags = []
 
     def __repr__(self):
-        return (self._infotags, self.grid).__repr__() # "["+ ','.join("["+ ','.join(str(n._connectivity) for n in row) +"]" for row in self.grid) + "]"
+        return (self._infotags, self.grid).__repr__()
 
     def __iter__(self):
+        """Iterate over the nodes of the maze."""
         return itertools.chain(*self.grid)
 
     def add_info(self, string):
+        """Add information about the maze, likely after modifying it."""
         self._infotags.append(string)
-        return None
+        return
 
-    def make_name(self):
-        """Set an internal name for the maze object.
-        """
+    def generate_name(self):
+        """Generate human-readable name for the maze."""
         info = '-'.join(self._infotags)
         size = f"{self.width}" if self.width==self.height else f"{self.width}x{self.height}"
         timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
@@ -107,9 +135,14 @@ class Maze:
         return name
 
     def bitmap(self, corridorwidth=1, columnated=True):
-        """Return a simple bitmap drawing of the maze.
-        - columnated : bool to determine whether to draw free-standing columns in the maze
-        - corridorwidth : how wide the corridors should be in relation to the walls
+        """Return a simple 2D bitmap representation of the maze.
+
+        Args:
+            corridorwidth (int): Multiplier of how much wider corridors should be compared to the walls (default is 1)
+            columnated (bool): Whether free-standing 'column' pieces should be placed in free 4x4 sections of the maze (default is True)
+
+        Returns:
+            list(list(bool)): 2D bitmap of the maze
         """
         has_wall, w, (wall,air) = self.has_wall, corridorwidth, (True,False)
         if columnated: column = lambda x,y: True
@@ -136,41 +169,39 @@ class Maze:
             bmap += [brow2]
         return bmap
 
-    def str_bitmap(self, wall=None, air=None, bitmap=None):
-        """Produce 'canonical' bitmap string art of the maze.
-        Keyword arguments `wall`/`air` may also be functions that produce random texture instead of a fixed string.
-        - wall, air : a string (or callable object that produces a string) to be used as wall/air texture
+    def str_bitmap(self, wall='#', air=None, bitmap=None):
+        """Produce a binary string presentation of the maze.
+
+        Args:
+            wall (str): Wall texture (default is '#')
+            air (str): Air texture (default is len(wall)*' ')
+            bitmap (list(list(bool))): Bit map to be rendered (default is self.bitmap())
+
+        Returns:
+            str: Binary string presentation of the maze
         """
-        # Sort out default arguments
+        if air is None:
+            air = len(wall)*' '
         if bitmap is None:
             bitmap = self.bitmap()
-        if wall is None:     make_wall = lambda: '#'
-        elif callable(wall): make_wall = wall
-        else:                make_wall = lambda: wall
-        if air is None:     make_air = lambda: ' '*len(make_wall())
-        elif callable(air): make_air = air
-        else:               make_air = lambda: air
         # Produce actual string
         string = '\n'.join(
             ''.join(
-                make_wall() if b else make_air() for b in row
+                wall if bit else air for bit in row
             ) for row in bitmap
         )
         return string
 
     def str_block_double(self):
-        """Produce double-block (unicode) bitmap art of the maze.
-        """
+        """Produce a wide (unicode) block string presentation of the maze."""
         return self.str_bitmap(wall='██',air='  ')
 
     def str_block(self):
-        """Produce full-block (unicode) bitmap art of the maze.
-        """
+        """Produce a (unicode) block string presentation of the maze."""
         return self.str_bitmap(wall='█',air=' ')
 
     def str_block_half(self):
-        """Produce half-block (unicode) bitmap art of the maze.
-        """
+        """Produce a (unicode) half-block string presentation of the maze."""
         bmap = self.bitmap()
         # Pad bitmap to even height
         if len(bmap)%2!=0:
@@ -185,8 +216,7 @@ class Maze:
         return string
 
     def str_block_quarter(self):
-        """Produce quarter-block (unicode) bitmap art of the maze.
-        """
+        """Produce a (unicode) quarter-block string presentation of the maze."""
         bmap = self.bitmap()
         # Pad bitmap to even height and width
         if len(bmap)%2!=0:
@@ -203,8 +233,7 @@ class Maze:
         return string
 
     def str_pipes(self):
-        """Produce pipe-like unicode art of the maze.
-        """
+        """Produce a (unicode) pipe-like string presentation of the maze."""
         tiles = " ╶╺╵└┕╹┖┗╴─╼┘┴┶┚┸┺╸╾━┙┵┷┛┹┻╷┌┍│├┝╿┞┡┐┬┮┤┼┾┦╀╄┑┭┯┥┽┿┩╃╇╻┎┏╽┟┢┃┠┣┒┰┲┧╁╆┨╂╊┓┱┳┪╅╈┫╉╋"
         make_tile = lambda a,b,c,d: tiles[27*d + 9*c + 3*b + 1*a]
         string = ""
@@ -220,7 +249,13 @@ class Maze:
         return string
 
     def str_frame(self, slim=False):
-        """Produce outline/frame (unicode) art of the maze.
+        """Produce a (unicode) frame string presentation of the maze.
+
+        Args:
+            slim (bool): Whether art should be half as wide (default is False)
+
+        Returns:
+            str: (unicode) frame string presentation of the maze
         """
         wall = self.has_wall
         tiles = " ╶╵└╴─┘┴╷┌│├┐┬┤┼"
@@ -243,6 +278,14 @@ class Maze:
         return string
 
     def str_frame_ascii(self, corridorwidth=1):
+        """Produce an (ASCII) frame string presentation of the maze.
+
+        Args:
+            corridorwidth (int): Multiplier of how much wider corridors should be compared to the walls (default is 1)
+
+        Returns:
+            str: (ASCII) frame string presentation of the maze
+        """
         # Top-left corner
         linestr = [['+']]
         # Top wall
@@ -265,8 +308,7 @@ class Maze:
         return '\n'.join(''.join(line) for line in linestr)
 
     def str_frame_ascii_small(self):
-        """Produce a 'minimal/compact' ASCII art of the maze.
-        """
+        """Produce a minimal (ASCII) frame string presentation of the maze."""
         wall = self.has_wall
         # Corner cases are nasty, dude;
         """ ,___, ,___, ,___, ,___,
@@ -317,36 +359,44 @@ class Maze:
                 string.append(cornersegment(x,y))
         return ''.join(string)
 
-    def generate_image(self, bitmap=None):
-        """Generate an Image of the maze and store it in the instance.
-        - bitmap : custom bitmap (2D list)
-        """
-        if bitmap is None:
-            bitmap = self.bitmap()
+    def generate_image(self):
+        """Generate a handle to a (PIL) Image object presenting the maze."""
+        bitmap = self.bitmap()
         width,height = len(bitmap[0]),len(bitmap)
         bit_to_rgb = lambda bit: (0,0,0) if bit else (255,255,255)
         imgdata = tuple(bit_to_rgb(bit) for bit in itertools.chain(*bitmap))
-        # Convert to Image
         image = Image.new('RGB', (width,height))
         image.putdata(imgdata)
         return image
 
     def has_wall(self, x, y, direction):
-        """Check whether there is a wall in that direction.
-        - x, y : integers where 0<=x<width && 0<=y<height
-        - direction : one of {RIGHT,UP,LEFT,DOWN}
+        """Check for a wall, facing some direction at some location in the maze.
+
+        Args:
+            x, y (int): Coordinates with 0<=x<self.width && 0<=y<self.height
+            direction (int) : One of (RIGHT,UP,LEFT,DOWN) = (1,2,4,8)
+
+        Returns:
+            bool: Whether there is a wall when facing direction from (x,y) in maze
         """
         return self.node_at(x,y).has_wall(direction)
 
     def node_at(self, x, y):
-        """Provide direct access to a grid node.
-        - x, y : integers where 0<=x<width && 0<=y<height
+        """Get node at those coordinates in the maze.
+
+        Args:
+            x, y (int): Coordinates with 0<=x<self.width && 0<=y<self.height
+
+        Returns:
+            Node: Node object at position (x,y) in maze
         """
         return self.grid[y][x]
 
     def connect(self, node0, node1):
         """Toggle the connection between two nodes in the maze.
-        - node0, node1 : `Node`s
+
+        Args:
+            node0, node1 (Node): Two nodes in the maze that lie adjacent
         """
         (x0,y0), (x1,y1) = node0.coordinates, node1.coordinates
         dx, dy = x1-x0, y1-y0
@@ -355,10 +405,14 @@ class Maze:
         get_dir = lambda dx,dy: (LEFT if dx<0 else RIGHT) if dx else (UP if dy<0 else DOWN)
         node0.toggle_edge(get_dir(dx,dy))
         node1.toggle_edge(get_dir(-dx,-dy))
-        return None
+        return
 
     def connect_to(self, node, direction):
-        """Toggle the connection between a node and its neighbor in the maze.
+        """Toggle the connection between two nodes in the maze.
+
+        Args:
+            node (Node): Node within the maze
+            direction (int) : One of (RIGHT,UP,LEFT,DOWN) = (1,2,4,8), where direction cannot face outside of maze boundaries (else ValueError)
         """
         (x,y) = node.coordinates
         [r,u,l,d] = [direction==dir for dir in (RIGHT,UP,LEFT,DOWN)]
@@ -375,11 +429,17 @@ class Maze:
         opposite_direction = {RIGHT:LEFT,UP:DOWN,LEFT:RIGHT,DOWN:UP}[direction]
         node.toggle_edge(direction)
         neighbor.toggle_edge(opposite_direction)
-        return None
+        return
 
     def adjacent_to(self, node, connected=None):
-        """Get the adjacent cells to a node.
-        - node : `Node`
+        """Get all cells that are adjacent to node in the maze.
+
+        Args:
+            node (Node): Origin node
+            connected (bool): Flag to additionally check cells for being connected or disconnected (default is None)
+
+        Yields:
+            Node: Neighboring node fulfilling conditions
         """
         (x,y) = node.coordinates
         if connected is None:
@@ -399,44 +459,45 @@ class Maze:
             if y<self.height-1 and node.has_wall(DOWN):  yield self.node_at(x,y+1)
 
     def make_unicursal(self):
-        """Convert a maze into a unicursal/'braided' maze by joining/removing no dead ends.
-        """
+        """Convert self into a unicursal/ maze by removing no dead ends."""
+        if self._infotags[-1] == "joined":
+            return
         for node in self:
-            #dirs = [dir for dir in (RIGHT,UP,LEFT,DOWN) if node.has_wall(dir)]
-            #if len(dirs) >= 3:
-                #(x,y) = node.coordinates
-                #if x==0:             dirs.remove(LEFT)
-                #if x==self.width-1:  dirs.remove(RIGHT)
-                #if y==0:             dirs.remove(UP)
-                #if y==self.height-1: dirs.remove(DOWN)
-                #self.connect_to(node, random.choice(dirs))
-
             while sum(1 for _ in self.adjacent_to(node,connected=True)) <= 1:
                 neighbor = random.choice(list(self.adjacent_to(node,connected=False)))
                 self.connect(node,neighbor)
         self.add_info("joined")
-        return None
+        return
 
-    def recursively_backtrack(self):
-        """Carve a maze using simple randomized depth-first-search.
-        * Prone to function recursion limit for large mazes.
-        * Simple standalone implementation and tries to fill out every unvisited node.
-        """
-        randomized = lambda it: random.shuffle(ls:=list(it)) or ls # randomize iterator
-        def dfs(node):
-            for neighbor in randomized(self.adjacent_to(node)):
-                if not neighbor.flag:
-                    neighbor.flag = True
-                    self.connect(node,neighbor)
-                    dfs(neighbor)
-        for node in self:
-            if not node.flag:
-                node.flag = True
-                dfs(node)
-        self.add_info("backtracked")
-        return None
+#    def recursively_backtrack(self):
+#        """Carve a maze using simple randomized depth-first-search.
+#
+#        Simple standalone implementation and tries to fill out every unvisited node but prone to function recursion limit for large mazes (see growing tree instead).
+#        """
+#        randomized = lambda it: random.shuffle(ls:=list(it)) or ls # randomize iterator
+#        def dfs(node):
+#            for neighbor in randomized(self.adjacent_to(node)):
+#                if not neighbor.flag:
+#                    neighbor.flag = True
+#                    self.connect(node,neighbor)
+#                    dfs(neighbor)
+#        for node in self:
+#            if not node.flag:
+#                node.flag = True
+#                dfs(node)
+#        self.add_info("backtracked")
+#        return
 
+    @staticmethod
     def from_template(temp):
+        """Generate a maze by loading from a template.
+
+        Args:
+            temp (list(str),list(list(int))): Maze representation
+
+        Returns:
+            Maze: Corresponding maze object
+        """
         (infotags,grid) = temp
         maze = Maze(len(grid[0]),len(grid))
         for x in range(maze.height):
@@ -445,34 +506,39 @@ class Maze:
         maze._infotags = infotags
         return maze
 
-    def bogus_maze(width, height):
-        """Build a complete bogus maze by randomizing every node.
+    @staticmethod
+    def bogus(width, height):
+        """Build a bogus maze by having every node randomly connected.
+
+        Args:
+            width, height (int): Positive integer dimensions of desired maze
         """
         maze = Maze(width,height)
         for node in maze:
             node.toggle_edge(random.randint(0b0000,0b1111))
-        maze.add_info("bogus")
+        maze.add_info("Bogus")
         return maze
 
-    def growing_tree_maze(width, height, start_coord=None, index_choice=None, fast_pop=False):
-        """Build a maze using the 'growing binary tree' algorithm.
-        - start : origin `Node`
-        - index_choice : callable that returns a valid index given an indexable `bucket`
-        * Note that this carver can be made equivalent to other algorithms by tweaking `index_choice`:
-        - always `-1` (newest element) is recursive backtracker / depth first search
-        - always `0` (oldest element) is breadth first search
-        - always random is randomized prim's algorithm.
+    @staticmethod
+    def growing_tree(width, height, start_coord=None, index_choice=None, fast_pop=False):
+        """Build a random maze using the '(random) growing tree' algorithm.
+
+        Args:
+            width, height (int): Positive integer dimensions of desired maze
+            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
+            index_choice (callable(int) -> int): Function to pick an index between 0 and a given max_index, used to determine behaviour of the algorithm (default is lambda max_index: -1 if random.random()<0.95 else random.randint(0,max_index))
+            fast_pop (bool): Whether to switch chosen element with last element when removing from active set. This is to speed up generation of large, random mazes (default is False)
         """
         maze = Maze(width, height)
         if start_coord is None:
             start_coord = (random.randrange(maze.width),random.randrange(maze.height))
         start = maze.node_at(*start_coord)
         if index_choice is None:
-            index_choice = lambda bucket: -1 if random.random()<0.95 else random.randrange(len(bucket))
+            index_choice = lambda max_index: -1 if random.random()<0.95 else random.randint(0,max_index)
         start.flag = True
         bucket = [start]
         while bucket:
-            n = index_choice(bucket)
+            n = index_choice(len(bucket)-1)
             node = bucket[n]
             neighbors = [nb for nb in maze.adjacent_to(node) if not nb.flag]
             if neighbors:
@@ -487,26 +553,39 @@ class Maze:
                     bucket.pop()
                 else:
                     bucket.pop(n)
-        maze.add_info("growingtree")
+        maze.add_info("GrowingTree")
         return maze
 
-    def prim_maze(width, height, start_coord=None):
-        """Build a maze using randomized Prim's algorithm.
+    @staticmethod
+    def prim(width, height, start_coord=None):
+        """Build a random maze using randomized Prim's algorithm.
+
+        Args:
+            width, height (int): Positive integer dimensions of desired maze
+            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
-        maze = Maze.growing_tree_maze(width, height, start_coord, index_choice=lambda bucket: random.randrange(len(bucket)))
-        maze.add_info("prim")
+        maze = Maze.growing_tree(width, height, start_coord, index_choice=lambda max_index: random.randint(0,max_index))
+        maze.add_info("Prim")
         return maze
 
-    def backtracker_maze(width, height, start_coord=None):
-        """Build a maze using simple randomized depth-first-search.
-        * More robust than `recursive backtracker` for larger mazes.
+    @staticmethod
+    def backtracker(width, height, start_coord=None):
+        """Build a random maze using randomized depth first search.
+
+        Args:
+            width, height (int): Positive integer dimensions of desired maze
+            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
-        maze = Maze.growing_tree_maze(width, height, start_coord, index_choice=lambda bucket: -1)
-        maze.add_info("backtracker")
+        maze = Maze.growing_tree(width, height, start_coord, index_choice=lambda max_index: -1)
+        maze.add_info("DepthFirstSearch")
         return maze
 
-    def kruskal_maze(width, height):
-        """Build a maze using randomized Kruskal's algorithm.
+    @staticmethod
+    def kruskal(width, height):
+        """Build a random maze using randomized Kruskal's algorithm.
+
+        Args:
+            width, height (int): Positive integer dimensions of desired maze
         """
         maze = Maze(width, height)
         edges = []
@@ -532,11 +611,16 @@ class Maze:
                     node.color = bigger.color
                     bigger.color.members.append(node)
                 if len(bigger.color.members)==maze.width*maze.height: break
-        maze.add_info("kruskal")
+        maze.add_info("Kruskal")
         return maze
 
-    def wilson_maze(width, height, start_coord=None):
-        """Build a maze using Wilson's random uniform spanning tree algorithm.
+    @staticmethod
+    def wilson(width, height, start_coord=None):
+        """Build a random maze using Wilson's uniform spanning tree algorithm..
+
+        Args:
+            width, height (int): Positive integer dimensions of desired maze
+            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
         maze = Maze(width, height)
         def backtrack_walk(tail_node, origin):
@@ -571,11 +655,15 @@ class Maze:
                     elif next_node.flag < generation:
                         maze.connect(curr_node,next_node)
                         break
-        maze.add_info("wilson")
+        maze.add_info("Wilson")
         return maze
 
-    def quarter_division_maze(width, height):
-        """Build a maze using a divide-and-conquer approach.
+    @staticmethod
+    def quad_divide_conquer(width, height):
+        """Build a random maze using randomized quadruple divide-and-conquer.
+
+        Args:
+            width, height (int): Positive integer dimensions of desired maze
         """
         maze = Maze(width, height)
         def divide(topleft, bottomright):
@@ -612,11 +700,17 @@ class Maze:
                 if y<maze.height-1: dir |= DOWN
                 node.put_edge(dir)
         divide((0,0), (maze.width-1,maze.height-1))
-        maze.add_info("divide-4")
+        maze.add_info("DivideAndConquer4")
         return maze
 
-    def division_maze(width, height, slice_bias=1.0, pivot_choice=None):
-        """Build a maze using a divide-and-conquer approach.
+    @staticmethod
+    def divide_conquer(width, height, slice_bias=1.0, pivot_choice=None):
+        """Build a random maze using randomized divide-and-conquer.
+
+        Args:
+            width, height (int): Positive integer dimensions of desired maze
+            slice_bias (float): Probability (0<=slice_bias<=1) to do a reroll when dividing a quadrant along the same direction as parent call
+            pivot_choice (callable(int,int) -> int): Function to choose a random index between given lower and upper index along which to make a cut
         """
         maze = Maze(width, height)
         if pivot_choice is None:
@@ -646,7 +740,6 @@ class Maze:
                 maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y))
                 divide((x0,y0), (xP,y1), False)
                 divide((xP+1,y0), (x1,y1), False)
-            #print(maze.str_frame())
         for y,row in enumerate(maze.grid):
             for x,node in enumerate(row):
                 dir = 0b0000
@@ -656,7 +749,7 @@ class Maze:
                 if y<maze.height-1: dir |= DOWN
                 node.put_edge(dir)
         divide((0,0), (maze.width-1,maze.height-1), maze.width)
-        maze.add_info("divide-n-conquer")
+        maze.add_info("DivideAndConquer")
         return maze
 
 # CLASSES END

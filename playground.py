@@ -1,17 +1,8 @@
 # OUTLINE BEGIN
 """
-A script to try out building and interacting with mazes.
+A script to try out things from `maze.py` interactively.
 
-Work in Progress:
-- Refactors: "All done!"
-- Carvers: All done!
-- Solvers:
-  * BFS
-  * A* pathfinder
-- ETC Dreams:
-  * Maze navigator (w/ curses)
-  * Interactive picker: distance by color
-  * Doom (curses) █▯▓▯▒▯░ ".,-~:;=!*#$@"
+Run as main and use console to interact
 """
 # OUTLINE END
 
@@ -37,55 +28,43 @@ import time
 # FUNCTIONS BEGIN
 
 def autocomplete(input_word, full_words):
+    """Autocomplete word (only) if there's a unique word completion from list.
+
+    Args:
+        input_word (str): Word to be completed
+        full_words (list(str)): Available words to be completed to
+
+    Returns:
+        str: A unique match from full_words, otherwise input_word
+    """
     candidates = [w for w in full_words if w.startswith(input_word)]
     if len(candidates) == 1:
         return candidates[0]
     else:
         return input_word
 
+def preview(maze, max_cellcount=10000):
+    """Print maze to the console iff within given size limit."""
+    cellcount = maze.width*maze.height
+    if cellcount <= max_cellcount:
+        print(maze.str_frame())
+    else:
+        print(f"[no print (cellcount {cellcount})]")
+    return
+
 def run_and_time(f):
+    """Run a function and return its result and execution time as tuple."""
     start_time = time.perf_counter()
     result = f()
     time_taken = time.perf_counter() - start_time
     return (result, time_taken)
 
-def display(maze, limit=100*100):
-    cellcount = maze.width*maze.height
-    if cellcount <= limit:
-        print(maze.str_frame())
-    else:
-        print(f"[no print (cellcount {cellcount})]")
-    return None
+# FUNCTIONS END
 
-def benchmark():
-    """Run `python3 -m scalene maze.py`
-    """
-    # Execute actions
-    benchmark_maze = Maze(1,1)
-    for (title,action) in [
-          ("BEGIN", lambda maze:
-            maze
-        ),("div-cqr", lambda maze:
-             Maze.division_maze(2**9,2**9)
-        ),("grow w/fastpop", lambda maze:
-            Maze.growing_tree_maze(2**9,2**9,fast_pop=True)
-        ),("wilson", lambda maze:
-            Maze.wilson_maze(2**7,2**7)
-        ),("save image", lambda maze:
-            maze.generate_image().save(f"{maze.make_name()}.png") and()or maze
-        ),("join", lambda maze:
-            maze.make_unicursal() and()or maze # cursed sequential composition
-        ),("save image", lambda maze:
-            maze.generate_image().save(f"{maze.make_name()}.png") and()or maze
-        ),("END  ", lambda maze:
-            maze
-        ),
-    ]:
-        (benchmark_maze, secs) = run_and_time(lambda:action(benchmark_maze))
-        print(f"['{title}' completed in {secs:.03f}s]")
-    return None
 
-def sandbox():
+# MAIN BEGIN
+
+def main():
     main_dimensions = (16,16)
     main_maze = Maze(*main_dimensions)
     main_image = None
@@ -107,49 +86,48 @@ def sandbox():
     commands = ["help","build","join","size","load","print","show","save"]
     command = "help"
     while True:
-        print(main_dimensions)
         match command:
-            case "help":
+            case "help": # Show help menu
                 print(help_text)
-            case "build":
+            case "build": # Allow user to choose method and build new maze
                 builders = {x.__name__:x for x in [
-                    Maze.backtracker_maze,
-                    Maze.growing_tree_maze,
-                    Maze.prim_maze,
-                    Maze.kruskal_maze,
-                    Maze.wilson_maze,
-                    Maze.division_maze,
-                    Maze.quarter_division_maze,
+                    Maze.backtracker,
+                    Maze.growing_tree,
+                    Maze.prim,
+                    Maze.kruskal,
+                    Maze.wilson,
+                    Maze.divide_conquer,
+                    Maze.quad_divide_conquer,
                 ]}
                 user_input = input(f"Choose method:\n| " + '\n| '.join(builders) + "\n> ")
-                name = autocomplete(user_input.strip(),builders)
-                if name in builders:
-                    (main_maze, secs) = run_and_time(lambda: builders[name](*main_dimensions))
-                    print(f"[{name} completed in {secs:.03f}s]")
+                bname = autocomplete(user_input.strip(),builders)
+                if bname in builders:
+                    (main_maze, time_taken) = run_and_time(lambda:builders[bname](*main_dimensions))
+                    print(f"[{bname} completed in {time_taken:.03f}s]")
                     main_cached_image = None
-                    display(main_maze)
+                    preview(main_maze)
                 else:
-                    print(f"[unrecognized algorithm '{name}']")
-            case "join":
-                (_, secs) = run_and_time(lambda: main_maze.make_unicursal())
-                print(f"[joining completed in {secs:.03f}s]")
+                    print(f"[unrecognized method '{bname}']")
+            case "join": # Make current maze unicursal
+                (_, time_taken) = run_and_time(lambda:main_maze.make_unicursal())
+                print(f"[joining completed in {time_taken:.03f}s]")
                 main_cached_image = None
-                display(main_maze)
-            case "size":
+                preview(main_maze)
+            case "size": # Allow user to save new maze size
                 user_input = input(f"Enter new dimensions 'X Y' (currently: {main_dimensions[0]} {main_dimensions[1]}) > ")
                 try:
                     (x,y) = tuple(map(int, user_input.split()))
                     main_dimensions = (x,y)
-                except Exception as e:
+                except ValueError as e:
                     print(f"[invalid dimensions: {e}]")
-            case "load":
-                user_input = input("Enter maze `repr` string > ")
+            case "load": # Let user load maze from a copied `repr` of a maze
+                user_input = input("Enter `repr` string of a maze > ")
                 try:
-                    main_maze = Maze.from_template(eval(user_input.strip()))
-                    display(main_maze)
+                    main_maze = Maze.from_template(eval(user_input))
+                    preview(main_maze)
                 except Exception as e:
                     print(f"[could not load maze: {e}]")
-            case "print":
+            case "print": # Print currently stored maze in all available styles
                 printers = {x.__name__:x for x in [
                     Maze.str_bitmap,
                     Maze.str_block_double,
@@ -164,43 +142,36 @@ def sandbox():
                 ]}
                 for name,printer in printers.items():
                     print(f"{name}:\n{printer(main_maze)}")
-            case "show":
+            case "show": # Generate image of current maze and open in external program
                 if main_cached_image is None:
                     main_cached_image = main_maze.generate_image()
                 print(f"[showing maze in external program]")
                 main_cached_image.show()
-            case "save":
+            case "save": # Generate image of current maze and save as file
                 if main_cached_image is None:
                     main_cached_image = main_maze.generate_image()
-                filename = f"{main_maze.make_name()}.png"
+                filename = f"{main_maze.generate_name()}.png"
                 main_cached_image.save(filename)
                 print(f"[saved '{filename}']")
-            case cmd if cmd in {"debug","exec","sudo","dev","py"}:
+            case cmd if cmd in {"debug","exec","sudo","dev","py"}: # hehe
                 user_input = input(">>> ")
                 try:
                     exec(user_input)
                 except Exception as e:
                     print(f"<error: {e}>")
-            case _:
+            case _: # Non-empty, unrecognized command
                 print("[unrecognized command]")
+        # Get user input and possibly exit loop
         user_input = input(f"| {' | '.join(commands)} > ")
         if not user_input.strip():
             print("goodbye")
             break
+        # We autocomplete unambiguous user input so the playground program could be used more quickly
         command = autocomplete(user_input.strip(), commands)
+        # Show to the user what command he autocompleted to
         if command != user_input:
             print(f"-> {command}")
-    return None
-# FUNCTIONS END
-
-
-# MAIN BEGIN
-
-def main():
-    if True:
-        sandbox()
-    else:
-        benchmark()
+    return
 
 if __name__=="__main__": main()
 
