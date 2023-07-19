@@ -127,6 +127,9 @@ def main():
                     preview(main_maze)
                 except Exception as e:
                     print(f"[could not load maze: {e}]")
+            case "solve": # TODO
+                main_maze.breadth_first_search()
+                print(main_maze.str_frame_ascii()) # TODO
             case "print": # Print currently stored maze in all available styles
                 printers = {x.__name__:x for x in [
                     Maze.str_bitmap,

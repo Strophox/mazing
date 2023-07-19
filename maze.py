@@ -22,8 +22,9 @@ Notes to self / Work in Progress:
 # IMPORTS BEGIN
 
 import itertools # chain
+import collections # deque
+import time # strftime
 import random
-import time
 from PIL import Image
 
 # IMPORTS END
@@ -85,7 +86,7 @@ class Maze:
     All methods of this class fall into these broad categories:
     - Primitive Interaction
         * __init__, __iter__, __repr__
-        * add_info, generate_name
+        * generate_name
         * adjacent_to, connect, connect_to, has_wall, node_at
     - Sophisticated maze presentation
         * bitmap
@@ -112,6 +113,7 @@ class Maze:
         self.width  = width
         self.height = height
         self._grid = [[Node(x,y) for x in range(width)] for y in range(height)]
+        self._solution = set()
         self._infotags = []
 
     def __repr__(self):
@@ -134,11 +136,6 @@ class Maze:
         for row,row_below in zip(rows,rows_below):
             edge_iterators += [zip(row,row_below)]
         return itertools.chain(*edge_iterators)
-
-    def add_info(self, string):
-        """Add information about the maze, likely after modifying it."""
-        self._infotags.append(string)
-        return
 
     def generate_name(self):
         """Generate human-readable name for the maze."""
@@ -314,7 +311,7 @@ class Maze:
         linestr = [['+']]
         # Top wall
         for node in self._grid[0]:
-            linestr[0] += ['--' if node.has_wall(UP) else '  '] * corridorwidth
+            linestr[0] += ['---' if node.has_wall(UP) else '   '] * corridorwidth
             linestr[0] += ['+']
         # Middle and bottom rows of string
         for row in self._grid:
@@ -323,9 +320,9 @@ class Maze:
             row2 = ['+']
             # Middle and bottom walls (2 blocks/node)
             for node in row:
-                row1 += ['  '] * corridorwidth
+                row1 += [f' {"%" if node in self._solution else " "} '] * corridorwidth
                 row1 += ['|' if node.has_wall(RIGHT) else ' ']
-                row2 += ['--' if node.has_wall(DOWN) else '  '] * corridorwidth
+                row2 += ['---' if node.has_wall(DOWN) else '   '] * corridorwidth
                 row2 += ['+']
             linestr += [row1] * corridorwidth
             linestr += [row2]
@@ -472,7 +469,12 @@ class Maze:
             if 0<y             and node.has_wall(UP):    yield self.node_at(x,y-1)
             if y<self.height-1 and node.has_wall(DOWN):  yield self.node_at(x,y+1)
 
-    def join_all_nodes(self):
+    def _unflag_nodes(self):
+        """Set flag attributes of all nodes to `None`."""
+        for node in self.nodes():
+            node.flag = None
+
+    def _join_nodes(self):
         """Join all nodes within the maze """
         for y,row in enumerate(self._grid):
             for x,node in enumerate(row):
@@ -486,23 +488,46 @@ class Maze:
 
     def make_unicursal(self):
         """Convert self into a unicursal/ maze by removing no dead ends."""
-        if self._infotags[-1] == "joined":
+        if self._infotags[-1] == "unicursal": # TODO icky
             return
         for node in self.nodes():
             while sum(1 for _ in self.adjacent_to(node,connected=True)) <= 1:
                 neighbor = random.choice(list(self.adjacent_to(node,connected=False)))
                 self.connect(node,neighbor)
-        self.add_info("joined")
+        self._infotags.append("unicursal")
         return
 
-    def breadth_first_search(self, start_coord=None):
+    def breadth_first_search(self, entrance=None, exit=None):
         """Compute all node distances and draw in the shortest path in a maze.
 
         Args:
-            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
+            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is (0,0))
         """
-        for node in self.nodes(): node.flag = False
-        return #TODO
+        if entrance is None:
+            entrance = self.node_at(0,0)
+        if exit is None:
+            exit = self.node_at(-1,-1)
+        for node in self.nodes():
+            node.flag = None
+        queue = collections.deque(maxlen=3*max(self.width,self.height))
+        queue.append(entrance)
+        entrance.flag = 0
+        while queue:
+            node = queue.popleft()
+            neighbors = list(self.adjacent_to(node,connected=True))
+            for neighbor in neighbors:
+                if neighbor.flag is None:
+                    queue.append(neighbor)
+                    neighbor.flag = node.flag + 1
+        # Find solution path if not yet calculated
+        if not self._solution:
+            # Backtrack solution path
+            current = exit
+            while current != entrance:
+                self._solution.add(current)
+                current = min(self.adjacent_to(current,connected=True),key=lambda n:n.flag)
+            self._solution.add(entrance)
+        return
 
 
 #    def recursively_backtrack(self):
@@ -521,7 +546,7 @@ class Maze:
 #            if not node.flag:
 #                node.flag = True
 #                dfs(node)
-#        self.add_info("backtracked")
+#        self._infotags.append("backtracked")
 #        return
 
     @staticmethod
@@ -552,7 +577,7 @@ class Maze:
         maze = Maze(width,height)
         for node in maze.nodes():
             node.toggle_edge(random.randint(0b0000,0b1111))
-        maze.add_info("Bogus")
+        maze._infotags.append("Bogus")
         return maze
 
     @staticmethod
@@ -589,7 +614,8 @@ class Maze:
                     bucket.pop()
                 else:
                     bucket.pop(n)
-        maze.add_info("GrowingTree")
+        maze._unflag_nodes()
+        maze._infotags.append("GrowingTree")
         return maze
 
     @staticmethod
@@ -601,7 +627,7 @@ class Maze:
             start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
         maze = Maze.growing_tree(width, height, start_coord, index_choice=lambda max_index: random.randint(0,max_index))
-        maze.add_info("Prim")
+        maze._infotags.append("Prim")
         return maze
 
     @staticmethod
@@ -613,7 +639,7 @@ class Maze:
             start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
         maze = Maze.growing_tree(width, height, start_coord, index_choice=lambda max_index: -1)
-        maze.add_info("DepthFirstSearch")
+        maze._infotags.append("DepthFirstSearch")
         return maze
 
     @staticmethod
@@ -641,7 +667,8 @@ class Maze:
                     node.flag = bigger.flag
                     members[bigger.flag].append(node)
                 if len(members[bigger.flag])==maze.width*maze.height: break
-        maze.add_info("Kruskal")
+        maze._unflag_nodes()
+        maze._infotags.append("Kruskal")
         return maze
 
     @staticmethod
@@ -685,7 +712,8 @@ class Maze:
                     elif next_node.flag < generation:
                         maze.connect(curr_node,next_node)
                         break
-        maze.add_info("Wilson")
+        maze._unflag_nodes()
+        maze._infotags.append("Wilson")
         return maze
 
     @staticmethod
@@ -721,9 +749,9 @@ class Maze:
             divide((xP+1,y0), (x1,yP))
             divide((x0,yP+1), (xP,y1))
             divide((xP+1,yP+1), (x1,y1))
-        maze.join_all_nodes()
+        maze._join_nodes()
         divide((0,0), (maze.width-1,maze.height-1))
-        maze.add_info("DivideAndConquer4")
+        maze._infotags.append("DivideAndConquer4")
         return maze
 
     @staticmethod
@@ -763,9 +791,9 @@ class Maze:
                 maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y))
                 divide((x0,y0), (xP,y1), False)
                 divide((xP+1,y0), (x1,y1), False)
-        maze.join_all_nodes()
+        maze._join_nodes()
         divide((0,0), (maze.width-1,maze.height-1), maze.width)
-        maze.add_info("DivideAndConquer")
+        maze._infotags.append("DivideAndConquer")
         return maze
 
 # CLASSES END
