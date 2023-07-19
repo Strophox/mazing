@@ -6,8 +6,13 @@ Contains the main `Maze` class,
 This file contains all important maze-relation implementations to store, create and modify grid mazes.
 
 Notes to self / Work in Progress:
+- Docstrings:
+    * a l l   m u s t   b e   c h e c k e d .
+- Printers:
+    * With colors: generate_image
+    * With solution: frame_ascii
+    * With solution challenge: str_frame
 - Solvers:
-    * BFS
     * A* pathfinder
 - Printers:
     * Colored image (generated_image)
@@ -145,111 +150,127 @@ class Maze:
         name = f"maze_{info}_{size}_{timestamp}"
         return name
 
-    def generate_bitmap(self, corridorwidth=1, columnated=True):
-        """Return a simple 2D bitmap representation of the maze.
+    def generate_raster(self, corridorwidth=1, columnated=True, show_node_marks=True, show_flag_colors=False): # # TODO FIXME DANGER WARNING BUG BEGIN END ATTENTION
+        """Return a simple 2D raster representation of the maze.
 
         Args:
             corridorwidth (int): Multiplier of how much wider corridors should be compared to the walls (default is 1)
             columnated (bool): Whether free-standing 'column' pieces should be placed in free 4x4 sections of the maze (default is True)
 
         Returns:
-            list(list(bool)): 2D bitmap of the maze
+            list(list(bool)): 2D raster of the maze
         """
-        has_wall, w, (wall,air) = self.has_wall, corridorwidth, (True,False)
+        has_wall, (wall,air) = self.has_wall, (True,False)
         if columnated: column = lambda x,y: True
         else:
             column = lambda x,y: x==self.width-1 or y==self.height-1 or has_wall(x,y,RIGHT) or has_wall(x,y,DOWN) or has_wall(x,y+1,RIGHT) or has_wall(x+1,y,DOWN)
         # Top-left corner
-        bmap = [[wall]]
+        raster = [[wall]]
         # Top wall
         for x,node in enumerate(self._grid[0]):
-            bmap[0] += [node.has_wall(UP)] * w
-            bmap[0] += [wall]
+            raster[0] += [node.has_wall(UP)] * corridorwidth
+            raster[0] += [wall]
         # Middle and bottom rows of string
         for y,row in enumerate(self._grid):
             # Left wall
-            brow1 = [row[0].has_wall(LEFT)]
-            brow2 = [wall]
+            row1 = [row[0].has_wall(LEFT)]
+            row2 = [wall]
             # Middle and bottom walls (2 blocks/node)
             for x,node in enumerate(row):
-                brow1 += [air] * w
-                brow1 += [node.has_wall(RIGHT)]
-                brow2 += [node.has_wall(DOWN)] * w
-                brow2 += [column(x,y)]
-            bmap += [brow1] * w
-            bmap += [brow2]
-        return bmap
+                row1 += [air] * corridorwidth
+                row1 += [node.has_wall(RIGHT)]
+                row2 += [node.has_wall(DOWN)] * corridorwidth
+                row2 += [column(x,y)]
+            raster += [row1] * corridorwidth
+            raster += [row2]
+        return raster
 
-    def generate_image(self):
-        """Generate a handle to a (PIL) Image object presenting the maze."""
-        bitmap = self.generate_bitmap()
-        width,height = len(bitmap[0]),len(bitmap)
-        bit_to_rgb = lambda bit: (0,0,0) if bit else (255,255,255)
-        imgdata = tuple(bit_to_rgb(bit) for bit in itertools.chain(*bitmap))
-        image = Image.new('RGB', (width,height))
-        image.putdata(imgdata)
+    @staticmethod
+    def raster_to_image(raster, value_to_rgb): # TODO FIXME DANGER WARNING BUG BEGIN END ATTENTION
+        """TODO
+        """
+        rgb_data = list(value_to_rgb(value) for value in itertools.chain(*raster))
+        image = Image.new('RGB', (len(raster[0]),len(raster)))
+        image.putdata(rgb_data)
         return image
 
-    def str_bitmap(self, wall='#', air=None, bitmap=None):
+    def generate_image(self):
+        """Generate a handle to a (PIL) Image object presenting the maze.
+
+        Args:
+            raster (list(list(bool))): Bit map to be rendered (default is self.generate_raster())
+        """
+        raster = self.generate_raster()
+        value_to_rgb = lambda bit: (0,0,0) if bit else (255,255,255)
+        image = Maze.raster_to_image(raster)
+        return image
+
+    @staticmethod
+    def raster_to_string(raster, value_to_chars): # TODO FIXME DANGER WARNING BUG BEGIN END ATTENTION
+        """TODO
+        """
+        string = '\n'.join(
+            ''.join(
+                value_to_chars(value) for value in row
+            ) for row in raster
+        )
+        return string
+
+    def str_raster(self, wall='#', air=None):
         """Produce a binary string presentation of the maze.
 
         Args:
             wall (str): Wall texture (default is '#')
             air (str): Air texture (default is len(wall)*' ')
-            bitmap (list(list(bool))): Bit map to be rendered (default is self.generate_bitmap())
+            raster (list(list(bool))): Bit map to be rendered (default is self.generate_raster())
 
         Returns:
             str: Binary string presentation of the maze
         """
         if air is None:
             air = len(wall)*' '
-        if bitmap is None:
-            bitmap = self.generate_bitmap()
-        # Produce actual string
-        string = '\n'.join(
-            ''.join(
-                wall if bit else air for bit in row
-            ) for row in bitmap
-        )
+        raster = self.generate_raster()
+        value_to_chars = lambda value: wall if value else air
+        string = Maze.raster_to_string(raster, value_to_chars)
         return string
 
     def str_block_double(self):
         """Produce a wide (unicode) block string presentation of the maze."""
-        return self.str_bitmap(wall='██',air='  ')
+        return self.str_raster(wall='██')
 
     def str_block(self):
         """Produce a (unicode) block string presentation of the maze."""
-        return self.str_bitmap(wall='█',air=' ')
+        return self.str_raster(wall='█')
 
     def str_block_half(self):
         """Produce a (unicode) half-block string presentation of the maze."""
-        bmap = self.generate_bitmap()
-        # Pad bitmap to even height
-        if len(bmap)%2!=0:
-            bmap.append([False for _ in bmap[0]])
+        raster = self.generate_raster()
+        # Pad raster to even height
+        if len(raster)%2!=0:
+            raster.append([False for _ in raster[0]])
         # String is just a join of row strings (which are also join)
         tiles = " ▄▀█"
         string = '\n'.join(
             ''.join(
-                tiles[2*hi + 1*lo] for (hi,lo) in zip(bmap[y],bmap[y+1])
-            ) for y in range(0,len(bmap),2)
+                tiles[2*hi + 1*lo] for (hi,lo) in zip(raster[y],raster[y+1])
+            ) for y in range(0,len(raster),2)
         )
         return string
 
     def str_block_quarter(self):
         """Produce a (unicode) quarter-block string presentation of the maze."""
-        bmap = self.generate_bitmap()
+        raster = self.generate_raster()
         # Pad bitmap to even height and width
-        if len(bmap)%2!=0:
-            bmap.append([False for _ in bmap[0]])
-        if len(bmap[0])%2!=0:
-            for row in bmap: row.append(False)
+        if len(raster)%2!=0:
+            raster.append([False for _ in raster[0]])
+        if len(raster[0])%2!=0:
+            for row in raster: row.append(False)
         # String is just a join of row strings (which are also join)
         tiles = " ▘▝▀▖▌▞▛▗▚▐▜▄▙▟█" # ▯▘▯▝▯▀▯▖▯▌▯▞▯▛▯▗▯▚▯▐▯▜▯▄▯▙▯▟▯█
         string = '\n'.join(
             ''.join(
-                tiles[8*bmap[y+1][x+1] + 4*bmap[y+1][x] + 2*bmap[y][x+1] + 1*bmap[y][x]] for x in range(0,len(bmap[0]),2)
-            ) for y in range(0,len(bmap),2)
+                tiles[8*raster[y+1][x+1] + 4*raster[y+1][x] + 2*raster[y][x+1] + 1*raster[y][x]] for x in range(0,len(raster[0]),2)
+            ) for y in range(0,len(raster),2)
         )
         return string
 
@@ -298,11 +319,12 @@ class Maze:
                 string += make_tile(x<self.width-1 and wall(x+1,y,DOWN),wall(x,y,RIGHT),wall(x,y,DOWN),y<self.height-1 and wall(x,y+1,RIGHT))
         return string
 
-    def str_frame_ascii(self, corridorwidth=1):
+    def str_frame_ascii(self, corridorwidth=1, show_node_marks=True):
         """Produce an (ASCII) frame string presentation of the maze.
 
         Args:
             corridorwidth (int): Multiplier of how much wider corridors should be compared to the walls (default is 1)
+            show_node_marks (bool): Whether solution should be displayed if calculated (default is True)
 
         Returns:
             str: (ASCII) frame string presentation of the maze
@@ -320,7 +342,7 @@ class Maze:
             row2 = ['+']
             # Middle and bottom walls (2 blocks/node)
             for node in row:
-                row1 += [f' {"%" if node in self._solution else " "} '] * corridorwidth
+                row1 += [f' {"." if show_node_marks and node in self._solution else " "} '] * corridorwidth
                 row1 += ['|' if node.has_wall(RIGHT) else ' ']
                 row2 += ['---' if node.has_wall(DOWN) else '   '] * corridorwidth
                 row2 += ['+']

@@ -81,9 +81,11 @@ def main():
         | print : latest maze, ascii art
         | show  : latest maze, external png
         | save  : external png
+        Play
+        | solve : latest maze
         Enter blank command to exit
         """).strip()
-    commands = ["help","build","join","size","load","print","show","save"]
+    commands = ["help","build","join","size","load","print","show","save","solve"]
     command = "help"
     while True:
         match command:
@@ -127,12 +129,9 @@ def main():
                     preview(main_maze)
                 except Exception as e:
                     print(f"[could not load maze: {e}]")
-            case "solve": # TODO
-                main_maze.breadth_first_search()
-                print(main_maze.str_frame_ascii()) # TODO
             case "print": # Print currently stored maze in all available styles
                 printers = {x.__name__:x for x in [
-                    Maze.str_bitmap,
+                    Maze.str_raster,
                     Maze.str_block_double,
                     Maze.str_block,
                     Maze.str_block_half,
@@ -156,7 +155,10 @@ def main():
                 filename = f"{main_maze.generate_name()}.png"
                 main_cached_image.save(filename)
                 print(f"[saved '{filename}']")
-            case cmd if cmd in {"debug","exec","sudo","dev","py"}: # hehe
+            case "solve": # Solve the maze
+                main_maze.breadth_first_search()
+                print(main_maze.str_frame_ascii())
+            case "hack": # hehe
                 user_input = input(">>> ")
                 try:
                     exec(user_input)
