@@ -1,36 +1,24 @@
 # mazing
-Generating and playing around with mazes.
+Generating and playing around with mazes
 
 ## What it is
-The central `maze.py` script provides a Maze class with methods to display as string or PNG.
-Separate functions implement different well-known maze creation algorithms.
+A central `maze.py` script provides a Maze class to interact with mazes.
+Functionality implemented thus far includes:
+- 10 different visualisation methods, including saving as PNG
+- 8 different maze generation algorithms
+- 1 way to modify a given maze further (unicursal)
+- (Other access to maze contents such as maze name, nodes, their neighbors etc.)
 
 ## How it's used
-Run `maze.py` as main to directly try stuff out
+Run `playground.py` as main to directly try stuff out, or `import maze` and use as documented in the module.
 
 ## Why
-Graph algorithms are elegant, ASCII art is interesting, and playing with mazes is lots of fun =)
+- Graph algorithms are interesting
+- ASCII art is fascinating
+- and playing with mazes is tons of fun =)
 
 ## Examples
-```
-┌─┬───────────┬─────────────┬───┐
-│ ╵ ╷ ┌───┬─╴ └───╴ ╷ ┌─────┘ ╷ │
-│ ╶─┼─┘ ╷ └───────┐ ├─┘ ╷ ╶─┬─┘ │
-├─╴ │ ╶─┼─────┬─╴ │ │ ┌─┴─╴ │ ┌─┤
-│ ╷ └─╴ ├─╴ ╶─┤ ╶─┴─┘ ├─┬───┘ │ │
-│ ├─────┤ ┌─┐ └───┬───┘ │ ╶─┬─┘ │
-│ │ ╶───┘ │ └───┐ │ ╶───┴─┐ │ ╶─┤
-│ │ ╶─┬─┬─┴─╴ ┌─┘ │ ┌───┐ ╵ ├─╴ │
-│ └─┐ │ │ ╷ ╶─┴─┬─┘ └─┐ └─┐ ╵ ╷ │
-├─╴ │ ╵ │ └───┐ └───┐ ├─╴ └─┬─┘ │
-│ ╷ │ ╷ │ ┌─╴ ├─┬─┬─┘ │ ┌───┤ ┌─┤
-│ │ └─┤ │ ├─┐ ╵ │ │ ╶─┘ └─┐ ╵ │ │
-│ ├─┐ ╵ ╵ │ │ ╶─┤ └───────┼─┬─┘ │
-│ │ │ ┌─╴ │ ├─╴ │ ┌───╴ ╷ ╵ │ ╷ │
-│ │ │ │ ┌─┘ │ ┌─┘ └─┐ ╶─┴─┬─┴─┘ │
-│ ╵ │ └─┘ ┌─┘ └───╴ ├───╴ └─╴ ╷ │
-└───┴─────┴─────────┴─────────┴─┘
-```
+*(Note: Unfortunately it may happen that special characters might not display with their correct relative width.)*
 ```
 ,_______________________________,
 | ,__ |___, |_, , , |___, |___, |
@@ -49,6 +37,25 @@ Graph algorithms are elegant, ASCII art is interesting, and playing with mazes i
 | |_| |_| |_| | |_, | | |__ __|_|
 | ,__ | , |___|_| |_| | , ,__ __|
 |_|_____|___|_________|_|_|_____|
+```
+```
+┌─┬───────────┬─────────────┬───┐
+│ ╵ ╷ ┌───┬─╴ └───╴ ╷ ┌─────┘ ╷ │
+│ ╶─┼─┘ ╷ └───────┐ ├─┘ ╷ ╶─┬─┘ │
+├─╴ │ ╶─┼─────┬─╴ │ │ ┌─┴─╴ │ ┌─┤
+│ ╷ └─╴ ├─╴ ╶─┤ ╶─┴─┘ ├─┬───┘ │ │
+│ ├─────┤ ┌─┐ └───┬───┘ │ ╶─┬─┘ │
+│ │ ╶───┘ │ └───┐ │ ╶───┴─┐ │ ╶─┤
+│ │ ╶─┬─┬─┴─╴ ┌─┘ │ ┌───┐ ╵ ├─╴ │
+│ └─┐ │ │ ╷ ╶─┴─┬─┘ └─┐ └─┐ ╵ ╷ │
+├─╴ │ ╵ │ └───┐ └───┐ ├─╴ └─┬─┘ │
+│ ╷ │ ╷ │ ┌─╴ ├─┬─┬─┘ │ ┌───┤ ┌─┤
+│ │ └─┤ │ ├─┐ ╵ │ │ ╶─┘ └─┐ ╵ │ │
+│ ├─┐ ╵ ╵ │ │ ╶─┤ └───────┼─┬─┘ │
+│ │ │ ┌─╴ │ ├─╴ │ ┌───╴ ╷ ╵ │ ╷ │
+│ │ │ │ ┌─┘ │ ┌─┘ └─┐ ╶─┴─┬─┴─┘ │
+│ ╵ │ └─┘ ┌─┘ └───╴ ├───╴ └─╴ ╷ │
+└───┴─────┴─────────┴─────────┴─┘
 ```
 ```
 █▀▀▀▀▀▀▀▀▀▀▀█▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█
