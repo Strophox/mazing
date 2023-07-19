@@ -1,4 +1,3 @@
-
 # OUTLINE BEGIN
 """
 Contains the main `Maze` class,
@@ -31,6 +30,7 @@ import collections # deque
 import time # strftime
 import random
 from PIL import Image
+import my_color_utils as col
 
 # IMPORTS END
 
@@ -115,11 +115,24 @@ class Maze:
         self.width  = width
         self.height = height
         self._grid = [[Node(x,y) for x in range(width)] for y in range(height)]
-        self._solution = set()
-        self._infotags = []
+        self._timestamp = time.strftime('%Y-%m-%d_%Hh%Mm%S')
+        self._history = []
+        self._solution = None
 
     def __repr__(self):
-        return (self._infotags, self._grid).__repr__()
+        return (self._history, self._grid).__repr__()
+
+    def name(self):
+        """Generate human-readable name for the maze."""
+        size = f"{self.width}" if self.width==self.height else f"{self.width}x{self.height}"
+        history = '-'.join(self._history)
+        timestamp = self._timestamp
+        name = f"maze{size}_{history}_{timestamp}"
+        return name
+
+    def _log_action(self, title):
+        self._timestamp = time.strftime('%Y-%m-%d_%Hh%Mm%S')
+        self._history.append(title)
 
     def nodes(self):
         """Produce iterator over the nodes of the maze."""
@@ -139,14 +152,6 @@ class Maze:
             edge_iterators += [zip(row,row_below)]
         return itertools.chain(*edge_iterators)
 
-    def generate_name(self):
-        """Generate human-readable name for the maze."""
-        info = '-'.join(self._infotags)
-        size = f"{self.width}" if self.width==self.height else f"{self.width}x{self.height}"
-        timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
-        name = f"maze_{info}_{size}_{timestamp}"
-        return name
-
     def generate_raster(self, corridorwidth=1, columnated=True, show_marked_nodes=False, show_flags=False): # TODO FIXME DANGER WARNING BUG BEGIN END ATTENTION
         """Return a simple 2D raster representation of the maze.
 
@@ -160,7 +165,7 @@ class Maze:
         wall = self.has_wall
         if show_flags:
             mkval = lambda is_wall, x,y: -1 if is_wall else self.node_at(x,y).flag
-        elif show_marked_nodes:
+        elif show_marked_nodes and self._solution is not None:
             mkval = lambda is_wall, x,y: 1 if is_wall else 2 if self.node_at(x,y) in self._solution else 0
         else:
             mkval = lambda is_wall, x,y: True if is_wall else False
@@ -206,7 +211,7 @@ class Maze:
         image.putdata(pixels)
         return image
 
-    def generate_image(self, show_marked_nodes=True):
+    def generate_image(self, show_marked_nodes=True, wallcolor=(0,0,0), aircolor=(255,255,255), markcolor=(53,215,187)):#(255,127,127)):
         """Generate a handle to a (PIL) Image object presenting the maze.
 
         Args:
@@ -214,20 +219,20 @@ class Maze:
         """
         raster = self.generate_raster(show_marked_nodes=show_marked_nodes)
         if show_marked_nodes:
-            value_to_rgb = lambda value: (255,127,127) if value==2 else (0,0,0) if value==1 else (255,255,255)
+            value_to_rgb = lambda value: markcolor if value==2 else wallcolor if value==1 else aircolor
         else:
-            value_to_rgb = lambda value: (0,0,0) if value else (255,255,255)
+            value_to_rgb = lambda value: wallcolor if value else air
         image = Maze.raster_to_image(raster, value_to_rgb)
         return image
 
-    def generate_image_colored(self, color0=(0x93,0x76,0xE0), color1=(0xFF,0xF5,0xB8)):
-        if "solved" not in self._infotags:
-            raise ValueError("maze must be solved to generate colored image")
-        if color1 is None:
-            color1 = tuple(255-x for x in color0)
+    def generate_image_colored(self, gradcol0=(147,118,224), gradcol1=(255,245,184)):
+        if self._solution is None:
+            raise ValueError("maze must be searched to generate colored image")
+        if gradcol1 is None: # TODO
+            gradcol1 = tuple(255-x for x in gradcol0)
         raster = self.generate_raster(show_flags=True)
         peak = max(itertools.chain(*raster))
-        value_to_rgb = lambda val: (0,0,0) if val==-1 else tuple(round((1-val/peak)*c0 + (val/peak)*c1) for c0,c1 in zip(color0,color1))
+        value_to_rgb = lambda val: (0,0,0) if val==-1 else tuple(round((1-val/peak)*c0 + (val/peak)*c1) for c0,c1 in zip(gradcol0,gradcol1))
         image = Maze.raster_to_image(raster, value_to_rgb)
         return image
 
@@ -535,12 +540,12 @@ class Maze:
 
     def make_unicursal(self):
         """Convert self into a unicursal/ maze by removing no dead ends."""
-        if "unicursal" not in self._infotags:
+        if "braided" not in self._history: # FIXME icky
             for node in self.nodes():
                 while sum(1 for _ in self.adjacent_to(node,connected=True)) <= 1:
                     neighbor = random.choice(list(self.adjacent_to(node,connected=False)))
                     self.connect(node,neighbor)
-            self._infotags.append("unicursal")
+            self._log_action("braided")
         return
 
     def breadth_first_search(self, entrance=None, exit=None):
@@ -566,14 +571,15 @@ class Maze:
                     queue.append(neighbor)
                     neighbor.flag = node.flag + 1
         # Find solution path if not yet calculated
-        if "solved" not in self._solution:
+        if self._solution is None:
             # Backtrack solution path
+            self._solution = set()
             current = exit
             while current != entrance:
                 self._solution.add(current)
-                current = min(self.adjacent_to(current,connected=True),key=lambda n:n.flag)
+                current = min(self.adjacent_to(current,connected=True), default=False, key=lambda n:n.flag)
+                if not current: break
             self._solution.add(entrance)
-        self._infotags.append("solved")
         return
 
 
@@ -606,12 +612,12 @@ class Maze:
         Returns:
             Maze: Corresponding maze object
         """
-        (infotags,grid) = temp
+        (history,grid) = temp
         maze = Maze(len(grid[0]),len(grid))
         for x in range(maze.height):
             for y in range(maze.width):
                 maze.node_at(x,y).set_edges(grid[y][x])
-        maze._infotags = infotags
+        maze._history = history
         return maze
 
     @staticmethod
@@ -624,7 +630,7 @@ class Maze:
         maze = Maze(width,height)
         for node in maze.nodes():
             node.toggle_edge(random.randint(0b0000,0b1111))
-        maze._infotags.append("Bogus")
+        maze._log_action("bogo")
         return maze
 
     @staticmethod
@@ -662,7 +668,7 @@ class Maze:
                 else:
                     bucket.pop(n)
         maze._unflag_nodes()
-        maze._infotags.append("GrowingTree")
+        maze._log_action("tree")
         return maze
 
     @staticmethod
@@ -674,7 +680,7 @@ class Maze:
             start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
         maze = Maze.growing_tree(width, height, start_coord, index_choice=lambda max_index: random.randint(0,max_index))
-        maze._infotags.append("Prim")
+        maze._log_action("prim")
         return maze
 
     @staticmethod
@@ -686,7 +692,7 @@ class Maze:
             start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
         maze = Maze.growing_tree(width, height, start_coord, index_choice=lambda max_index: -1)
-        maze._infotags.append("DepthFirstSearch")
+        maze._log_action("dfs")
         return maze
 
     @staticmethod
@@ -715,7 +721,7 @@ class Maze:
                     members[bigger.flag].append(node)
                 if len(members[bigger.flag])==maze.width*maze.height: break
         maze._unflag_nodes()
-        maze._infotags.append("Kruskal")
+        maze._log_action("kruskal")
         return maze
 
     @staticmethod
@@ -760,7 +766,7 @@ class Maze:
                         maze.connect(curr_node,next_node)
                         break
         maze._unflag_nodes()
-        maze._infotags.append("Wilson")
+        maze._log_action("wilson")
         return maze
 
     @staticmethod
@@ -798,7 +804,7 @@ class Maze:
             divide((xP+1,yP+1), (x1,y1))
         maze._join_nodes()
         divide((0,0), (maze.width-1,maze.height-1))
-        maze._infotags.append("DivideAndConquer4")
+        maze._log_action("divide4")
         return maze
 
     @staticmethod
@@ -840,7 +846,7 @@ class Maze:
                 divide((xP+1,y0), (x1,y1), False)
         maze._join_nodes()
         divide((0,0), (maze.width-1,maze.height-1), maze.width)
-        maze._infotags.append("DivideAndConquer")
+        maze._log_action("divide")
         return maze
 
 # CLASSES END

@@ -20,7 +20,7 @@ import time
 SEQ_00 = [
       (r"BEGIN", lambda maze: maze
 
-    ),("dummy", lambda maze:
+    ),("dummy test", lambda maze:
         Maze.bogus(1,1)
 
     ),(r"END  ", lambda maze: maze)
