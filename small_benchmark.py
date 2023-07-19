@@ -16,7 +16,113 @@ import time
 
 
 # CONSTANTS BEGIN
-# No constants
+
+SEQ_00 = [
+      (r"BEGIN", lambda maze: maze
+
+    ),("dummy", lambda maze:
+        Maze.bogus(1,1)
+
+    ),(r"END  ", lambda maze: maze)
+]
+
+SEQ_01 = [
+      (r"BEGIN", lambda maze: maze
+
+    ),("maze  0", lambda maze:
+        Maze(*_2(0))
+    ),("maze  1", lambda maze:
+        Maze(*_2(1))
+    ),("maze  2", lambda maze:
+        Maze(*_2(2))
+    ),("maze  3", lambda maze:
+        Maze(*_2(3))
+    ),("maze  4", lambda maze:
+        Maze(*_2(4))
+    ),("maze  5", lambda maze:
+        Maze(*_2(5))
+    ),("maze  6", lambda maze:
+        Maze(*_2(6))
+    ),("maze  7", lambda maze:
+        Maze(*_2(7))
+    ),("maze  8", lambda maze:
+        Maze(*_2(8))
+    ),("maze  9", lambda maze:
+        Maze(*_2(9))
+    ),("maze 10", lambda maze:
+        Maze(*_2(10))
+    ),("maze 11", lambda maze:
+        Maze(*_2(11))
+    ),("maze 12", lambda maze:
+        Maze(*_2(12))
+    ),("maze 13", lambda maze:
+        Maze(*_2(13))
+    ),("maze 14", lambda maze:
+        Maze(*_2(14))
+    ),("maze 15", lambda maze:
+        Maze(*_2(15))
+    ),("maze 16", lambda maze:
+        Maze(*_2(16))
+
+    ),(r"END  ", lambda maze: maze)
+]
+
+SEQ_02 = [
+    (N := 10) and()or
+      (r"BEGIN", lambda maze: maze
+
+    ),("bogus", lambda maze:
+        Maze.bogus(*_2(N))
+    ),("growing_tree", lambda maze:
+        Maze.growing_tree(*_2(N))
+    ),("backtracker", lambda maze:
+        Maze.backtracker(*_2(N))
+    ),("prim", lambda maze:
+        Maze.prim(*_2(N))
+    ),("kruskal", lambda maze:
+        Maze.kruskal(*_2(N))
+    ),("wilson", lambda maze:
+        Maze.wilson(*_2(N))
+    ),("divide_conquer", lambda maze:
+        Maze.divide_conquer(*_2(N))
+    ),("quad_divide_conquer", lambda maze:
+        Maze.quad_divide_conquer(*_2(N))
+
+    ),(r"END  ", lambda maze: maze)
+]
+
+SEQ_03 = [
+      (r"BEGIN", lambda maze: maze
+
+    ),("divide_conquer", lambda maze:
+        Maze.divide_conquer(*_2(9))
+    ),("growing_tree (fast_pop)", lambda maze:
+        Maze.growing_tree(*_2(9),fast_pop=True)
+    ),("wilson", lambda maze:
+        Maze.wilson(*_2(7))
+    ),("image save", lambda maze:
+        maze.generate_image().save(f"{maze.generate_name()}.png") and()or maze # <- cursed sequential expression composition
+    ),("make_unicursal", lambda maze:
+        maze.make_unicursal() and()or maze
+    ),("image save", lambda maze:
+        maze.generate_image().save(f"{maze.generate_name()}.png") and()or maze
+
+    ),(r"END  ", lambda maze: maze)
+]
+
+SEQ_04 = [
+      (r"BEGIN", lambda maze: maze
+
+    ),("big maze creation", lambda maze:
+        Maze(*_2(10))
+    ),("join_all_nodes", lambda maze:
+        maze.join_all_nodes() and()or maze
+
+    ),(r"END  ", lambda maze: maze)
+]
+
+SEQ_CHOSEN = SEQ_04
+
 # CONSTANTS END
 
 
@@ -27,6 +133,10 @@ import time
 
 # FUNCTIONS BEGIN
 
+def _2(n):
+    """Produce a pair (2**n,2**n) given some number n."""
+    return (2**n,2**n)
+
 def run_and_time(f):
     """Run a function and return its result and execution time as tuple."""
     start_time = time.perf_counter()
@@ -34,36 +144,25 @@ def run_and_time(f):
     time_taken = time.perf_counter() - start_time
     return (result, time_taken)
 
+def run_benchmark_on(sequence):
+    """Runs and benchmarks a sequence of 'actions'.
+
+    Args:
+        sequence (list(str, callable(Maze) -> Maze)): A list of 'actions' where an 'action' has a name and does computation on a Maze and returns a Maze
+    """
+    main_maze = None
+    for (title,action) in sequence:
+        (main_maze, time_taken) = run_and_time(lambda:action(main_maze))
+        print(f"['{title}' completed in {time_taken:.03f}s]")
+    return
+
 # FUNCTIONS END
 
 
 # MAIN BEGIN
 
 def main():
-    main_maze = None
-    # Execute sequence of actions
-    sequence = [
-          ("BEGIN", lambda maze:
-            None
-        ),("build div&cqr", lambda maze:
-            Maze.divide_conquer(2**9,2**9)
-        ),("build tree w/fastpop", lambda maze:
-            Maze.growing_tree(2**9,2**9,fast_pop=True)
-        ),("build wilson", lambda maze:
-            Maze.wilson(2**7,2**7)
-        ),("save image", lambda maze:
-            maze.generate_image().save(f"{maze.generate_name()}.png") and()or maze # <- cursed sequential expression composition
-        ),("join", lambda maze:
-            maze.make_unicursal() and()or maze
-        ),("save image", lambda maze:
-            maze.generate_image().save(f"{maze.generate_name()}.png") and()or maze
-        ),("END  ", lambda maze:
-            None
-        ),
-    ]
-    for (title,action) in sequence:
-        (main_maze, time_taken) = run_and_time(lambda:action(main_maze))
-        print(f"['{title}' completed in {time_taken:.03f}s]")
+    run_benchmark_on(SEQ_CHOSEN)
     return
 
 if __name__=="__main__": main()

@@ -48,35 +48,35 @@ class Node:
     """
     def __init__(self, x, y):
         """Initialize a node by its grid coordinates."""
-        self.coordinates = (self.x, self.y) = (x, y)
+        self.coordinates = (x, y)
         self.flag = None
-        self._connectivity = 0
+        self._edges = 0b0000
 
     def __repr__(self):
-        return self._connectivity.__repr__()
+        return self._edges.__repr__()
 
 #    def __str__(self):
-#        return " ╶╵└╴─┘┴╷┌│├┐┬┤┼"[self._connectivity%0b10000]
+#        return " ╶╵└╴─┘┴╷┌│├┐┬┤┼"[self._edges%0b10000]
 
     def has_wall(self, direction):
         """Check whether there is a wall in a certain direction from the node."""
-        return not (self._connectivity & direction)
+        return not (self._edges & direction)
 
     def has_edge(self, direction):
         """Check whether there is an edge in a certain direction from the node."""
-        return self._connectivity & direction
+        return self._edges & direction
 
     def set_edges(self, direction):
         """Set node to be connected exactly into the given directions."""
-        self._connectivity = direction
+        self._edges = direction
 
     def put_edge(self, direction):
         """Connect the node into the given directions."""
-        self._connectivity |= direction
+        self._edges |= direction
 
     def toggle_edge(self, direction):
         """Connect/disconnect the node into the given directions."""
-        self._connectivity ^= direction
+        self._edges ^= direction
 
 class Maze:
     """
@@ -111,15 +111,29 @@ class Maze:
             raise ValueError("Maze must have positive width and height")
         self.width  = width
         self.height = height
-        self.grid = [[Node(x,y) for x in range(width)] for y in range(height)] # TODO make private (self._grid)?
+        self._grid = [[Node(x,y) for x in range(width)] for y in range(height)]
         self._infotags = []
 
     def __repr__(self):
-        return (self._infotags, self.grid).__repr__()
+        return (self._infotags, self._grid).__repr__()
 
-    def __iter__(self):
-        """Iterate over the nodes of the maze."""
-        return itertools.chain(*self.grid)
+    def nodes(self):
+        """Produce iterator over the nodes of the maze."""
+        return itertools.chain(*self._grid)
+
+    def edges(self):
+        """Produce iterator over the edges of the maze."""
+        edge_iterators = []
+        rows = self._grid
+        for row in rows:
+            row_right = iter(row)
+            next(row_right)
+            edge_iterators += [zip(row,row_right)]
+        rows_below = iter(rows)
+        next(rows_below)
+        for row,row_below in zip(rows,rows_below):
+            edge_iterators += [zip(row,row_below)]
+        return itertools.chain(*edge_iterators)
 
     def add_info(self, string):
         """Add information about the maze, likely after modifying it."""
@@ -134,7 +148,7 @@ class Maze:
         name = f"maze_{info}_{size}_{timestamp}"
         return name
 
-    def bitmap(self, corridorwidth=1, columnated=True):
+    def generate_bitmap(self, corridorwidth=1, columnated=True):
         """Return a simple 2D bitmap representation of the maze.
 
         Args:
@@ -151,11 +165,11 @@ class Maze:
         # Top-left corner
         bmap = [[wall]]
         # Top wall
-        for x,node in enumerate(self.grid[0]):
+        for x,node in enumerate(self._grid[0]):
             bmap[0] += [node.has_wall(UP)] * w
             bmap[0] += [wall]
         # Middle and bottom rows of string
-        for y,row in enumerate(self.grid):
+        for y,row in enumerate(self._grid):
             # Left wall
             brow1 = [row[0].has_wall(LEFT)]
             brow2 = [wall]
@@ -169,13 +183,23 @@ class Maze:
             bmap += [brow2]
         return bmap
 
+    def generate_image(self):
+        """Generate a handle to a (PIL) Image object presenting the maze."""
+        bitmap = self.generate_bitmap()
+        width,height = len(bitmap[0]),len(bitmap)
+        bit_to_rgb = lambda bit: (0,0,0) if bit else (255,255,255)
+        imgdata = tuple(bit_to_rgb(bit) for bit in itertools.chain(*bitmap))
+        image = Image.new('RGB', (width,height))
+        image.putdata(imgdata)
+        return image
+
     def str_bitmap(self, wall='#', air=None, bitmap=None):
         """Produce a binary string presentation of the maze.
 
         Args:
             wall (str): Wall texture (default is '#')
             air (str): Air texture (default is len(wall)*' ')
-            bitmap (list(list(bool))): Bit map to be rendered (default is self.bitmap())
+            bitmap (list(list(bool))): Bit map to be rendered (default is self.generate_bitmap())
 
         Returns:
             str: Binary string presentation of the maze
@@ -183,7 +207,7 @@ class Maze:
         if air is None:
             air = len(wall)*' '
         if bitmap is None:
-            bitmap = self.bitmap()
+            bitmap = self.generate_bitmap()
         # Produce actual string
         string = '\n'.join(
             ''.join(
@@ -194,15 +218,15 @@ class Maze:
 
     def str_block_double(self):
         """Produce a wide (unicode) block string presentation of the maze."""
-        return self.str_bitmap(wall='██',air='  ')
+        return self.str_generate_bitmap(wall='██',air='  ')
 
     def str_block(self):
         """Produce a (unicode) block string presentation of the maze."""
-        return self.str_bitmap(wall='█',air=' ')
+        return self.str_generate_bitmap(wall='█',air=' ')
 
     def str_block_half(self):
         """Produce a (unicode) half-block string presentation of the maze."""
-        bmap = self.bitmap()
+        bmap = self.generate_bitmap()
         # Pad bitmap to even height
         if len(bmap)%2!=0:
             bmap.append([False for _ in bmap[0]])
@@ -217,7 +241,7 @@ class Maze:
 
     def str_block_quarter(self):
         """Produce a (unicode) quarter-block string presentation of the maze."""
-        bmap = self.bitmap()
+        bmap = self.generate_bitmap()
         # Pad bitmap to even height and width
         if len(bmap)%2!=0:
             bmap.append([False for _ in bmap[0]])
@@ -237,7 +261,7 @@ class Maze:
         tiles = " ╶╺╵└┕╹┖┗╴─╼┘┴┶┚┸┺╸╾━┙┵┷┛┹┻╷┌┍│├┝╿┞┡┐┬┮┤┼┾┦╀╄┑┭┯┥┽┿┩╃╇╻┎┏╽┟┢┃┠┣┒┰┲┧╁╆┨╂╊┓┱┳┪╅╈┫╉╋"
         make_tile = lambda a,b,c,d: tiles[27*d + 9*c + 3*b + 1*a]
         string = ""
-        for row in self.grid:
+        for row in self._grid:
             string  += '\n'
             strbelow = "\n"
             for node in row:
@@ -289,11 +313,11 @@ class Maze:
         # Top-left corner
         linestr = [['+']]
         # Top wall
-        for node in self.grid[0]:
+        for node in self._grid[0]:
             linestr[0] += ['--' if node.has_wall(UP) else '  '] * corridorwidth
             linestr[0] += ['+']
         # Middle and bottom rows of string
-        for row in self.grid:
+        for row in self._grid:
             # Left wall
             row1 = ['|' if row[0].has_wall(LEFT) else ' ']
             row2 = ['+']
@@ -359,16 +383,6 @@ class Maze:
                 string.append(cornersegment(x,y))
         return ''.join(string)
 
-    def generate_image(self):
-        """Generate a handle to a (PIL) Image object presenting the maze."""
-        bitmap = self.bitmap()
-        width,height = len(bitmap[0]),len(bitmap)
-        bit_to_rgb = lambda bit: (0,0,0) if bit else (255,255,255)
-        imgdata = tuple(bit_to_rgb(bit) for bit in itertools.chain(*bitmap))
-        image = Image.new('RGB', (width,height))
-        image.putdata(imgdata)
-        return image
-
     def has_wall(self, x, y, direction):
         """Check for a wall, facing some direction at some location in the maze.
 
@@ -390,7 +404,7 @@ class Maze:
         Returns:
             Node: Node object at position (x,y) in maze
         """
-        return self.grid[y][x]
+        return self._grid[y][x]
 
     def connect(self, node0, node1):
         """Toggle the connection between two nodes in the maze.
@@ -462,12 +476,34 @@ class Maze:
         """Convert self into a unicursal/ maze by removing no dead ends."""
         if self._infotags[-1] == "joined":
             return
-        for node in self:
+        for node in self.nodes():
             while sum(1 for _ in self.adjacent_to(node,connected=True)) <= 1:
                 neighbor = random.choice(list(self.adjacent_to(node,connected=False)))
                 self.connect(node,neighbor)
         self.add_info("joined")
         return
+
+    def join_all_nodes(self):
+        """Join all nodes within the maze """
+        for y,row in enumerate(self._grid):
+            for x,node in enumerate(row):
+                direction = 0b0000
+                if 0<x:             direction |= LEFT
+                if x<self.width-1:  direction |= RIGHT
+                if 0<y:             direction |= UP
+                if y<self.height-1: direction |= DOWN
+                node.put_edge(direction)
+        return
+
+    def breadth_first_search(self, start_coord=None):
+        """Compute all node distances and draw in the shortest path in a maze.
+
+        Args:
+            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
+        """
+        for node in self.nodes(): node.flag = False
+        return #TODO
+
 
 #    def recursively_backtrack(self):
 #        """Carve a maze using simple randomized depth-first-search.
@@ -481,7 +517,7 @@ class Maze:
 #                    neighbor.flag = True
 #                    self.connect(node,neighbor)
 #                    dfs(neighbor)
-#        for node in self:
+#        for node in self.nodes():
 #            if not node.flag:
 #                node.flag = True
 #                dfs(node)
@@ -514,7 +550,7 @@ class Maze:
             width, height (int): Positive integer dimensions of desired maze
         """
         maze = Maze(width,height)
-        for node in maze:
+        for node in maze.nodes():
             node.toggle_edge(random.randint(0b0000,0b1111))
         maze.add_info("Bogus")
         return maze
@@ -588,29 +624,23 @@ class Maze:
             width, height (int): Positive integer dimensions of desired maze
         """
         maze = Maze(width, height)
-        edges = []
-        rows = maze.grid
-        for row in rows:
-            row_right = iter(row) ; next(row_right)
-            edges.extend(zip(row,row_right))
-        rows_below = iter(rows) ; next(rows_below)
-        for row,row_below in zip(rows,rows_below):
-            edges.extend(zip(row,row_below))
+        edges = list(maze.edges())
         random.shuffle(edges)
+        members = {}
         for (node0,node1) in edges:
-            if not getattr(node0,'color',None):
-                node0.color, node0.members = node0, [node0]
-            if not getattr(node1,'color',None):
-                node1.color, node1.members = node1, [node1]
-            if node0.color != node1.color:
+            if not node0.flag:
+                node0.flag, members[node0] = node0, [node0]
+            if not node1.flag:
+                node1.flag, members[node1] = node1, [node1]
+            if node0.flag != node1.flag:
                 maze.connect(node0,node1)
-                if len(node0.color.members) < len(node1.color.members):
+                if len(members[node0.flag]) < len(members[node1.flag]):
                     smaller,bigger = node0,node1
                 else: smaller,bigger = node1,node0
-                for node in smaller.color.members:
-                    node.color = bigger.color
-                    bigger.color.members.append(node)
-                if len(bigger.color.members)==maze.width*maze.height: break
+                for node in members[smaller.flag]:
+                    node.flag = bigger.flag
+                    members[bigger.flag].append(node)
+                if len(members[bigger.flag])==maze.width*maze.height: break
         maze.add_info("Kruskal")
         return maze
 
@@ -633,7 +663,7 @@ class Maze:
             start = maze.node_at(maze.width//2,maze.height//2)
         else:
             start = maze.node_at(*start_coord)
-        nodes = list(maze)
+        nodes = list(maze.nodes())
         nodes.remove(start)
         generation = 1
         start.flag = generation
@@ -691,14 +721,7 @@ class Maze:
             divide((xP+1,y0), (x1,yP))
             divide((x0,yP+1), (xP,y1))
             divide((xP+1,yP+1), (x1,y1))
-        for y,row in enumerate(maze.grid):
-            for x,node in enumerate(row):
-                dir = 0b0000
-                if 0<x:             dir |= LEFT
-                if x<maze.width-1:  dir |= RIGHT
-                if 0<y:             dir |= UP
-                if y<maze.height-1: dir |= DOWN
-                node.put_edge(dir)
+        maze.join_all_nodes()
         divide((0,0), (maze.width-1,maze.height-1))
         maze.add_info("DivideAndConquer4")
         return maze
@@ -740,14 +763,7 @@ class Maze:
                 maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y))
                 divide((x0,y0), (xP,y1), False)
                 divide((xP+1,y0), (x1,y1), False)
-        for y,row in enumerate(maze.grid):
-            for x,node in enumerate(row):
-                dir = 0b0000
-                if 0<x:             dir |= LEFT
-                if x<maze.width-1:  dir |= RIGHT
-                if 0<y:             dir |= UP
-                if y<maze.height-1: dir |= DOWN
-                node.put_edge(dir)
+        maze.join_all_nodes()
         divide((0,0), (maze.width-1,maze.height-1), maze.width)
         maze.add_info("DivideAndConquer")
         return maze

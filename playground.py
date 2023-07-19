@@ -2,7 +2,7 @@
 """
 A script to try out things from `maze.py` interactively.
 
-Run as main and use console to interact
+Run as main and use console to build, view ... mazes.
 """
 # OUTLINE END
 
