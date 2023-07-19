@@ -61,9 +61,6 @@ class Node:
     def __repr__(self):
         return self._edges.__repr__()
 
-#    def __str__(self):
-#        return " ╶╵└╴─┘┴╷┌│├┐┬┤┼"[self._edges%0b10000]
-
     def has_wall(self, direction):
         """Check whether there is a wall in a certain direction from the node."""
         return not (self._edges & direction)
@@ -150,7 +147,7 @@ class Maze:
         name = f"maze_{info}_{size}_{timestamp}"
         return name
 
-    def generate_raster(self, corridorwidth=1, columnated=True, show_node_marks=True, show_flag_colors=False): # # TODO FIXME DANGER WARNING BUG BEGIN END ATTENTION
+    def generate_raster(self, corridorwidth=1, columnated=True, show_marked_nodes=False, show_flags=False): # TODO FIXME DANGER WARNING BUG BEGIN END ATTENTION
         """Return a simple 2D raster representation of the maze.
 
         Args:
@@ -160,55 +157,83 @@ class Maze:
         Returns:
             list(list(bool)): 2D raster of the maze
         """
-        has_wall, (wall,air) = self.has_wall, (True,False)
-        if columnated: column = lambda x,y: True
+        wall = self.has_wall
+        if show_flags:
+            mkval = lambda is_wall, x,y: -1 if is_wall else self.node_at(x,y).flag
+        elif show_marked_nodes:
+            mkval = lambda is_wall, x,y: 1 if is_wall else 2 if self.node_at(x,y) in self._solution else 0
         else:
-            column = lambda x,y: x==self.width-1 or y==self.height-1 or has_wall(x,y,RIGHT) or has_wall(x,y,DOWN) or has_wall(x,y+1,RIGHT) or has_wall(x+1,y,DOWN)
+            mkval = lambda is_wall, x,y: True if is_wall else False
+        if columnated:
+            column_wall = lambda x,y: True
+        else:
+            column_wall = lambda x,y: x==self.width-1 or y==self.height-1 or wall(x,y,RIGHT) or wall(x,y,DOWN) or wall(x+1,y+1,LEFT) or wall(x+1,y+1,UP)
         # Top-left corner
-        raster = [[wall]]
+        val = mkval(True, 0,0)
+        raster = [[val]]
         # Top wall
         for x,node in enumerate(self._grid[0]):
-            raster[0] += [node.has_wall(UP)] * corridorwidth
-            raster[0] += [wall]
+            val = mkval(node.has_wall(UP),x,0)
+            raster[0] += [val] * corridorwidth
+            val = mkval(True,x,0)
+            raster[0] += [val]
         # Middle and bottom rows of string
         for y,row in enumerate(self._grid):
             # Left wall
-            row1 = [row[0].has_wall(LEFT)]
-            row2 = [wall]
+            val = mkval(row[0].has_wall(LEFT), 0,y)
+            row1 = [val]
+            val = mkval(True, 0,y)
+            row2 = [val]
             # Middle and bottom walls (2 blocks/node)
             for x,node in enumerate(row):
-                row1 += [air] * corridorwidth
-                row1 += [node.has_wall(RIGHT)]
-                row2 += [node.has_wall(DOWN)] * corridorwidth
-                row2 += [column(x,y)]
+                val = mkval(False, x,y)
+                row1 += [val] * corridorwidth
+                val = mkval(node.has_wall(RIGHT), x,y)
+                row1 += [val]
+                val = mkval(node.has_wall(DOWN), x,y)
+                row2 += [val] * corridorwidth
+                val = mkval(column_wall(x,y), x,y)
+                row2 += [val]
             raster += [row1] * corridorwidth
             raster += [row2]
         return raster
 
     @staticmethod
-    def raster_to_image(raster, value_to_rgb): # TODO FIXME DANGER WARNING BUG BEGIN END ATTENTION
-        """TODO
-        """
-        rgb_data = list(value_to_rgb(value) for value in itertools.chain(*raster))
+    def raster_to_image(raster, value_to_rgb):
+        """TODO"""
+        pixels = [value_to_rgb(value) for value in itertools.chain(*raster)]
         image = Image.new('RGB', (len(raster[0]),len(raster)))
-        image.putdata(rgb_data)
+        image.putdata(pixels)
         return image
 
-    def generate_image(self):
+    def generate_image(self, show_marked_nodes=True):
         """Generate a handle to a (PIL) Image object presenting the maze.
 
         Args:
             raster (list(list(bool))): Bit map to be rendered (default is self.generate_raster())
         """
-        raster = self.generate_raster()
-        value_to_rgb = lambda bit: (0,0,0) if bit else (255,255,255)
-        image = Maze.raster_to_image(raster)
+        raster = self.generate_raster(show_marked_nodes=show_marked_nodes)
+        if show_marked_nodes:
+            value_to_rgb = lambda value: (255,127,127) if value==2 else (0,0,0) if value==1 else (255,255,255)
+        else:
+            value_to_rgb = lambda value: (0,0,0) if value else (255,255,255)
+        image = Maze.raster_to_image(raster, value_to_rgb)
+        return image
+
+    def generate_image_colored(self, color0=(0x93,0x76,0xE0), color1=(0xFF,0xF5,0xB8)):
+        if "solved" not in self._infotags:
+            raise ValueError("maze must be solved to generate colored image")
+        if color1 is None:
+            color1 = tuple(255-x for x in color0)
+        raster = self.generate_raster(show_flags=True)
+        peak = max(itertools.chain(*raster))
+        value_to_rgb = lambda val: (0,0,0) if val==-1 else tuple(round((1-val/peak)*c0 + (val/peak)*c1) for c0,c1 in zip(color0,color1))
+        image = Maze.raster_to_image(raster, value_to_rgb)
         return image
 
     @staticmethod
-    def raster_to_string(raster, value_to_chars): # TODO FIXME DANGER WARNING BUG BEGIN END ATTENTION
-        """TODO
-        """
+    def raster_to_string(raster, value_to_chars):
+        """TODO"""
         string = '\n'.join(
             ''.join(
                 value_to_chars(value) for value in row
@@ -319,12 +344,12 @@ class Maze:
                 string += make_tile(x<self.width-1 and wall(x+1,y,DOWN),wall(x,y,RIGHT),wall(x,y,DOWN),y<self.height-1 and wall(x,y+1,RIGHT))
         return string
 
-    def str_frame_ascii(self, corridorwidth=1, show_node_marks=True):
+    def str_frame_ascii(self, corridorwidth=1, show_marked_nodes=True):
         """Produce an (ASCII) frame string presentation of the maze.
 
         Args:
             corridorwidth (int): Multiplier of how much wider corridors should be compared to the walls (default is 1)
-            show_node_marks (bool): Whether solution should be displayed if calculated (default is True)
+            show_marked_nodes (bool): Whether solution should be displayed if calculated (default is True)
 
         Returns:
             str: (ASCII) frame string presentation of the maze
@@ -342,7 +367,7 @@ class Maze:
             row2 = ['+']
             # Middle and bottom walls (2 blocks/node)
             for node in row:
-                row1 += [f' {"." if show_node_marks and node in self._solution else " "} '] * corridorwidth
+                row1 += [f' {"." if show_marked_nodes and node in self._solution else " "} '] * corridorwidth
                 row1 += ['|' if node.has_wall(RIGHT) else ' ']
                 row2 += ['---' if node.has_wall(DOWN) else '   '] * corridorwidth
                 row2 += ['+']
@@ -510,13 +535,12 @@ class Maze:
 
     def make_unicursal(self):
         """Convert self into a unicursal/ maze by removing no dead ends."""
-        if self._infotags[-1] == "unicursal": # TODO icky
-            return
-        for node in self.nodes():
-            while sum(1 for _ in self.adjacent_to(node,connected=True)) <= 1:
-                neighbor = random.choice(list(self.adjacent_to(node,connected=False)))
-                self.connect(node,neighbor)
-        self._infotags.append("unicursal")
+        if "unicursal" not in self._infotags:
+            for node in self.nodes():
+                while sum(1 for _ in self.adjacent_to(node,connected=True)) <= 1:
+                    neighbor = random.choice(list(self.adjacent_to(node,connected=False)))
+                    self.connect(node,neighbor)
+            self._infotags.append("unicursal")
         return
 
     def breadth_first_search(self, entrance=None, exit=None):
@@ -530,7 +554,7 @@ class Maze:
         if exit is None:
             exit = self.node_at(-1,-1)
         for node in self.nodes():
-            node.flag = None
+            node.flag = -1
         queue = collections.deque(maxlen=3*max(self.width,self.height))
         queue.append(entrance)
         entrance.flag = 0
@@ -538,17 +562,18 @@ class Maze:
             node = queue.popleft()
             neighbors = list(self.adjacent_to(node,connected=True))
             for neighbor in neighbors:
-                if neighbor.flag is None:
+                if neighbor.flag == -1:
                     queue.append(neighbor)
                     neighbor.flag = node.flag + 1
         # Find solution path if not yet calculated
-        if not self._solution:
+        if "solved" not in self._solution:
             # Backtrack solution path
             current = exit
             while current != entrance:
                 self._solution.add(current)
                 current = min(self.adjacent_to(current,connected=True),key=lambda n:n.flag)
             self._solution.add(entrance)
+        self._infotags.append("solved")
         return
 
 

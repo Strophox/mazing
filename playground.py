@@ -67,7 +67,7 @@ def run_and_time(f):
 def main():
     main_dimensions = (16,16)
     main_maze = Maze(*main_dimensions)
-    main_image = None
+    main_cached_image = None
     import textwrap # remove source code multiline string indents
     help_text = textwrap.dedent("""
         A Mazing Sandbox
@@ -92,6 +92,7 @@ def main():
             case "help": # Show help menu
                 print(help_text)
             case "build": # Allow user to choose method and build new maze
+                main_cached_image = None
                 builders = {x.__name__:x for x in [
                     Maze.backtracker,
                     Maze.growing_tree,
@@ -106,14 +107,13 @@ def main():
                 if bname in builders:
                     (main_maze, time_taken) = run_and_time(lambda:builders[bname](*main_dimensions))
                     print(f"[{bname} completed in {time_taken:.03f}s]")
-                    main_cached_image = None
                     preview(main_maze)
                 else:
                     print(f"[unrecognized method '{bname}']")
             case "join": # Make current maze unicursal
+                main_cached_image = None
                 (_, time_taken) = run_and_time(lambda:main_maze.make_unicursal())
                 print(f"[joining completed in {time_taken:.03f}s]")
-                main_cached_image = None
                 preview(main_maze)
             case "size": # Allow user to save new maze size
                 user_input = input(f"Enter new dimensions 'X Y' (currently: {main_dimensions[0]} {main_dimensions[1]}) > ")
@@ -123,6 +123,7 @@ def main():
                 except ValueError as e:
                     print(f"[invalid dimensions: {e}]")
             case "load": # Let user load maze from a copied `repr` of a maze
+                main_cached_image = None
                 user_input = input("Enter `repr` string of a maze > ")
                 try:
                     main_maze = Maze.from_template(eval(user_input))
@@ -155,9 +156,15 @@ def main():
                 filename = f"{main_maze.generate_name()}.png"
                 main_cached_image.save(filename)
                 print(f"[saved '{filename}']")
+            case "color": # TODO
+                if main_cached_image is None:
+                    main_cached_image = main_maze.generate_image_colored()
+                print(f"[showing maze in external program]")
+                main_cached_image.show()
             case "solve": # Solve the maze
+                main_cached_image = None
                 main_maze.breadth_first_search()
-                print(main_maze.str_frame_ascii())
+                # TODO Preview maze
             case "hack": # hehe
                 user_input = input(">>> ")
                 try:
