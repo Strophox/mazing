@@ -99,7 +99,7 @@ def main():
                     Maze.divide_conquer,
                     Maze.quad_divide_conquer,
                 ]}
-                user_input = input(f"Choose method:\n| " + '\n| '.join(builders) + "\n> ")
+                user_input = input(f"Choose method:\n| " + ' | '.join(builders) + " > ")
                 bname = autocomplete(user_input.strip(),builders)
                 if bname in builders:
                     (main_maze, time_taken) = run_and_time(lambda:builders[bname](*main_dimensions))

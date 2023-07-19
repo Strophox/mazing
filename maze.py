@@ -218,11 +218,11 @@ class Maze:
 
     def str_block_double(self):
         """Produce a wide (unicode) block string presentation of the maze."""
-        return self.str_generate_bitmap(wall='██',air='  ')
+        return self.str_bitmap(wall='██',air='  ')
 
     def str_block(self):
         """Produce a (unicode) block string presentation of the maze."""
-        return self.str_generate_bitmap(wall='█',air=' ')
+        return self.str_bitmap(wall='█',air=' ')
 
     def str_block_half(self):
         """Produce a (unicode) half-block string presentation of the maze."""
@@ -472,17 +472,6 @@ class Maze:
             if 0<y             and node.has_wall(UP):    yield self.node_at(x,y-1)
             if y<self.height-1 and node.has_wall(DOWN):  yield self.node_at(x,y+1)
 
-    def make_unicursal(self):
-        """Convert self into a unicursal/ maze by removing no dead ends."""
-        if self._infotags[-1] == "joined":
-            return
-        for node in self.nodes():
-            while sum(1 for _ in self.adjacent_to(node,connected=True)) <= 1:
-                neighbor = random.choice(list(self.adjacent_to(node,connected=False)))
-                self.connect(node,neighbor)
-        self.add_info("joined")
-        return
-
     def join_all_nodes(self):
         """Join all nodes within the maze """
         for y,row in enumerate(self._grid):
@@ -493,6 +482,17 @@ class Maze:
                 if 0<y:             direction |= UP
                 if y<self.height-1: direction |= DOWN
                 node.put_edge(direction)
+        return
+
+    def make_unicursal(self):
+        """Convert self into a unicursal/ maze by removing no dead ends."""
+        if self._infotags[-1] == "joined":
+            return
+        for node in self.nodes():
+            while sum(1 for _ in self.adjacent_to(node,connected=True)) <= 1:
+                neighbor = random.choice(list(self.adjacent_to(node,connected=False)))
+                self.connect(node,neighbor)
+        self.add_info("joined")
         return
 
     def breadth_first_search(self, start_coord=None):
