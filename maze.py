@@ -356,7 +356,15 @@ class Maze:
         self._solution.add(self._entrance)
         return
 
-    def generate_raster(self, corridorwidth=1, columnated=True, show_solution=False, show_flags=False): # TODO
+    def generate_raster(self, corridorwidth=1, columnated=True, show_solution=False, show_distances=False): # TODO
+        """
+        normal:
+            wall = -1  air = 0
+        show_solution:
+            wall = -1  air = 0  marker = [1,2..]
+        show_distances:
+            wall = -1  air = [0,1..]  unreachable = -1
+        """
         """Return a simple 2D raster representation of the maze.
 
         Args:
@@ -369,12 +377,12 @@ class Maze:
         wall = self.has_wall
         if show_solution and self.has_solution() is None:
             raise RuntimeError("cannot show solution path before searching for it")
-        if show_flags:
+        if show_distances:
             mkval = lambda is_wall, x,y: (-1) if is_wall or self.node_at(x,y).distance==float('inf') else self.node_at(x,y).distance
         elif show_solution and self._solution:
-            mkval = lambda is_wall, x,y: 1 if is_wall else 2 if self.node_at(x,y) in self._solution else 0
+            mkval = lambda is_wall, x,y: (-1) if is_wall else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self._solution else 0
         else:
-            mkval = lambda is_wall, x,y: True if is_wall else False
+            mkval = lambda is_wall, x,y: (-1) if is_wall else 0
         if columnated:
             column_wall = lambda x,y: True
         else:
@@ -423,23 +431,47 @@ class Maze:
             raster (list(list(bool))): Bit map to be rendered (default is self.generate_raster())
         """
         raster = self.generate_raster()
+        # color conversion
         (wall_color, air_color) = wall_air_colors
-        value_to_color = lambda value: wall_color if value==1 else air_color
+        value_to_color = lambda value: wall_color if value==(-1) else air_color
+        # Convert to image
         image = Maze.raster_to_image(raster, value_to_color)
         return image
 
-    def generate_solutionimage(self, wall_air_marker_colors=(col.hex_to_tuple(0x000000),col.hex_to_tuple(0xFFFFFF),col.hex_to_tuple(0x007FFF))):
+    def generate_solutionimage(self, wall_air_marker_colors=None):
         raster = self.generate_raster(show_solution=True)
-        (wall_color, air_color, marker_color) = wall_air_marker_colors
-        value_to_color = lambda value: wall_color if value==1 else air_color if value==0 else marker_color
+        # color conversion
+        if wall_air_marker_colors is None:
+            peak = self._exit.distance or 1
+            wall_color = col.hex_to_tuple(0x000000)
+            air_color = col.hex_to_tuple(0xFFFFFF)
+            marker_color = lambda value: col.convert((360*value/peak, 1, 1),'HSV','RGB')
+            #marker_color = col.hex_to_tuple(0x007FFF)
+        else:
+            wall_color = wall_air_marker_colors[0]
+            air_color = wall_air_marker_colors[1]
+            marker_color = lambda value: wall_air_marker_colors[2]
+        value_to_color = lambda value: wall_color if value==(-1) else air_color if value==0 else marker_color(value)
+        # Convert to image
         image = Maze.raster_to_image(raster, value_to_color)
         return image
 
-    def generate_colorimage(self, gradient_colors=(col.hex_to_tuple(0xFFFFFF),col.hex_to_tuple(0x003F7F))):
-        (grad0_color, grad1_color) = gradient_colors
-        raster = self.generate_raster(show_flags=True)
-        peak = max(itertools.chain(*raster)) or 1
-        value_to_color = lambda dist: col.hex_to_tuple(0x000000) if dist == (-1) else col.interpolate(grad0_color, grad1_color, dist/peak)
+    def generate_colorimage(self, gradient_colors=None):
+        raster = self.generate_raster(show_distances=True)
+        # color conversion
+        if gradient_colors is None:
+            wall_color = col.hex_to_tuple(0x000000)
+            peak = max(itertools.chain(*raster)) or 1
+            #air_color = lambda value: col.convert((270*value/peak, 1, 1),'HSV','RGB')
+            (color0,color1) = (col.hex_to_tuple(0xFFFFFF),col.hex_to_tuple(0x003F7F))
+            air_color = lambda value: col.interpolate(color0, color1, value/peak)
+        else:
+            wall_color = col.hex_to_tuple(0x000000)
+            peak = max(itertools.chain(*raster)) or 1
+            (color0,color1) = gradient_colors
+            air_color = lambda value: col.interpolate(color0, color1, value/peak)
+        value_to_color = lambda value: wall_color if value==(-1) else air_color(value)
+        # Convert to image
         image = Maze.raster_to_image(raster, value_to_color)
         return image
 
