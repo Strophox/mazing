@@ -4,13 +4,15 @@ Generating and playing around with mazes
 ## What it is
 A central `maze.py` script provides a Maze class to interact with mazes.
 Functionality implemented thus far includes:
-- 10 different visualisation methods, including saving as PNG
-- 8 different maze generation algorithms
-- 1 way to modify a given maze further (unicursal)
+- 6 different maze generation algorithms (backtracker, growing tree, prim, kruskal, wilson, divide and conquer)
+- 1 way to modify a given maze further (make unicursal)
+- 1 way to solve it (breadth first search)
+- 8 different ways to print as ASCII/Unicode art
+- 3 image visualisation methods (normal, show solution, color distances)
 - (Other access to maze contents such as maze name, nodes, their neighbors etc.)
 
 ## How it's used
-Run `playground.py` as main to directly try stuff out, or `import maze` and use as documented in the module.
+Run `playground.py` as main to directly try most stuff out, or `import maze` and use as documented in the module.
 
 ## Why
 - Graph algorithms are interesting

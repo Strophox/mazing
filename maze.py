@@ -4,7 +4,7 @@ Contains the main `Maze` class,
 
 This file contains all important maze-relation implementations to store, create and modify grid mazes.
 
-Notes to self / Work in Progress:
+TBD Work in Progress:
 - Docstrings:
     * a l l   m u s t   b e   c h e c k e d .
 - Printers:
@@ -56,6 +56,7 @@ class Node:
         """Initialize a node by its grid coordinates."""
         self.coordinates = (x, y)
         self.flag = None
+        self.distance = None
         self._edges = 0b0000
 
     def __repr__(self):
@@ -99,7 +100,7 @@ class Maze:
         * generate_image
     - Generation algorithms (static methods)
         * from_template
-        * backtracker, bogus, divide_conquer, growing_tree, kruskal, prim, quad_divide_conquer, wilson
+        * backtracker, bogus, division, growing_tree, kruskal, prim, quad_division, wilson
     - Maze modification
         * make_unicursal
     """
@@ -115,24 +116,81 @@ class Maze:
         self.width  = width
         self.height = height
         self._grid = [[Node(x,y) for x in range(width)] for y in range(height)]
-        self._timestamp = time.strftime('%Y-%m-%d_%Hh%Mm%S')
-        self._history = []
+        self._entrance = self.node_at(0,0)
+        self._exit = self.node_at(-1,-1)
+        self._history = [time.strftime('%Y-%m-%d_%Hh%Mm%S')]
         self._solution = None
 
     def __repr__(self):
-        return (self._history, self._grid).__repr__()
+        string = (
+            self._history,
+            self._entrance.coordinates,
+            self._entrance.coordinates,
+            self._grid
+        ).__repr__()
+        return string
+
+    @staticmethod
+    def from_repr(data):
+        """Generate a maze by loading from a template.
+
+        Args:
+            data (list(str),list(list(int))): Maze representation
+
+        Returns:
+            Maze: Corresponding maze object
+        """
+        (
+            history,
+            entrance_coordinates,
+            exit_coordinates,
+            grid
+        ) = data
+        assert (type(grid) == list)
+        assert (len(grid) > 0)
+        assert (type(grid[0]) == list)
+        assert (len(grid[0]) > 0)
+        maze = Maze(len(grid[0]),len(grid))
+        for x in range(maze.height):
+            for y in range(maze.width):
+                assert (type(grid[y][x]) == int)
+                maze.node_at(x,y).set_edges(grid[y][x])
+        assert (type(entrance_coordinates) == tuple)
+        assert (type(entrance_coordinates[0]) == int)
+        assert (type(entrance_coordinates[1]) == int)
+        maze.set_entrance(maze.node_at(*entrance_coordinates))
+        assert (type(exit_coordinates) == tuple)
+        assert (type(exit_coordinates[0]) == int)
+        assert (type(exit_coordinates[1]) == int)
+        maze.set_exit(maze.node_at(*exit_coordinates))
+        assert (type(history) == list)
+        for entry in history:
+            assert (type(entry) == str)
+            maze._log_action(entry)
+        return maze
+
+    def _log_action(self, title):
+        self._history.append(title)
+        return
+
+    def _join_nodes(self):
+        """Join all nodes within the maze """
+        for y,row in enumerate(self._grid):
+            for x,node in enumerate(row):
+                direction = 0b0000
+                if 0<x:             direction |= LEFT
+                if x<self.width-1:  direction |= RIGHT
+                if 0<y:             direction |= UP
+                if y<self.height-1: direction |= DOWN
+                node.put_edge(direction)
+        return
 
     def name(self):
         """Generate human-readable name for the maze."""
         size = f"{self.width}" if self.width==self.height else f"{self.width}x{self.height}"
         history = '-'.join(self._history)
-        timestamp = self._timestamp
-        name = f"maze{size}_{history}_{timestamp}"
-        return name
-
-    def _log_action(self, title):
-        self._timestamp = time.strftime('%Y-%m-%d_%Hh%Mm%S')
-        self._history.append(title)
+        string = f"maze{size}_{history}"
+        return string
 
     def nodes(self):
         """Produce iterator over the nodes of the maze."""
@@ -142,17 +200,161 @@ class Maze:
         """Produce iterator over the edges of the maze."""
         edge_iterators = []
         rows = self._grid
-        for row in rows:
-            row_right = iter(row)
-            next(row_right)
-            edge_iterators += [zip(row,row_right)]
-        rows_below = iter(rows)
-        next(rows_below)
+        rows_below = iter(rows) ; next(rows_below)
         for row,row_below in zip(rows,rows_below):
-            edge_iterators += [zip(row,row_below)]
+            row_shifted_right = iter(row) ; next(row_shifted_right)
+            edge_iterators.append(zip(row,row_shifted_right))
+            edge_iterators.append(zip(row,row_below))
         return itertools.chain(*edge_iterators)
 
-    def generate_raster(self, corridorwidth=1, columnated=True, show_marked_nodes=False, show_flags=False): # TODO FIXME DANGER WARNING BUG BEGIN END ATTENTION
+    def set_entrance(self, x, y):
+        self._solution = None
+        self._entrance = self.node_at(x,y)
+        return
+
+    def set_exit(self, x, y):
+        self._solution = None
+        self._exit = self.node_at(x,y)
+        return
+
+    def node_at(self, x, y):
+        """Get node at those coordinates in the maze.
+
+        Args:
+            x, y (int): Coordinates with 0<=x<self.width && 0<=y<self.height
+
+        Returns:
+            Node: Node object at position (x,y) in maze
+        """
+        #if not (0 <= x < self.width and 0 <= y < self.height):
+            #raise ValueError("coordinates not within boundaries")
+        return self._grid[y][x]
+
+    def connect(self, node0, node1):
+        """Toggle the connection between two nodes in the maze.
+
+        Args:
+            node0, node1 (Node): Two nodes in the maze that lie adjacent
+        """
+        (x0,y0), (x1,y1) = node0.coordinates, node1.coordinates
+        dx, dy = x1-x0, y1-y0
+        if abs(dx) + abs(dy) != 1:
+            raise ValueError("nodes to connect must be neighbors")
+        get_dir = lambda dx,dy: (LEFT if dx<0 else RIGHT) if dx else (UP if dy<0 else DOWN)
+        node0.toggle_edge(get_dir(dx,dy))
+        node1.toggle_edge(get_dir(-dx,-dy))
+        return
+
+    def connect_to(self, node, direction):
+        """Toggle the connection between two nodes in the maze.
+
+        Args:
+            node (Node): Node within the maze
+            direction (int) : One of (RIGHT,UP,LEFT,DOWN) = (1,2,4,8), where direction cannot face outside of maze boundaries (else ValueError)
+        """
+        (x,y) = node.coordinates
+        [r,u,l,d] = [direction==dir for dir in (RIGHT,UP,LEFT,DOWN)]
+        invalid_direction = (
+            r and x==self.width-1
+            or l and x==0
+            or u and y==0
+            or d and y==self.height-1
+        )
+        if invalid_direction:
+            raise ValueError("cannot connect node outside grid")
+        dx, dy = (1 if r else -1 if l else 0), (1 if d else -1 if u else 0)
+        neighbor = self.node_at(x+dx,y+dy)
+        opposite_direction = {RIGHT:LEFT,UP:DOWN,LEFT:RIGHT,DOWN:UP}[direction]
+        node.toggle_edge(direction)
+        neighbor.toggle_edge(opposite_direction)
+        return
+
+    def has_wall(self, x, y, direction):
+        """Check for a wall, facing some direction at some location in the maze.
+
+        Args:
+            x, y (int): Coordinates with 0<=x<self.width && 0<=y<self.height
+            direction (int) : One of (RIGHT,UP,LEFT,DOWN) = (1,2,4,8)
+
+        Returns:
+            bool: Whether there is a wall when facing direction from (x,y) in maze
+        """
+        return self.node_at(x,y).has_wall(direction)
+
+    def adjacent_to(self, node, connected=None):
+        """Get all cells that are adjacent to node in the maze.
+
+        Args:
+            node (Node): Origin node
+            connected (bool): Flag to additionally check cells for being connected or disconnected (default is None)
+
+        Yields:
+            Node: Neighboring node fulfilling conditions
+        """
+        (x,y) = node.coordinates
+        if connected is None:
+            if 0<x:             yield self.node_at(x-1,y)
+            if x<self.width-1:  yield self.node_at(x+1,y)
+            if 0<y:             yield self.node_at(x,y-1)
+            if y<self.height-1: yield self.node_at(x,y+1)
+        elif connected is True:
+            if 0<x             and node.has_edge(LEFT):  yield self.node_at(x-1,y)
+            if x<self.width-1  and node.has_edge(RIGHT): yield self.node_at(x+1,y)
+            if 0<y             and node.has_edge(UP):    yield self.node_at(x,y-1)
+            if y<self.height-1 and node.has_edge(DOWN):  yield self.node_at(x,y+1)
+        elif connected is False:
+            if 0<x             and node.has_wall(LEFT):  yield self.node_at(x-1,y)
+            if x<self.width-1  and node.has_wall(RIGHT): yield self.node_at(x+1,y)
+            if 0<y             and node.has_wall(UP):    yield self.node_at(x,y-1)
+            if y<self.height-1 and node.has_wall(DOWN):  yield self.node_at(x,y+1)
+
+    def make_unicursal(self):
+        """Convert self into a unicursal/ maze by removing no dead ends."""
+        for node in self.nodes():
+            while sum(1 for _ in self.adjacent_to(node,connected=True)) <= 1:
+                neighbor = random.choice(list(self.adjacent_to(node,connected=False)))
+                self.connect(node,neighbor)
+                progressed = True # NOTE icky
+        if progressed:self._log_action("unicursal")
+        return
+
+    def has_solution(self):
+        if self._solution is None:
+            return None
+        if len(self._solution) == 0:
+            return False
+        else:
+            return True
+
+    def breadth_first_search(self):
+        """Compute all node distances and draw in the shortest path in a maze.
+
+        Args:
+            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is (0,0))
+        """
+        for node in self.nodes():
+            node.distance = float('inf')
+        queue = collections.deque(maxlen=3*max(self.width,self.height))
+        queue.append(self._entrance)
+        self._entrance.distance = 0
+        while queue:
+            node = queue.popleft()
+            neighbors = list(self.adjacent_to(node,connected=True))
+            for neighbor in neighbors:
+                if neighbor.distance == float('inf'):
+                    queue.append(neighbor)
+                    neighbor.distance = node.distance + 1
+        self._solution = set()
+        if self._exit.distance == float('inf'):
+            return
+        current = self._exit
+        while current != self._entrance:
+            self._solution.add(current)
+            current = min(self.adjacent_to(current,connected=True), default=False, key=lambda n:n.distance)
+        self._solution.add(self._entrance)
+        return
+
+    def generate_raster(self, corridorwidth=1, columnated=True, show_solution=False, show_flags=False): # TODO
         """Return a simple 2D raster representation of the maze.
 
         Args:
@@ -163,9 +365,11 @@ class Maze:
             list(list(bool)): 2D raster of the maze
         """
         wall = self.has_wall
+        if show_solution and self._solution is None:
+            raise RuntimeError("cannot show solution path before searching for it")
         if show_flags:
-            mkval = lambda is_wall, x,y: -1 if is_wall else self.node_at(x,y).flag
-        elif show_marked_nodes and self._solution is not None:
+            mkval = lambda is_wall, x,y: (-1) if is_wall or self.node_at(x,y).distance==float('inf') else self.node_at(x,y).distance
+        elif show_solution and self._solution:
             mkval = lambda is_wall, x,y: 1 if is_wall else 2 if self.node_at(x,y) in self._solution else 0
         else:
             mkval = lambda is_wall, x,y: True if is_wall else False
@@ -204,36 +408,38 @@ class Maze:
         return raster
 
     @staticmethod
-    def raster_to_image(raster, value_to_rgb):
+    def raster_to_image(raster, value_to_color):
         """TODO"""
-        pixels = [value_to_rgb(value) for value in itertools.chain(*raster)]
+        colors = [value_to_color(value) for value in itertools.chain(*raster)]
         image = Image.new('RGB', (len(raster[0]),len(raster)))
-        image.putdata(pixels)
+        image.putdata(colors)
         return image
 
-    def generate_image(self, show_marked_nodes=True, wallcolor=(0,0,0), aircolor=(255,255,255), markcolor=(53,215,187)):#(255,127,127)):
+    def generate_image(self, wall_air_colors=(col.hex_to_tuple(0x000000),col.hex_to_tuple(0xFFFFFF))):
         """Generate a handle to a (PIL) Image object presenting the maze.
 
         Args:
             raster (list(list(bool))): Bit map to be rendered (default is self.generate_raster())
         """
-        raster = self.generate_raster(show_marked_nodes=show_marked_nodes)
-        if show_marked_nodes:
-            value_to_rgb = lambda value: markcolor if value==2 else wallcolor if value==1 else aircolor
-        else:
-            value_to_rgb = lambda value: wallcolor if value else air
-        image = Maze.raster_to_image(raster, value_to_rgb)
+        raster = self.generate_raster()
+        (wall_color, air_color) = wall_air_colors
+        value_to_color = lambda value: wall_color if value==1 else air_color
+        image = Maze.raster_to_image(raster, value_to_color)
         return image
 
-    def generate_image_colored(self, gradcol0=(147,118,224), gradcol1=(255,245,184)):
-        if self._solution is None:
-            raise ValueError("maze must be searched to generate colored image")
-        if gradcol1 is None: # TODO
-            gradcol1 = tuple(255-x for x in gradcol0)
+    def generate_solutionimage(self, wall_air_marker_colors=(col.hex_to_tuple(0x000000),col.hex_to_tuple(0xFFFFFF),col.hex_to_tuple(0x007FFF))):
+        raster = self.generate_raster(show_solution=True)
+        (wall_color, air_color, marker_color) = wall_air_marker_colors
+        value_to_color = lambda value: wall_color if value==1 else air_color if value==0 else marker_color
+        image = Maze.raster_to_image(raster, value_to_color)
+        return image
+
+    def generate_colorimage(self, gradient_colors=(col.hex_to_tuple(0xFFFFFF),col.hex_to_tuple(0x003F7F))):
+        (grad0_color, grad1_color) = gradient_colors
         raster = self.generate_raster(show_flags=True)
         peak = max(itertools.chain(*raster))
-        value_to_rgb = lambda val: (0,0,0) if val==-1 else tuple(round((1-val/peak)*c0 + (val/peak)*c1) for c0,c1 in zip(gradcol0,gradcol1))
-        image = Maze.raster_to_image(raster, value_to_rgb)
+        value_to_color = lambda dist: col.hex_to_tuple(0x000000) if dist is (-1) else col.interpolate(grad0_color, grad1_color, dist/peak)
+        image = Maze.raster_to_image(raster, value_to_color)
         return image
 
     @staticmethod
@@ -349,7 +555,7 @@ class Maze:
                 string += make_tile(x<self.width-1 and wall(x+1,y,DOWN),wall(x,y,RIGHT),wall(x,y,DOWN),y<self.height-1 and wall(x,y+1,RIGHT))
         return string
 
-    def str_frame_ascii(self, corridorwidth=1, show_marked_nodes=True):
+    def str_frame_ascii(self, corridorwidth=1, show_solution=False):
         """Produce an (ASCII) frame string presentation of the maze.
 
         Args:
@@ -359,6 +565,8 @@ class Maze:
         Returns:
             str: (ASCII) frame string presentation of the maze
         """
+        if show_solution and self.solution is None:
+            raise RuntimeError("cannot show solution path before searching for it")
         # Top-left corner
         linestr = [['+']]
         # Top wall
@@ -372,7 +580,7 @@ class Maze:
             row2 = ['+']
             # Middle and bottom walls (2 blocks/node)
             for node in row:
-                row1 += [f' {"." if show_marked_nodes and node in self._solution else " "} '] * corridorwidth
+                row1 += [f' {"." if show_solution and node in self._solution else " "} '] * corridorwidth
                 row1 += ['|' if node.has_wall(RIGHT) else ' ']
                 row2 += ['---' if node.has_wall(DOWN) else '   '] * corridorwidth
                 row2 += ['+']
@@ -432,157 +640,6 @@ class Maze:
                 string.append(cornersegment(x,y))
         return ''.join(string)
 
-    def has_wall(self, x, y, direction):
-        """Check for a wall, facing some direction at some location in the maze.
-
-        Args:
-            x, y (int): Coordinates with 0<=x<self.width && 0<=y<self.height
-            direction (int) : One of (RIGHT,UP,LEFT,DOWN) = (1,2,4,8)
-
-        Returns:
-            bool: Whether there is a wall when facing direction from (x,y) in maze
-        """
-        return self.node_at(x,y).has_wall(direction)
-
-    def node_at(self, x, y):
-        """Get node at those coordinates in the maze.
-
-        Args:
-            x, y (int): Coordinates with 0<=x<self.width && 0<=y<self.height
-
-        Returns:
-            Node: Node object at position (x,y) in maze
-        """
-        return self._grid[y][x]
-
-    def connect(self, node0, node1):
-        """Toggle the connection between two nodes in the maze.
-
-        Args:
-            node0, node1 (Node): Two nodes in the maze that lie adjacent
-        """
-        (x0,y0), (x1,y1) = node0.coordinates, node1.coordinates
-        dx, dy = x1-x0, y1-y0
-        if abs(dx) + abs(dy) != 1:
-            raise ValueError("nodes to connect must be neighbors")
-        get_dir = lambda dx,dy: (LEFT if dx<0 else RIGHT) if dx else (UP if dy<0 else DOWN)
-        node0.toggle_edge(get_dir(dx,dy))
-        node1.toggle_edge(get_dir(-dx,-dy))
-        return
-
-    def connect_to(self, node, direction):
-        """Toggle the connection between two nodes in the maze.
-
-        Args:
-            node (Node): Node within the maze
-            direction (int) : One of (RIGHT,UP,LEFT,DOWN) = (1,2,4,8), where direction cannot face outside of maze boundaries (else ValueError)
-        """
-        (x,y) = node.coordinates
-        [r,u,l,d] = [direction==dir for dir in (RIGHT,UP,LEFT,DOWN)]
-        invalid_direction = (
-            r and x==self.width-1
-            or l and x==0
-            or u and y==0
-            or d and y==self.height-1
-        )
-        if invalid_direction:
-            raise ValueError("cannot connect node outside grid")
-        dx, dy = (1 if r else -1 if l else 0), (1 if d else -1 if u else 0)
-        neighbor = self.node_at(x+dx,y+dy)
-        opposite_direction = {RIGHT:LEFT,UP:DOWN,LEFT:RIGHT,DOWN:UP}[direction]
-        node.toggle_edge(direction)
-        neighbor.toggle_edge(opposite_direction)
-        return
-
-    def adjacent_to(self, node, connected=None):
-        """Get all cells that are adjacent to node in the maze.
-
-        Args:
-            node (Node): Origin node
-            connected (bool): Flag to additionally check cells for being connected or disconnected (default is None)
-
-        Yields:
-            Node: Neighboring node fulfilling conditions
-        """
-        (x,y) = node.coordinates
-        if connected is None:
-            if 0<x:             yield self.node_at(x-1,y)
-            if x<self.width-1:  yield self.node_at(x+1,y)
-            if 0<y:             yield self.node_at(x,y-1)
-            if y<self.height-1: yield self.node_at(x,y+1)
-        elif connected:
-            if 0<x             and node.has_edge(LEFT):  yield self.node_at(x-1,y)
-            if x<self.width-1  and node.has_edge(RIGHT): yield self.node_at(x+1,y)
-            if 0<y             and node.has_edge(UP):    yield self.node_at(x,y-1)
-            if y<self.height-1 and node.has_edge(DOWN):  yield self.node_at(x,y+1)
-        elif not connected:
-            if 0<x             and node.has_wall(LEFT):  yield self.node_at(x-1,y)
-            if x<self.width-1  and node.has_wall(RIGHT): yield self.node_at(x+1,y)
-            if 0<y             and node.has_wall(UP):    yield self.node_at(x,y-1)
-            if y<self.height-1 and node.has_wall(DOWN):  yield self.node_at(x,y+1)
-
-    def _unflag_nodes(self):
-        """Set flag attributes of all nodes to `None`."""
-        for node in self.nodes():
-            node.flag = None
-
-    def _join_nodes(self):
-        """Join all nodes within the maze """
-        for y,row in enumerate(self._grid):
-            for x,node in enumerate(row):
-                direction = 0b0000
-                if 0<x:             direction |= LEFT
-                if x<self.width-1:  direction |= RIGHT
-                if 0<y:             direction |= UP
-                if y<self.height-1: direction |= DOWN
-                node.put_edge(direction)
-        return
-
-    def make_unicursal(self):
-        """Convert self into a unicursal/ maze by removing no dead ends."""
-        if "braided" not in self._history: # FIXME icky
-            for node in self.nodes():
-                while sum(1 for _ in self.adjacent_to(node,connected=True)) <= 1:
-                    neighbor = random.choice(list(self.adjacent_to(node,connected=False)))
-                    self.connect(node,neighbor)
-            self._log_action("braided")
-        return
-
-    def breadth_first_search(self, entrance=None, exit=None):
-        """Compute all node distances and draw in the shortest path in a maze.
-
-        Args:
-            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is (0,0))
-        """
-        if entrance is None:
-            entrance = self.node_at(0,0)
-        if exit is None:
-            exit = self.node_at(-1,-1)
-        for node in self.nodes():
-            node.flag = -1
-        queue = collections.deque(maxlen=3*max(self.width,self.height))
-        queue.append(entrance)
-        entrance.flag = 0
-        while queue:
-            node = queue.popleft()
-            neighbors = list(self.adjacent_to(node,connected=True))
-            for neighbor in neighbors:
-                if neighbor.flag == -1:
-                    queue.append(neighbor)
-                    neighbor.flag = node.flag + 1
-        # Find solution path if not yet calculated
-        if self._solution is None:
-            # Backtrack solution path
-            self._solution = set()
-            current = exit
-            while current != entrance:
-                self._solution.add(current)
-                current = min(self.adjacent_to(current,connected=True), default=False, key=lambda n:n.flag)
-                if not current: break
-            self._solution.add(entrance)
-        return
-
-
 #    def recursively_backtrack(self):
 #        """Carve a maze using simple randomized depth-first-search.
 #
@@ -601,24 +658,6 @@ class Maze:
 #                dfs(node)
 #        self._infotags.append("backtracked")
 #        return
-
-    @staticmethod
-    def from_template(temp):
-        """Generate a maze by loading from a template.
-
-        Args:
-            temp (list(str),list(list(int))): Maze representation
-
-        Returns:
-            Maze: Corresponding maze object
-        """
-        (history,grid) = temp
-        maze = Maze(len(grid[0]),len(grid))
-        for x in range(maze.height):
-            for y in range(maze.width):
-                maze.node_at(x,y).set_edges(grid[y][x])
-        maze._history = history
-        return maze
 
     @staticmethod
     def bogus(width, height):
@@ -667,7 +706,6 @@ class Maze:
                     bucket.pop()
                 else:
                     bucket.pop(n)
-        maze._unflag_nodes()
         maze._log_action("tree")
         return maze
 
@@ -720,7 +758,6 @@ class Maze:
                     node.flag = bigger.flag
                     members[bigger.flag].append(node)
                 if len(members[bigger.flag])==maze.width*maze.height: break
-        maze._unflag_nodes()
         maze._log_action("kruskal")
         return maze
 
@@ -765,50 +802,11 @@ class Maze:
                     elif next_node.flag < generation:
                         maze.connect(curr_node,next_node)
                         break
-        maze._unflag_nodes()
         maze._log_action("wilson")
         return maze
 
     @staticmethod
-    def quad_divide_conquer(width, height):
-        """Build a random maze using randomized quadruple divide-and-conquer.
-
-        Args:
-            width, height (int): Positive integer dimensions of desired maze
-        """
-        maze = Maze(width, height)
-        def divide(topleft, bottomright):
-            (x0,y0), (x1,y1) = topleft, bottomright
-            if x0==x1 or y0==y1: return
-            (xP,yP) = (random.randrange(x0,x1),random.randrange(y0,y1))
-            for x in range(x0,x1+1):
-                maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1)) # DANGER actually disconnect
-            for y in range(y0,y1+1):
-                maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y)) # DANGER actually disconnect
-            dice = random.randint(1,4)
-            if dice != 1:
-                x = random.randint(x0,xP)
-                maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1))
-            if dice != 2:
-                x = random.randint(xP+1,x1)
-                maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1))
-            if dice != 3:
-                y = random.randint(y0,yP)
-                maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y))
-            if dice != 4:
-                y = random.randint(yP+1,y1)
-                maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y))
-            divide((x0,y0), (xP,yP))
-            divide((xP+1,y0), (x1,yP))
-            divide((x0,yP+1), (xP,y1))
-            divide((xP+1,yP+1), (x1,y1))
-        maze._join_nodes()
-        divide((0,0), (maze.width-1,maze.height-1))
-        maze._log_action("divide4")
-        return maze
-
-    @staticmethod
-    def divide_conquer(width, height, slice_bias=1.0, pivot_choice=None):
+    def division(width, height, slice_bias=1.0, pivot_choice=None):
         """Build a random maze using randomized divide-and-conquer.
 
         Args:
@@ -846,7 +844,7 @@ class Maze:
                 divide((xP+1,y0), (x1,y1), False)
         maze._join_nodes()
         divide((0,0), (maze.width-1,maze.height-1), maze.width)
-        maze._log_action("divide")
+        maze._log_action("division")
         return maze
 
 # CLASSES END
@@ -855,3 +853,5 @@ class Maze:
 # MAIN BEGIN
 # No main
 # MAIN END
+
+# {{{ BEGIN END }}} ALERT ATTENTION DANGER HACK SECURITY BUG FIXME DEPRECATED TASK TODO TBD WARNING CAUTION NOLINT ### NOTE NOTICE TEST TESTING
