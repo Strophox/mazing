@@ -17,7 +17,7 @@ import time
 
 # CONSTANTS BEGIN
 
-_2 = lambda n: (2**n, 2**n)
+__ = lambda n: (2**n, 2**n)
 
 SEQ_00 = [
       (r"BEGIN", lambda maze: maze
