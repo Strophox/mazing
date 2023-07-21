@@ -4,7 +4,7 @@ Generating and playing around with mazes
 ## What it is
 A central `maze.py` script provides a Maze class to interact with mazes.
 Functionality implemented thus far includes:
-- 6 different maze generation algorithms (backtracker, growing tree, prim, kruskal, wilson, divide and conquer)
+- 7 different maze generation algorithms (backtracker, growing tree, prim, kruskal, wilson, divide and conquer)
 - 1 way to modify a given maze further (make unicursal)
 - 1 way to solve it (breadth first search)
 - 8 different ways to print as ASCII/Unicode art

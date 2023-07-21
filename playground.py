@@ -43,13 +43,13 @@ def autocomplete(input_word, full_words):
     else:
         return input_word
 
-def preview(maze, printer=Maze.str_frame, max_cellcount=9999):
+def preview(maze, printer=Maze.str_frame, max_node_count=9999):
     """Print maze to the console iff within given size limit."""
-    cellcount = maze.width*maze.height
-    if cellcount <= max_cellcount:
+    node_count = maze.width*maze.height
+    if node_count <= max_node_count:
         print(printer(maze))
     else:
-        print(f"[no print (cellcount {cellcount})]")
+        print(f"[large maze won't be printed ({node_count} nodes)]")
     return
 
 def run_and_print_time(title, f):
@@ -69,25 +69,31 @@ def main():
     dimensions = (16,16)
     maze = Maze(*dimensions)
     cache_image = (None, None)
-    import textwrap # remove source code multiline string indents
-    help_text = textwrap.dedent("""
-        A Mazing Sandbox
-        | help   : show this menu
-        Editing
-        | build  : make new maze
-        | join   : remove dead ends
-        Viewing
-        | print  : ascii art
-        | img    : view image of maze
-        | imgsol : view solution image
-        | imgcol : view color image (distances)
-        | store  : save latest viewed image
-        Settings
-        | size   : set size of next maze
-        | load   : load maze from string
-        (Enter blank command to exit)
-        """).strip()
-    commands = ["help","build","join","print","img","imgsol","imgcol","save","size","load"]
+    #import textwrap # remove source code multiline string indents
+    help_text = """
+~:--------------------------------------:~
+ A Mazing Playground
+~:--------------------------------------:~
+ Enter a command to achieve its effect:
+ :  help   - show this menu
+ Editing:
+ :  build  - make new maze
+ :  join   - remove dead ends
+ Viewing:
+ :  print  - text art of maze
+ :  solve  - text art solution
+ :  img    - png image of maze
+ :  solimg - png solution
+ :  colimg - png colored distances
+ :  save   - save latest viewed image
+ Settings:
+ :  size   - set size of next maze
+ :  load   - load maze from string
+ (Commands are autocompleted)
+ (Blank command to exit)
+~:--------------------------------------:~
+""".strip()
+    commands = [l[1] for line in help_text.split('\n') if (l:=line.split()) and l[0]==':']
     command = "help"
     while True:
         match command:
@@ -95,12 +101,13 @@ def main():
                 print(help_text)
             case "build": # Allow user to choose method and build new maze
                 builders = {x.__name__:x for x in [
-                    Maze.backtracker,
                     Maze.growing_tree,
+                    Maze.backtracker,
                     Maze.prim,
                     Maze.kruskal,
                     Maze.wilson,
                     Maze.division,
+                    Maze.random_edges
                 ]}
                 user_input = input(f"Choose method:\n| " + ' | '.join(builders) + " > ")
                 name = autocomplete(user_input.strip(),builders)
@@ -127,17 +134,21 @@ def main():
                 ]}
                 for name,printer in printers.items():
                     print(f"{name}:\n{printer(maze)}")
+            case "solve":
+                if maze.has_solution() is None:
+                    run_and_print_time("solving",lambda:maze.breadth_first_search())
+                preview(maze, lambda maze:maze.str_frame_ascii(show_solution=True))
             case "img": # Generate image of current maze and open in external program
                 print(f"[making and showing maze image externally]")
                 cache_image = ("",maze.generate_image())
                 cache_image[1].show()
-            case "imgsol": # Generate image of current maze with solution and open in external program
+            case "solimg": # Generate image of current maze with solution and open in external program
                 if maze.has_solution() is None:
                     run_and_print_time("solving",lambda:maze.breadth_first_search())
                 print(f"[making and showing maze solution image externally]")
                 cache_image = ("_solution",maze.generate_solutionimage())
                 cache_image[1].show()
-            case "imgcol":
+            case "colimg":
                 #if maze.has_solution() is None:
                     #print("To generate map image first solve the maze!")
                 #else:
@@ -172,7 +183,7 @@ def main():
             case _: # Non-empty, unrecognized command
                 print("[unrecognized command]")
         # Get user input and possibly exit loop
-        user_input = input(f"| {' | '.join(commands)} > ")
+        user_input = input(f"\n| {' | '.join(commands)} > ")
         if not user_input.strip():
             print("goodbye")
             break

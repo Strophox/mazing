@@ -4,21 +4,24 @@ Contains the main `Maze` class,
 
 This file contains all important maze-relation implementations to store, create and modify grid mazes.
 
-TBD Work in Progress:
-- Docstrings:
-    * a l l   m u s t   b e   c h e c k e d .
+### Work in Progress:
+- General:
+    * color utils all the time
+    * a l l   d o c s t r i n g s   m u s t   b e   c h e c k e d   ( d e a t h )
+    *
+- Builders:
+    * division; alternate on aspect ratio
+    * division; leave rooms
+    * CHALLENGE compose algorithms
 - Printers:
-    * With colors: generate_image
-    * With solution: frame_ascii
-    * With solution challenge: str_frame
+    * solutionimage rainbow pat
+    * str_frame_ascii_small solution
+    * CHALLENGE str_frame solution
 - Solvers:
     * A* pathfinder
-- Printers:
-    * Colored image (generated_image)
 - ETC Dreams:
-    * Maze navigator (w/ curses)
-    * Interactive picker: distance by color
-    * Doom (curses) █▯▓▯▒▯░ ".,-~:;=!*#$@"
+    * curses maze navigator
+    * CHALLENGE doom; "░▒▓█.,-~:;=!*#$@"
 """
 # OUTLINE END
 
@@ -365,7 +368,7 @@ class Maze:
             list(list(bool)): 2D raster of the maze
         """
         wall = self.has_wall
-        if show_solution and self._solution is None:
+        if show_solution and self.has_solution() is None:
             raise RuntimeError("cannot show solution path before searching for it")
         if show_flags:
             mkval = lambda is_wall, x,y: (-1) if is_wall or self.node_at(x,y).distance==float('inf') else self.node_at(x,y).distance
@@ -409,7 +412,6 @@ class Maze:
 
     @staticmethod
     def raster_to_image(raster, value_to_color):
-        """TODO"""
         colors = [value_to_color(value) for value in itertools.chain(*raster)]
         image = Image.new('RGB', (len(raster[0]),len(raster)))
         image.putdata(colors)
@@ -437,14 +439,13 @@ class Maze:
     def generate_colorimage(self, gradient_colors=(col.hex_to_tuple(0xFFFFFF),col.hex_to_tuple(0x003F7F))):
         (grad0_color, grad1_color) = gradient_colors
         raster = self.generate_raster(show_flags=True)
-        peak = max(itertools.chain(*raster))
+        peak = max(itertools.chain(*raster)) or 1
         value_to_color = lambda dist: col.hex_to_tuple(0x000000) if dist is (-1) else col.interpolate(grad0_color, grad1_color, dist/peak)
         image = Maze.raster_to_image(raster, value_to_color)
         return image
 
     @staticmethod
     def raster_to_string(raster, value_to_chars):
-        """TODO"""
         string = '\n'.join(
             ''.join(
                 value_to_chars(value) for value in row
@@ -565,7 +566,7 @@ class Maze:
         Returns:
             str: (ASCII) frame string presentation of the maze
         """
-        if show_solution and self.solution is None:
+        if show_solution and self.has_solution() is None:
             raise RuntimeError("cannot show solution path before searching for it")
         # Top-left corner
         linestr = [['+']]
@@ -660,15 +661,16 @@ class Maze:
 #        return
 
     @staticmethod
-    def bogus(width, height):
-        """Build a bogus maze by having every node randomly connected.
+    def random_edges(width, height, edge_probability=0.5):
+        """Build a bogus maze by flipping a coin on every edge.
 
         Args:
             width, height (int): Positive integer dimensions of desired maze
         """
         maze = Maze(width,height)
-        for node in maze.nodes():
-            node.toggle_edge(random.randint(0b0000,0b1111))
+        for edge in maze.edges():
+            if random.random() < edge_probability:
+                maze.connect(*edge)
         maze._log_action("bogo")
         return maze
 
