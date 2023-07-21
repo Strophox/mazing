@@ -20,10 +20,10 @@ import time
 SEQ_00 = [
       (r"BEGIN", lambda maze: maze
 
-    ),("dummy test", lambda maze:
-        Maze.bogus(1,1)
+    ),("test unit", lambda maze:
+        print("hello, world")
 
-    ),(r"END  ", lambda maze: maze)
+    ),(r"END", lambda maze: maze)
 ]
 
 SEQ_01 = [
@@ -64,15 +64,15 @@ SEQ_01 = [
     ),("maze 16", lambda maze:
         Maze(*_2(16))
 
-    ),(r"END  ", lambda maze: maze)
+    ),(r"END", lambda maze: maze)
 ]
 
 SEQ_02 = [
     (N := 10) and()or
       (r"BEGIN", lambda maze: maze
 
-    ),("bogus", lambda maze:
-        Maze.bogus(*_2(N))
+    ),("random_edges", lambda maze:
+        Maze.random_edges(*_2(N))
     ),("growing_tree", lambda maze:
         Maze.growing_tree(*_2(N))
     ),("backtracker", lambda maze:
@@ -83,42 +83,42 @@ SEQ_02 = [
         Maze.kruskal(*_2(N))
     ),("wilson", lambda maze:
         Maze.wilson(*_2(N))
-    ),("divide_conquer", lambda maze:
-        Maze.divide_conquer(*_2(N))
-    ),("quad_divide_conquer", lambda maze:
-        Maze.quad_divide_conquer(*_2(N))
+    ),("division", lambda maze:
+        Maze.division(*_2(N))
 
-    ),(r"END  ", lambda maze: maze)
+    ),(r"END", lambda maze: maze)
 ]
 
 SEQ_03 = [
       (r"BEGIN", lambda maze: maze
 
-    ),("divide_conquer", lambda maze:
-        Maze.divide_conquer(*_2(9))
+    ),("division", lambda maze:
+        Maze.division(*_2(9))
     ),("growing_tree (fast_pop)", lambda maze:
         Maze.growing_tree(*_2(9),fast_pop=True)
     ),("wilson", lambda maze:
         Maze.wilson(*_2(7))
-    ),("image save", lambda maze:
+    ),("SAVE image", lambda maze:
         maze.generate_image().save(f"{maze.generate_name()}.png") and()or maze # <- cursed sequential expression composition
     ),("make_unicursal", lambda maze:
         maze.make_unicursal() and()or maze
-    ),("image save", lambda maze:
+    ),("SAVE image", lambda maze:
         maze.generate_image().save(f"{maze.generate_name()}.png") and()or maze
 
-    ),(r"END  ", lambda maze: maze)
+    ),(r"END", lambda maze: maze)
 ]
 
 SEQ_04 = [
       (r"BEGIN", lambda maze: maze
 
-    ),("big maze creation", lambda maze:
-        Maze(*_2(10))
-    ),("join_all_nodes", lambda maze:
-        maze.join_all_nodes() and()or maze
+    ),("backtracker", lambda maze:
+        Maze.backtracker(*_2(10))
+    ),("breadth_first_search", lambda maze:
+        maze.breadth_first_search() and()or maze
+    ),("generate_solutionimage", lambda maze:
+        maze.generate_solutionimage() and()or maze
 
-    ),(r"END  ", lambda maze: maze)
+    ),(r"END", lambda maze: maze)
 ]
 
 SEQ_CHOSEN = SEQ_04

@@ -6,17 +6,16 @@ This file contains all important maze-relation implementations to store, create 
 
 ### Work in Progress:
 - General:
-    * color utils all the time
     * a l l   d o c s t r i n g s   m u s t   b e   c h e c k e d   ( d e a t h )
-    *
-- Builders:
-    * division; alternate on aspect ratio
-    * division; leave rooms
-    * CHALLENGE compose algorithms
 - Printers:
-    * solutionimage rainbow pat
+    * solutionimage rainbow path =)
+    * FIXME generate_raster
     * str_frame_ascii_small solution
     * CHALLENGE str_frame solution
+- Builders:
+    * division; alternate on aspect ratio
+    * division; rooms
+    * CHALLENGE compose algorithms
 - Solvers:
     * A* pathfinder
 - ETC Dreams:
@@ -440,7 +439,7 @@ class Maze:
         (grad0_color, grad1_color) = gradient_colors
         raster = self.generate_raster(show_flags=True)
         peak = max(itertools.chain(*raster)) or 1
-        value_to_color = lambda dist: col.hex_to_tuple(0x000000) if dist is (-1) else col.interpolate(grad0_color, grad1_color, dist/peak)
+        value_to_color = lambda dist: col.hex_to_tuple(0x000000) if dist == (-1) else col.interpolate(grad0_color, grad1_color, dist/peak)
         image = Maze.raster_to_image(raster, value_to_color)
         return image
 
