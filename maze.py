@@ -8,7 +8,7 @@ This file contains all important maze-relation implementations to store, create 
 - General:
     * a l l   d o c s t r i n g s   m u s t   b e   c h e c k e d   ( d e a t h )
 - Printers:
-    * solutionimage rainbow path =)
+    * distance heatmap (official standards?)
     * FIXME generate_raster
     * str_frame_ascii_small solution
     * CHALLENGE str_frame solution
@@ -464,12 +464,14 @@ class Maze:
             peak = max(itertools.chain(*raster)) or 1
             #air_color = lambda value: col.convert((270*value/peak, 1, 1),'HSV','RGB')
             (color0,color1) = (col.hex_to_tuple(0xFFFFFF),col.hex_to_tuple(0x003F7F))
-            air_color = lambda value: col.interpolate(color0, color1, value/peak)
+            air_color = lambda value: col.mix(color0, color1, param=value/peak)
+            colors = [col.hex_to_tuple(0xFFFFFF),col.hex_to_tuple(0xFFFF00),col.hex_to_tuple(0xFF0000),col.hex_to_tuple(0x7F007F)]
+            air_color = lambda value: col.interpolate(colors, param=value/peak)
         else:
             wall_color = col.hex_to_tuple(0x000000)
             peak = max(itertools.chain(*raster)) or 1
             (color0,color1) = gradient_colors
-            air_color = lambda value: col.interpolate(color0, color1, value/peak)
+            air_color = lambda value: col.mix(color0, color1, param=value/peak)
         value_to_color = lambda value: wall_color if value==(-1) else air_color(value)
         # Convert to image
         image = Maze.raster_to_image(raster, value_to_color)

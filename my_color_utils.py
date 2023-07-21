@@ -64,9 +64,19 @@ def invert(color):
     color_inverted = tuple(255-ch for ch in color)
     return color_inverted
 
-def interpolate(color0, color1, param):
+def mix(color0, color1, param=0.5):
     color_mixed = tuple(int((1 - param)*ch0 + param*ch1) for (ch0,ch1) in zip(color0,color1))
     return color_mixed
+
+def interpolate(colors, param):
+    if param == 1.0: return colors[-1]
+    sectors = len(colors) - 1
+    segmentlength = 1/sectors
+    sector = int(param//segmentlength)
+    offset = param % segmentlength
+    sectorparam = offset / segmentlength
+    color_interpolated = mix(colors[sector], colors[sector+1], sectorparam)
+    return color_interpolated
 
 def average(*colors):
     add = lambda c1,c2: tuple(ch1+ch2 for ch1,ch2 in zip(c1,c2))

@@ -123,7 +123,20 @@ SEQ_04 = [
     ),(r"END", lambda maze: maze)
 ]
 
-SEQ_CHOSEN = SEQ_04
+SEQ_05 = [
+      (r"BEGIN", lambda maze: maze
+
+    ),("backtracker", lambda maze:
+        Maze.backtracker(64,64)
+    ),("breadth_first_search", lambda maze:
+        maze.breadth_first_search() and()or maze
+    ),("SHOW colorimage", lambda maze:
+        maze.generate_colorimage().show() and()or maze
+
+    ),(r"END", lambda maze: maze)
+]
+
+SEQ_CHOSEN = SEQ_05
 
 # CONSTANTS END
 
