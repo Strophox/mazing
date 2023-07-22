@@ -11,14 +11,17 @@ Run as main and use console to build, view ... mazes.
 
 from maze import Maze
 import time
+import shutil
 
 # IMPORTS END
 
 
 # CONSTANTS BEGIN
 
-PRINT_LIMIT = 10_000
 CANCEL_TEXT = "*canceled\n"
+PRINT_LIMIT = 100_000
+WX = lambda: shutil.get_terminal_size()[0]
+WY = lambda: shutil.get_terminal_size()[1]
 
 # CONSTANTS END
 
@@ -46,13 +49,19 @@ def autocomplete(input_word, full_words):
     else:
         return input_word
 
+def fits_into_console(string):
+    stringwidth = string.find('\n') + 1
+    stringheight = string.count('\n') + 1
+    return stringwidth <= WX() and stringheight <= WY()
+
 def preview(maze, printer=Maze.str_frame):
     """Print maze to the console iff within given size limit."""
-    cellcount = maze.width*maze.height
-    if cellcount < PRINT_LIMIT:
+    string = printer(maze)
+    charcount = len(string)
+    if charcount < PRINT_LIMIT and fits_into_console(string):
         print(printer(maze))
     else:
-        print(f"[maze too large for console preview ({cellcount} cells), consider an image option]")
+        print(f"[maze too large for console preview ({charcount} characters), consider an image option]")
     return
 
 def benchmark(title, function):
@@ -71,35 +80,37 @@ def benchmark(title, function):
 def main():
     dimensions = (16,16)
     maze = Maze.growing_tree(*dimensions)
-    cache_image = None
+    latest_image = None
     #import textwrap # remove source code multiline string indents
     help_text = """
 ~:--------------------------------------:~
  A Mazing Playground
 ~:--------------------------------------:~
  Enter a command to achieve its effect:
- :  help   - show this menu
+ ;  help   - show this menu
  Building:
- :  build  - make new maze
- ;  join   - remove dead ends
+ ;  build  - make new maze
+ :  join   - remove dead ends
  Viewing:
- :  print  - text art of maze
- :  img    - png image of maze
+ ;  print  - text art of maze
+ ;  img    - png image of maze
  Solving:
- :  solve  - text art solution
- ;  imgsol - png solution
+ ;  solve  - text art solution
+ :  imgsol - png solution
  Visualisation:
- ;  data   - analysis of maze
- ;  imgcol - png colored distances
+ :  data   - stats about current maze
+ :  imgcol - png colored distances
  Settings:
- ;  size   - set size of next maze
- ;  save   - save last png image
- ;  load   - load maze from string
+ :  size   - set size of next maze
+ :  view   - view last generated image
+ :  save   - save last generated image
+ :  load   - load maze from string
  (Commands are autocompleted)
- (Blank command to exit)
+ Enter blank command to quit
 ~:--------------------------------------:~
 """.strip()
-    commands = {l[1]:l[0]==':' for line in help_text.split('\n') if (l:=line.split()) and l[0] in ":;"}
+    commands = {l[1]:l[0]==';' for line in help_text.split('\n') if (l:=line.split()) and l[0] in ":;"}
+    command_prompt = f"\n| {' | '.join(cmd for cmd, in_selection in commands.items() if in_selection)} > "
     command = "help"
     while True:
         match command:
@@ -113,7 +124,7 @@ def main():
                     Maze.division,
                     Maze.random_edges
                 ]}
-                user_input = input(f"Choose method:\n| " + ' | '.join(builders) + " > ").strip()
+                user_input = input(f"Choose algorithm\n| {' | '.join(builders)} > ").strip()
                 if user_input:
                     buildername = autocomplete(user_input,builders)
                     if buildername in builders:
@@ -124,30 +135,45 @@ def main():
                 else:
                     print(CANCEL_TEXT,end='')
             case "data":
-                data = benchmark("maze analysis", lambda:maze.depth_first_search())
-                print(data)#TODO
+                hrulefill = lambda: print(f"~:{'-'*(WX()-4)}:~")
+                longest_path_distance = benchmark("finding longest path", lambda:maze.set_longest_path())
+                (tiles_counts, distances_counts) = benchmark("computing other stats", lambda:maze.compute_stats())
+                hrulefill()
+                print(" Tile distribution:")
+                max_tilecount = max(tiles_counts)
+                for tile,tilecount in zip(" ╶╵└╴─┘┴╷┌│├┐┬┤┼",tiles_counts):
+                    print(f"{tile} | {'#'*round(tilecount/max_tilecount * (WX()-2-3))}")
+                max_distance = max(distances_counts)
+                max_distancecount = max(distances_counts.values())
+                hrulefill()
+                print(" Distance distribution.")
+                for dist in range(max_distance+1):
+                    distancecount = distances_counts.get(dist, 0)
+                    print(f"{dist} | {'#'*round(distancecount/max_distancecount * (WX()-3-3))}")
+                hrulefill()
+                print(f" The longest path in the maze measures {longest_path_distance}")
+                hrulefill()
             case "help": # Show help menu
                 print(help_text)
             case "hackerman": # hehe
-                user_input = input(">>> ").strip()
-                if user_input:
-                    try:
-                        exec(user_input)
-                    except Exception as e:
-                        print(f"<error: {e}>")
-                else:
-                    print(CANCEL_TEXT,end='')
+                injection = []
+                while user_input:=input(">>> "):
+                    injection.append(user_input)
+                try:
+                    exec('\n'.join(injection))
+                except Exception as e:
+                    print(f"<error: {e}>")
             case "img": # Generate image of current maze and open in external program
-                cached_image = benchmark("generating image", lambda:maze.generate_image())
-                cached_image.show()
+                latest_image = benchmark("generating image", lambda:maze.generate_image())
+                latest_image.show()
             case "imgsol": # Generate image of current maze with solution and open in external program
                 benchmark("solving", lambda:maze.compute_solution())
-                cached_image = benchmark("generating image", lambda:maze.generate_solutionimage())
-                cached_image.show()
+                latest_image = benchmark("generating image", lambda:maze.generate_solutionimage())
+                latest_image.show()
             case "imgcol":
                 benchmark("computing distances", lambda:maze.compute_distances())
-                cached_image = benchmark("generating image", lambda:maze.generate_colorimage())
-                cached_image.show()
+                latest_image = benchmark("generating image", lambda:maze.generate_colorimage())
+                latest_image.show()
             case "join": # Make current maze unicursal
                 benchmark("making unicursal", lambda:maze.make_unicursal())
                 preview(maze)
@@ -163,8 +189,9 @@ def main():
                 else:
                     print(CANCEL_TEXT,end='')
             case "print": # Print currently stored maze in all available styles
-                cellcount = maze.width*maze.height
-                if cellcount < PRINT_LIMIT or input(f"Maze contains a lot of cells ({cellcount}), proceed ('Y')? >")=='Y':
+                repr_string = repr(maze)
+                charcount = len(repr_string)
+                if charcount < PRINT_LIMIT or input(f"Maze contains a lot of cells ({maze.width*maze.height}), proceed anyway ('Y')? >")=='Y':
                     printers = {x.__name__:x for x in [
                         Maze.str_raster,
                         Maze.str_block_double,
@@ -175,17 +202,17 @@ def main():
                         Maze.str_frame,
                         Maze.str_frame_ascii,
                         Maze.str_frame_ascii_small,
-                        repr,
                     ]}
                     for name,printer in printers.items():
                         print(f"{name}:\n{printer(maze)}")
+                    print(f"Maze `repr`:\n{repr_string}")
                 else:
                     print(CANCEL_TEXT,end='')
             case "save": # Generate image of current maze and save as file
-                if cached_image is not None:
-                    run_and_print_time("saving",lambda:cached_image.save(cached_image.filename))
+                if latest_image is not None:
+                    run_and_print_time("saving",lambda:latest_image.save(latest_image.filename))
                 else:
-                    print("No image generated yet, see `help` on ways of doing so")
+                    print("No image generated yet, see `help` on how to do so")
             case "size": # Allow user to save new maze size
                 user_input = input(f"Enter sidelength (e.g. '32') or dimensions (e.g. '80 40') (currently = {dimensions[0]} {dimensions[1]}) > ").strip()
                 if user_input:
@@ -204,10 +231,15 @@ def main():
             case "solve":
                 benchmark("solving",lambda:maze.compute_solution())
                 preview(maze, lambda maze: maze.str_frame_ascii(show_solution=True))
+            case "view":
+                if latest_image is not None:
+                    latest_image.show()
+                else:
+                    print("No image generated yet, see `help` on how to do so")
             case _: # Non-empty, unrecognized command
                 print("Unrecognized command")
         # Get user input and possibly exit loop
-        user_input = input(f"\n| {' | '.join(cmd for cmd,flag in commands.items() if flag)} > ").strip()
+        user_input = input(command_prompt).strip()
         if not user_input:
             print("goodbye")
             break

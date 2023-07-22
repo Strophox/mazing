@@ -296,7 +296,7 @@ class Maze:
         if progressed:self._log_action("unicursal")
         return
 
-    def compute_distances(self, start_coord=None, scanner=None):
+    def compute_distances(self, start_coord=None, scanr=None):
         """Compute all node distances using breadth first search.
 
         Args:
@@ -318,8 +318,8 @@ class Maze:
                 if neighbor.distance == float('inf'):
                     queue.append(neighbor)
                     neighbor.distance = current.distance + 1
-                    if scanner is not None:
-                        scanner(neighbor)
+                    if scanr is not None:
+                        scanr(neighbor)
         return
 
     def compute_solution(self):
@@ -333,6 +333,16 @@ class Maze:
             current = min(self.connected_to(current), default=False, key=lambda n:n.distance)
             self.solution_nodes.add(current)
         return
+
+    def compute_stats(self):
+        tiles_counts = [0 for _ in range(0b10000)]
+        distances_counts  = dict()
+        def update(node):
+            tiles_counts[node._edges] += 1
+            distances_counts.setdefault(node.distance, 0)
+            distances_counts[node.distance] += 1
+        self.compute_distances(scanr=update)
+        return (tiles_counts, distances_counts)
 
     def set_longest_path(self):
         #remote_nodes = []
