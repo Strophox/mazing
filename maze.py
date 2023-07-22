@@ -415,7 +415,7 @@ class Maze:
     def generate_raster(self, corridorwidth=1, columnated=True, show_solution=False, show_distances=False): # TODO
         """
         normal:
-            wall = -1  air = 0
+            wall = +1  air = 0
         show_solution:
             wall = -1  air = 0  marker = [1,2..]
         show_distances:
@@ -438,7 +438,7 @@ class Maze:
         elif show_solution and self._solution:
             mkval = lambda is_wall, x,y: (-1) if is_wall else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self._solution else 0
         else:
-            mkval = lambda is_wall, x,y: (-1) if is_wall else 0
+            mkval = lambda is_wall, x,y: (+1) if is_wall else 0
         if columnated:
             column_wall = lambda x,y: True
         else:
@@ -489,7 +489,7 @@ class Maze:
         raster = self.generate_raster()
         # color conversion
         (wall_color, air_color) = wall_air_colors
-        value_to_color = lambda value: wall_color if value==(-1) else air_color
+        value_to_color = lambda value: wall_color if value else air_color
         # Convert to image
         image = Maze.raster_to_image(raster, value_to_color)
         return image
@@ -550,7 +550,7 @@ class Maze:
         if air is None:
             air = len(wall)*' '
         raster = self.generate_raster()
-        value_to_chars = lambda value: wall if value==(-1) else air
+        value_to_chars = lambda value: wall if value else air
         string = Maze.raster_to_string(raster, value_to_chars)
         return string
 
