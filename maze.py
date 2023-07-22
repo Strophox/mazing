@@ -58,7 +58,7 @@ class Node:
         """Initialize a node by its grid coordinates."""
         self.coordinates = (x, y)
         self.flag = None
-        self.distance = None
+        self.distance = float('inf')
         self._edges = 0b0000
 
     def __repr__(self):
@@ -92,7 +92,7 @@ class Maze:
     - Primitive Interaction
         * __init__, __iter__, __repr__
         * generate_name
-        * adjacent_to, connect, connect_to, has_wall, node_at
+        * adjacent_to, connect, has_wall, node_at
     - Sophisticated maze presentation
         * bitmap
         * str_bitmap
@@ -118,16 +118,16 @@ class Maze:
         self.width  = width
         self.height = height
         self._grid = [[Node(x,y) for x in range(width)] for y in range(height)]
-        self._entrance = self.node_at(0,0)
-        self._exit = self.node_at(-1,-1)
+        self.entrance = self.node_at(0,0)
+        self.exit = self.node_at(-1,-1)
+        self.solution_nodes = None
         self._history = [time.strftime('%Y.%m.%d-%Hh%Mm%S')]
-        self._solution = None
 
     def __repr__(self):
         string = (
             self._history,
-            self._entrance.coordinates,
-            self._exit.coordinates,
+            self.entrance.coordinates,
+            self.exit.coordinates,
             [[node._edges for node in row] for row in self._grid],
         ).__repr__()
         return string
@@ -210,13 +210,11 @@ class Maze:
         return itertools.chain(*edge_iterators)
 
     def set_entrance(self, x, y):
-        self._solution = None
-        self._entrance = self.node_at(x,y)
+        self.entrance = self.node_at(x,y)
         return
 
     def set_exit(self, x, y):
-        self._solution = None
-        self._exit = self.node_at(x,y)
+        self.exit = self.node_at(x,y)
         return
 
     def node_at(self, x, y):
@@ -231,6 +229,18 @@ class Maze:
         #if not (0 <= x < self.width and 0 <= y < self.height):
             #raise ValueError("coordinates not within boundaries")
         return self._grid[y][x]
+
+    def has_wall(self, x, y, direction):
+        """Check for a wall, facing some direction at some location in the maze.
+
+        Args:
+            x, y (int): Coordinates with 0<=x<self.width && 0<=y<self.height
+            direction (int) : One of (RIGHT,UP,LEFT,DOWN) = (1,2,4,8)
+
+        Returns:
+            bool: Whether there is a wall when facing direction from (x,y) in maze
+        """
+        return self.node_at(x,y).has_wall(direction)
 
     def connect(self, node0, node1):
         """Toggle the connection between two nodes in the maze.
@@ -247,43 +257,7 @@ class Maze:
         node1.toggle_edge(get_dir(-dx,-dy))
         return
 
-    def connect_to(self, node, direction):
-        """Toggle the connection between two nodes in the maze.
-
-        Args:
-            node (Node): Node within the maze
-            direction (int) : One of (RIGHT,UP,LEFT,DOWN) = (1,2,4,8), where direction cannot face outside of maze boundaries (else ValueError)
-        """
-        (x,y) = node.coordinates
-        [r,u,l,d] = [direction==dir for dir in (RIGHT,UP,LEFT,DOWN)]
-        invalid_direction = (
-            r and x==self.width-1
-            or l and x==0
-            or u and y==0
-            or d and y==self.height-1
-        )
-        if invalid_direction:
-            raise ValueError("cannot connect node outside grid")
-        dx, dy = (1 if r else -1 if l else 0), (1 if d else -1 if u else 0)
-        neighbor = self.node_at(x+dx,y+dy)
-        opposite_direction = {RIGHT:LEFT,UP:DOWN,LEFT:RIGHT,DOWN:UP}[direction]
-        node.toggle_edge(direction)
-        neighbor.toggle_edge(opposite_direction)
-        return
-
-    def has_wall(self, x, y, direction):
-        """Check for a wall, facing some direction at some location in the maze.
-
-        Args:
-            x, y (int): Coordinates with 0<=x<self.width && 0<=y<self.height
-            direction (int) : One of (RIGHT,UP,LEFT,DOWN) = (1,2,4,8)
-
-        Returns:
-            bool: Whether there is a wall when facing direction from (x,y) in maze
-        """
-        return self.node_at(x,y).has_wall(direction)
-
-    def adjacent_to(self, node, connected=None):
+    def adjacent_to(self, node):
         """Get all cells that are adjacent to node in the maze.
 
         Args:
@@ -294,123 +268,92 @@ class Maze:
             Node: Neighboring node fulfilling conditions
         """
         (x,y) = node.coordinates
-        if connected is None:
-            if 0<x:             yield self.node_at(x-1,y)
-            if x<self.width-1:  yield self.node_at(x+1,y)
-            if 0<y:             yield self.node_at(x,y-1)
-            if y<self.height-1: yield self.node_at(x,y+1)
-        elif connected is True:
-            if 0<x             and node.has_edge(LEFT):  yield self.node_at(x-1,y)
-            if x<self.width-1  and node.has_edge(RIGHT): yield self.node_at(x+1,y)
-            if 0<y             and node.has_edge(UP):    yield self.node_at(x,y-1)
-            if y<self.height-1 and node.has_edge(DOWN):  yield self.node_at(x,y+1)
-        elif connected is False:
+        if 0<x:             yield self.node_at(x-1,y)
+        if x<self.width-1:  yield self.node_at(x+1,y)
+        if 0<y:             yield self.node_at(x,y-1)
+        if y<self.height-1: yield self.node_at(x,y+1)
+
+    def connected_to(self, node, invert=False):
+        (x,y) = node.coordinates
+        if invert:
             if 0<x             and node.has_wall(LEFT):  yield self.node_at(x-1,y)
             if x<self.width-1  and node.has_wall(RIGHT): yield self.node_at(x+1,y)
             if 0<y             and node.has_wall(UP):    yield self.node_at(x,y-1)
             if y<self.height-1 and node.has_wall(DOWN):  yield self.node_at(x,y+1)
+        else:
+            if 0<x             and node.has_edge(LEFT):  yield self.node_at(x-1,y)
+            if x<self.width-1  and node.has_edge(RIGHT): yield self.node_at(x+1,y)
+            if 0<y             and node.has_edge(UP):    yield self.node_at(x,y-1)
+            if y<self.height-1 and node.has_edge(DOWN):  yield self.node_at(x,y+1)
 
     def make_unicursal(self):
         """Convert self into a unicursal/ maze by removing no dead ends."""
         for node in self.nodes():
-            while sum(1 for _ in self.adjacent_to(node,connected=True)) <= 1:
-                neighbor = random.choice(list(self.adjacent_to(node,connected=False)))
+            while sum(1 for _ in self.connected_to(node)) <= 1:
+                neighbor = random.choice(list(self.connected_to(node,invert=True)))
                 self.connect(node,neighbor)
                 progressed = True # NOTE icky
         if progressed:self._log_action("unicursal")
         return
 
-    def has_solution(self):
-        if self._solution is None:
-            return None
-        if len(self._solution) == 0:
-            return False
-        else:
-            return True
-
-    def breadth_first_search(self):
-        """Compute all node distances and draw in the shortest path in a maze.
+    def compute_distances(self, start_coord=None, scanner=None):
+        """Compute all node distances using breadth first search.
 
         Args:
             start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is (0,0))
         """
+        if start_coord is None:
+            start = self.entrance
+        else:
+            start = self.node_at(*start_coord)
         for node in self.nodes():
             node.distance = float('inf')
         queue = collections.deque(maxlen=3*max(self.width,self.height))
-        queue.append(self._entrance)
-        self._entrance.distance = 0
+        queue.append(start)
+        start.distance = 0
         while queue:
-            node = queue.popleft()
-            neighbors = list(self.adjacent_to(node,connected=True))
+            current = queue.popleft()
+            neighbors = list(self.connected_to(current))
             for neighbor in neighbors:
                 if neighbor.distance == float('inf'):
                     queue.append(neighbor)
-                    neighbor.distance = node.distance + 1
-        self._solution = set()
-        if self._exit.distance == float('inf'):
-            return
-        current = self._exit
-        while current != self._entrance:
-            self._solution.add(current)
-            current = min(self.adjacent_to(current,connected=True), default=False, key=lambda n:n.distance)
-        self._solution.add(self._entrance)
+                    neighbor.distance = current.distance + 1
+                    if scanner is not None:
+                        scanner(neighbor)
         return
 
-    def depth_first_search(self): # ALERT BUG
-        start = self.node_at(0,0)
-        visited = {start}
-        startIter = self.adjacent_to(start,connected=True)
-        startBestTs = []
-        startRmtBest = (None,None,0)
-        frame = [start,startIter,startBestTs,startRmtBest]
-        stack = [frame]
-        return_ = None
-        while stack:
-            #print(return_)#TESTING
-            #for frame in stack:print(frame)#TESTING
-            #print("---")
-            # Load stackframe
-            [curr,currIter,currBestTs,currRmtBest] = stack[-1]
-            # Handle return value of child call by updating locals
-            if return_ is not None:
-                ((child,childDist), childRmtBest) = return_
-                currBestTs.append((child,childDist+1))
-                currBestTs.sort(key=lambda t:t[1],reverse=True)
-                if len(currBestTs) == 3: currBestTs.pop()
-                if currRmtBest[2] <= childRmtBest[2]:
-                    stack[-1][3] = childRmtBest
-            # Look at next neighbor
-            for nbr in currIter:
-                if nbr not in visited:
-                    visited.add(curr)
-                    # Prepare resursive call
-                    nbrIter = self.adjacent_to(nbr,connected=True)
-                    nbrBestTs = []
-                    nbrRmtBest = (None,None,0)
-                    frame = [nbr,nbrIter,nbrBestTs,nbrRmtBest]
-                    stack.append(frame)
-                    return_ = None
-                    break
-            # Gone through all neighbors, return value
-            else:
-                if currBestTs:
-                    currT = currBestTs[0]
-                else:
-                    currT = (curr,0)
-                if len(currBestTs) == 2:
-                    currRmtBest2 = (currBestTs[0][0],currBestTs[1][0],currBestTs[0][1]+currBestTs[1][1])
-                elif len(currBestTs) == 1:
-                    currRmtBest2 = (curr,currBestTs[0][0],currBestTs[0][1])
-                else:
-                    currRmtBest2 = (curr,curr,0)
-                if currRmtBest[2] <= currRmtBest2[2]:
-                    currRmtBest = currRmtBest2
-                stack.pop()
-                return_ = (currT, currRmtBest)
-            #for frame in stack:print(frame)#TESTING
-            #print(return_)#TESTING
-            #print(self.str_frame())#TESTING
-        return return_[1]
+    def compute_solution(self):
+        self.solution_nodes = set()
+        self.compute_distances()
+        if self.exit.distance == float('inf'):
+            return
+        current = self.exit
+        self.solution_nodes.add(self.exit)
+        while current != self.entrance:
+            current = min(self.connected_to(current), default=False, key=lambda n:n.distance)
+            self.solution_nodes.add(current)
+        return
+
+    def set_longest_path(self):
+        #remote_nodes = []
+        #def add_to_remote_nodes(node):
+            #if not remote_nodes:
+                #remote_nodes.append(node)
+            #else:
+                #if remote_nodes[0].distance < node.distance:
+                    #remote_nodes.clear()
+                    #remote_nodes.append(node)
+                #elif remote_nodes[0].distance == node.distance:
+                    #remote_nodes.append(node)
+                #elif remote_nodes[0].distance > node.distance:
+                    #pass
+        self.compute_distances()
+        farthest = max(self.nodes(), key=lambda n:n.distance)
+        self.entrance = farthest
+        self.compute_distances()
+        farthest = max(self.nodes(), key=lambda n:n.distance)
+        self.exit = farthest
+        return self.exit.distance
 
     def generate_raster(self, corridorwidth=1, columnated=True, show_solution=False, show_distances=False): # TODO
         """
@@ -431,18 +374,20 @@ class Maze:
             list(list(bool)): 2D raster of the maze
         """
         wall = self.has_wall
-        if show_solution and self.has_solution() is None:
-            raise RuntimeError("cannot show solution path before searching for it")
-        if show_distances:
-            mkval = lambda is_wall, x,y: (-1) if is_wall or self.node_at(x,y).distance==float('inf') else self.node_at(x,y).distance
-        elif show_solution and self._solution:
-            mkval = lambda is_wall, x,y: (-1) if is_wall else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self._solution else 0
-        else:
-            mkval = lambda is_wall, x,y: (+1) if is_wall else 0
         if columnated:
             column_wall = lambda x,y: True
         else:
             column_wall = lambda x,y: x==self.width-1 or y==self.height-1 or wall(x,y,RIGHT) or wall(x,y,DOWN) or wall(x+1,y+1,LEFT) or wall(x+1,y+1,UP)
+        if show_solution:
+            if self.solution_nodes is None:
+                raise RuntimeError("cannot show solution path before computing it")
+            mkval = lambda is_wall, x,y: (-1) if is_wall else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self.solution_nodes else 0
+        elif show_distances:
+            if self.entrance.distance == float('inf'):
+                raise RuntimeError("cannot show distances before computing them")
+            mkval = lambda is_wall, x,y: (-1) if is_wall or self.node_at(x,y).distance==float('inf') else self.node_at(x,y).distance
+        else:
+            mkval = lambda is_wall, x,y: (+1) if is_wall else 0
         # Top-left corner
         val = mkval(True, 0,0)
         raster = [[val]]
@@ -496,10 +441,12 @@ class Maze:
         return image
 
     def generate_solutionimage(self, wall_air_marker_colors=None):
+        if self.solution_nodes is None:
+            self.compute_solution()
         raster = self.generate_raster(show_solution=True)
         # color conversion
         if wall_air_marker_colors is None:
-            peak = self._exit.distance or 1
+            peak = self.exit.distance or 1
             wall_color = colortools.hex_to_tuple(0x000000)
             air_color = colortools.hex_to_tuple(0xFFFFFF)
             marker_color = lambda value: colortools.convert((360*value/peak, 1, 1),'HSV','RGB')
@@ -515,6 +462,8 @@ class Maze:
         return image
 
     def generate_colorimage(self, gradient_colors=None):
+        if self.entrance.distance == float('inf'):
+            self.compute_distances()
         raster = self.generate_raster(show_distances=True)
         # color conversion
         wall_color = colortools.hex_to_tuple(0x000000)
@@ -524,7 +473,6 @@ class Maze:
             gradient_colors = list(colortools.hex_to_tuple(color) for color in hex_colors)
         air_color = lambda value: colortools.interpolate(gradient_colors, param=value/peak)
         peak = max(itertools.chain(*raster)) or 1
-        print(f"{peak=}")
         value_to_color = lambda value: wall_color if value==(-1) else air_color(value)
         # Convert to image
         image = Maze.raster_to_image(raster, value_to_color)
@@ -653,7 +601,7 @@ class Maze:
         Returns:
             str: (ASCII) frame string presentation of the maze
         """
-        if show_solution and self.has_solution() is None:
+        if show_solution and self.solution_nodes is None:
             raise RuntimeError("cannot show solution path before searching for it")
         # Top-left corner
         linestr = [['+']]
@@ -668,7 +616,7 @@ class Maze:
             row2 = ['+']
             # Middle and bottom walls (2 blocks/node)
             for node in row:
-                row1 += [f' {"." if show_solution and node in self._solution else " "} '] * corridorwidth
+                row1 += [f' {"." if show_solution and node in self.solution_nodes else " "} '] * corridorwidth
                 row1 += ['|' if node.has_wall(RIGHT) else ' ']
                 row2 += ['---' if node.has_wall(DOWN) else '   '] * corridorwidth
                 row2 += ['+']
@@ -861,7 +809,7 @@ class Maze:
         maze = Maze(width, height)
         def backtrack_walk(tail_node, origin):
             while tail_node != origin:
-                prev_node = next(maze.adjacent_to(tail_node,connected=True))
+                prev_node = next(maze.connected_to(tail_node))
                 maze.connect(tail_node,prev_node) # DANGER actually disconnecting
                 tail_node.flag = 0
                 tail_node = prev_node

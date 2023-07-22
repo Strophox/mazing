@@ -125,44 +125,7 @@ SEQ_04 = [
     ),(r"END", lambda state: state)
 ]
 
-SEQ_05 = [
-      (r"BEGIN", lambda state: state
-
-    ),("growing_tree", lambda state:
-        Maze.growing_tree(*__(8))
-    ),("breadth_first_search", lambda state:
-        state.breadth_first_search()
-        and()or state
-    ),("set furthest entrance", lambda state:
-        (entrance_coords := max(state.nodes(),key=lambda n:n.distance).coordinates)
-        and()or state.set_entrance(*entrance_coords)
-        and()or state
-    ),("breadth first search", lambda state:
-        state.breadth_first_search()
-        and()or state
-    ),("set furthest exit", lambda state:
-        (exit_coords := max(state.nodes(),key=lambda n:n.distance).coordinates)
-        and()or state.set_exit(*exit_coords)
-        and()or state
-    ),("breadth first search", lambda state:
-        state.breadth_first_search()
-        and()or state
-    ),("output longest path (BFS)", lambda state:
-        (res := (state._entrance.coordinates,state._exit.coordinates,state._exit.distance))
-        and()or print(f"BFS: {res[0]} --({res[2]})-> {res[1]}")
-        and()or state
-    ),("output longest path (DFS)", lambda state:
-        (res := state.depth_first_search())
-        and()or print(f"DFS: {res[0]} --({res[2]})-> {res[1]}")
-        and()or state
-    ),("SHOW solutionimage", lambda state:
-        state.generate_solutionimage().show()
-        and()or state
-
-    ),(r"END", lambda state: state)
-]
-
-CHOSEN_SEQUENCE = SEQ_05
+CHOSEN_SEQUENCE = SEQ_04
 
 # CONSTANTS END
 
@@ -181,11 +144,12 @@ def run_on(sequence):
         sequence (list(str, callable(Maze) -> Maze)): A list of 'actions' where an 'action' has a name and does computation on a Maze and returns a Maze
     """
     state = None
-    for (title,action) in sequence:
+    for no, (title,action) in enumerate(sequence):
         begin_time = time.perf_counter()
         state  = action(state)
         end_time   = time.perf_counter()
-        print(f"['{title}' completed in {end_time-begin_time:.03f}s]")
+        print(f"|{no:02}| +{end_time-begin_time:.03f}s | {title}")
+        #print(f"['{title}' completed in {end_time-begin_time:.03f}s]")
     return
 
 # FUNCTIONS END
