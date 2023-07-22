@@ -32,7 +32,7 @@ import collections # deque
 import time # strftime
 import random
 from PIL import Image
-import my_color_utils as col
+import my_colortools as col
 
 # IMPORTS END
 
@@ -62,7 +62,7 @@ class Node:
         self._edges = 0b0000
 
     def __repr__(self):
-        return self._edges.__repr__()
+        return self.coordinates.__repr__()
 
     def has_wall(self, direction):
         """Check whether there is a wall in a certain direction from the node."""
@@ -127,8 +127,8 @@ class Maze:
         string = (
             self._history,
             self._entrance.coordinates,
-            self._entrance.coordinates,
-            self._grid
+            self._exit.coordinates,
+            [[node._edges for node in row] for row in self._grid],
         ).__repr__()
         return string
 
@@ -160,11 +160,11 @@ class Maze:
         assert (type(entrance_coordinates) == tuple)
         assert (type(entrance_coordinates[0]) == int)
         assert (type(entrance_coordinates[1]) == int)
-        maze.set_entrance(maze.node_at(*entrance_coordinates))
+        maze.set_entrance(*entrance_coordinates)
         assert (type(exit_coordinates) == tuple)
         assert (type(exit_coordinates[0]) == int)
         assert (type(exit_coordinates[1]) == int)
-        maze.set_exit(maze.node_at(*exit_coordinates))
+        maze.set_exit(*exit_coordinates)
         assert (type(history) == list)
         for entry in history:
             assert (type(entry) == str)
@@ -356,6 +356,62 @@ class Maze:
         self._solution.add(self._entrance)
         return
 
+    def depth_first_search(self):
+        start = self.node_at(0,0)
+        visited = {start}
+        startIter = self.adjacent_to(start,connected=True)
+        startBestTs = []
+        startRmtBest = (None,None,0)
+        frame = [start,startIter,startBestTs,startRmtBest]
+        stack = [frame]
+        return_ = None
+        while stack:
+            #print(return_)#TESTING
+            #for frame in stack:print(frame)#TESTING
+            #print("---")
+            # Load stackframe
+            [curr,currIter,currBestTs,currRmtBest] = stack[-1]
+            # Handle return value of child call by updating locals
+            if return_ is not None:
+                ((child,childDist), childRmtBest) = return_
+                currBestTs.append((child,childDist+1))
+                currBestTs.sort(key=lambda t:t[1],reverse=True)
+                if len(currBestTs) == 3: currBestTs.pop()
+                if currRmtBest[2] <= childRmtBest[2]:
+                    stack[-1][3] = childRmtBest
+            # Look at next neighbor
+            for nbr in currIter:
+                if nbr not in visited:
+                    visited.add(curr)
+                    # Prepare resursive call
+                    nbrIter = self.adjacent_to(nbr,connected=True)
+                    nbrBestTs = []
+                    nbrRmtBest = (None,None,0)
+                    frame = [nbr,nbrIter,nbrBestTs,nbrRmtBest]
+                    stack.append(frame)
+                    return_ = None
+                    break
+            # Gone through all neighbors, return value
+            else:
+                if currBestTs:
+                    currT = currBestTs[0]
+                else:
+                    currT = (curr,0)
+                if len(currBestTs) == 2:
+                    currRmtBest2 = (currBestTs[0][0],currBestTs[1][0],currBestTs[0][1]+currBestTs[1][1])
+                elif len(currBestTs) == 1:
+                    currRmtBest2 = (curr,currBestTs[0][0],currBestTs[0][1])
+                else:
+                    currRmtBest2 = (curr,curr,0)
+                if currRmtBest[2] <= currRmtBest2[2]:
+                    currRmtBest = currRmtBest2
+                stack.pop()
+                return_ = (currT, currRmtBest)
+            #for frame in stack:print(frame)#TESTING
+            #print(return_)#TESTING
+            #print(self.str_frame())#TESTING
+        return return_[1]
+
     def generate_raster(self, corridorwidth=1, columnated=True, show_solution=False, show_distances=False): # TODO
         """
         normal:
@@ -459,19 +515,13 @@ class Maze:
     def generate_colorimage(self, gradient_colors=None):
         raster = self.generate_raster(show_distances=True)
         # color conversion
+        wall_color = col.hex_to_tuple(0x000000)
         if gradient_colors is None:
-            wall_color = col.hex_to_tuple(0x000000)
-            peak = max(itertools.chain(*raster)) or 1
-            #air_color = lambda value: col.convert((270*value/peak, 1, 1),'HSV','RGB')
-            (color0,color1) = (col.hex_to_tuple(0xFFFFFF),col.hex_to_tuple(0x003F7F))
-            air_color = lambda value: col.mix(color0, color1, param=value/peak)
-            colors = [col.hex_to_tuple(0xFFFFFF),col.hex_to_tuple(0xFFFF00),col.hex_to_tuple(0xFF0000),col.hex_to_tuple(0x7F007F)]
-            air_color = lambda value: col.interpolate(colors, param=value/peak)
-        else:
-            wall_color = col.hex_to_tuple(0x000000)
-            peak = max(itertools.chain(*raster)) or 1
-            (color0,color1) = gradient_colors
-            air_color = lambda value: col.mix(color0, color1, param=value/peak)
+            hex_colors = [0xFFFFFF, 0x00007F, 0x7FFF00, 0x7F3F00, 0x7FCBFF, 0x7F00FF, 0xFFFF7F, 0x000000]
+            #hex_colors = [0xFFFFFF, 0x003F7F, 0xFFFF7F, 0x7F003F]
+            gradient_colors = list(col.hex_to_tuple(color) for color in hex_colors)
+        air_color = lambda value: col.interpolate(gradient_colors, param=value/peak)
+        peak = max(itertools.chain(*raster)) or 1
         value_to_color = lambda value: wall_color if value==(-1) else air_color(value)
         # Convert to image
         image = Maze.raster_to_image(raster, value_to_color)
@@ -500,7 +550,7 @@ class Maze:
         if air is None:
             air = len(wall)*' '
         raster = self.generate_raster()
-        value_to_chars = lambda value: wall if value else air
+        value_to_chars = lambda value: wall if value==(-1) else air
         string = Maze.raster_to_string(raster, value_to_chars)
         return string
 

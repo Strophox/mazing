@@ -117,8 +117,8 @@ SEQ_04 = [
         Maze.backtracker(*__(10))
     ),("breadth_first_search", lambda maze:
         maze.breadth_first_search() and()or maze
-    ),("generate_solutionimage", lambda maze:
-        maze.generate_solutionimage() and()or maze
+    ),("SHOW solutionimage", lambda maze:
+        maze.generate_solutionimage().show() and()or maze
 
     ),(r"END", lambda maze: maze)
 ]
@@ -127,11 +127,11 @@ SEQ_05 = [
       (r"BEGIN", lambda maze: maze
 
     ),("backtracker", lambda maze:
-        Maze.backtracker(64,64)
+        Maze.growing_tree(256,256)
     ),("breadth_first_search", lambda maze:
         maze.breadth_first_search() and()or maze
-    ),("SHOW colorimage", lambda maze:
-        maze.generate_colorimage().show() and()or maze
+    ),("SAVE colorimage", lambda maze:
+        maze.generate_colorimage().save(f"benchmark_{maze.name()}.png") and()or maze
 
     ),(r"END", lambda maze: maze)
 ]

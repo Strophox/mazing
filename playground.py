@@ -67,7 +67,7 @@ def run_and_print_time(title, f):
 
 def main():
     dimensions = (16,16)
-    maze = Maze(*dimensions)
+    maze = Maze.growing_tree(*dimensions)
     cache_image = (None, None)
     #import textwrap # remove source code multiline string indents
     help_text = """
@@ -76,18 +76,21 @@ def main():
 ~:--------------------------------------:~
  Enter a command to achieve its effect:
  :  help   - show this menu
- Editing:
+ Building:
  :  build  - make new maze
  :  join   - remove dead ends
  Viewing:
  :  print  - text art of maze
- :  solve  - text art solution
  :  img    - png image of maze
- :  solimg - png solution
- :  colimg - png colored distances
- :  save   - save latest viewed image
+ Solving:
+ :  solve  - text art solution
+ :  imgsol - png solution
+ Visualisation:
+ :  data   - analysis of maze
+ :  imgcol - png colored distances
  Settings:
  :  size   - set size of next maze
+ :  save   - save last png image
  :  load   - load maze from string
  (Commands are autocompleted)
  (Blank command to exit)
@@ -97,8 +100,6 @@ def main():
     command = "help"
     while True:
         match command:
-            case "help": # Show help menu
-                print(help_text)
             case "build": # Allow user to choose method and build new maze
                 builders = {x.__name__:x for x in [
                     Maze.growing_tree,
@@ -116,9 +117,46 @@ def main():
                     preview(maze)
                 else:
                     print(f"[unrecognized method '{name}']")
+            case "data":
+                data = run_and_print_time("maze analysis",lambda:maze.depth_first_search())
+                print(data)#TODO
+            case "help": # Show help menu
+                print(help_text)
+            case "hackerman": # hehe
+                user_input = input(">>> ")
+                try:
+                    exec(user_input)
+                except Exception as e:
+                    print(f"<error: {e}>")
+            case "img": # Generate image of current maze and open in external program
+                print(f"[making and showing maze image externally]")
+                cache_image = ("",maze.generate_image())
+                cache_image[1].show()
+            case "imgsol": # Generate image of current maze with solution and open in external program
+                if maze.has_solution() is None:
+                    run_and_print_time("solving",lambda:maze.breadth_first_search())
+                solutionimage = run_and_print_time("generating solution image",lambda:maze.generate_solutionimage())
+                cache_image = ("_solution",solutionimage)
+                cache_image[1].show()
+            case "imgcol":
+                #if maze.has_solution() is None:
+                    #print("To generate map image first solve the maze!")
+                #else:
+                if maze.has_solution() is None:
+                    run_and_print_time("solving",lambda:maze.breadth_first_search())
+                colorimage = run_and_print_time("generating color image",lambda:maze.generate_colorimage())
+                cache_image = ("_distances",colorimage)
+                cache_image[1].show()
             case "join": # Make current maze unicursal
                 run_and_print_time("joining",lambda:maze.make_unicursal())
                 preview(maze)
+            case "load": # Let user load maze from a copied `repr` of a maze
+                user_input = input("Enter `repr` string of a maze > ")
+                try:
+                    maze = Maze.from_repr(eval(user_input))
+                    preview(maze)
+                except Exception as e:
+                    print(f"[could not load maze: {e}]")
             case "print": # Print currently stored maze in all available styles
                 printers = {x.__name__:x for x in [
                     Maze.str_raster,
@@ -134,29 +172,6 @@ def main():
                 ]}
                 for name,printer in printers.items():
                     print(f"{name}:\n{printer(maze)}")
-            case "solve":
-                if maze.has_solution() is None:
-                    run_and_print_time("solving",lambda:maze.breadth_first_search())
-                preview(maze, lambda maze:maze.str_frame_ascii(show_solution=True))
-            case "img": # Generate image of current maze and open in external program
-                print(f"[making and showing maze image externally]")
-                cache_image = ("",maze.generate_image())
-                cache_image[1].show()
-            case "solimg": # Generate image of current maze with solution and open in external program
-                if maze.has_solution() is None:
-                    run_and_print_time("solving",lambda:maze.breadth_first_search())
-                print(f"[making and showing maze solution image externally]")
-                cache_image = ("_solution",maze.generate_solutionimage())
-                cache_image[1].show()
-            case "colimg":
-                #if maze.has_solution() is None:
-                    #print("To generate map image first solve the maze!")
-                #else:
-                if maze.has_solution() is None:
-                    run_and_print_time("solving",lambda:maze.breadth_first_search())
-                print(f"[making and showing maze distance map image externally]")
-                cache_image = ("_distances",maze.generate_colorimage())
-                cache_image[1].show()
             case "save": # Generate image of current maze and save as file
                 filename = f"{maze.name()}{cache_image[0]}.png"
                 run_and_print_time("saving",lambda:cache_image[1].save(filename))
@@ -167,19 +182,10 @@ def main():
                     dimensions = (x,y)
                 except ValueError as e:
                     print(f"[invalid dimensions: {e}]")
-            case "load": # Let user load maze from a copied `repr` of a maze
-                user_input = input("Enter `repr` string of a maze > ")
-                try:
-                    maze = Maze.from_template(eval(user_input))
-                    preview(maze)
-                except Exception as e:
-                    print(f"[could not load maze: {e}]")
-            case "hackerman": # hehe
-                user_input = input(">>> ")
-                try:
-                    exec(user_input)
-                except Exception as e:
-                    print(f"<error: {e}>")
+            case "solve":
+                if maze.has_solution() is None:
+                    run_and_print_time("solving",lambda:maze.breadth_first_search())
+                preview(maze, lambda maze:maze.str_frame_ascii(show_solution=True))
             case _: # Non-empty, unrecognized command
                 print("[unrecognized command]")
         # Get user input and possibly exit loop
