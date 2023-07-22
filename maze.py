@@ -32,7 +32,7 @@ import collections # deque
 import time # strftime
 import random
 from PIL import Image
-import my_colortools as col
+import colortools
 
 # IMPORTS END
 
@@ -480,7 +480,7 @@ class Maze:
         image.putdata(colors)
         return image
 
-    def generate_image(self, wall_air_colors=(col.hex_to_tuple(0x000000),col.hex_to_tuple(0xFFFFFF))):
+    def generate_image(self, wall_air_colors=(colortools.hex_to_tuple(0x000000),colortools.hex_to_tuple(0xFFFFFF))):
         """Generate a handle to a (PIL) Image object presenting the maze.
 
         Args:
@@ -500,10 +500,10 @@ class Maze:
         # color conversion
         if wall_air_marker_colors is None:
             peak = self._exit.distance or 1
-            wall_color = col.hex_to_tuple(0x000000)
-            air_color = col.hex_to_tuple(0xFFFFFF)
-            marker_color = lambda value: col.convert((360*value/peak, 1, 1),'HSV','RGB')
-            #marker_color = col.hex_to_tuple(0x007FFF)
+            wall_color = colortools.hex_to_tuple(0x000000)
+            air_color = colortools.hex_to_tuple(0xFFFFFF)
+            marker_color = lambda value: colortools.convert((360*value/peak, 1, 1),'HSV','RGB')
+            #marker_color = colortools.hex_to_tuple(0x007FFF)
         else:
             wall_color = wall_air_marker_colors[0]
             air_color = wall_air_marker_colors[1]
@@ -517,12 +517,12 @@ class Maze:
     def generate_colorimage(self, gradient_colors=None):
         raster = self.generate_raster(show_distances=True)
         # color conversion
-        wall_color = col.hex_to_tuple(0x000000)
+        wall_color = colortools.hex_to_tuple(0x000000)
         if gradient_colors is None:
             hex_colors = [0xFFFFFF, 0x00007F, 0x7FFF00, 0x7F3F00, 0x7FCBFF, 0x7F00FF, 0xFFFF7F, 0x000000]
             #hex_colors = [0xFFFFFF, 0x003F7F, 0xFFFF7F, 0x7F003F]
-            gradient_colors = list(col.hex_to_tuple(color) for color in hex_colors)
-        air_color = lambda value: col.interpolate(gradient_colors, param=value/peak)
+            gradient_colors = list(colortools.hex_to_tuple(color) for color in hex_colors)
+        air_color = lambda value: colortools.interpolate(gradient_colors, param=value/peak)
         peak = max(itertools.chain(*raster)) or 1
         print(f"{peak=}")
         value_to_color = lambda value: wall_color if value==(-1) else air_color(value)
