@@ -120,7 +120,7 @@ class Maze:
         self._grid = [[Node(x,y) for x in range(width)] for y in range(height)]
         self._entrance = self.node_at(0,0)
         self._exit = self.node_at(-1,-1)
-        self._history = [time.strftime('%Y-%m-%d_%Hh%Mm%S')]
+        self._history = [time.strftime('%Y.%m.%d-%Hh%Mm%S')]
         self._solution = None
 
     def __repr__(self):
@@ -189,8 +189,8 @@ class Maze:
 
     def name(self):
         """Generate human-readable name for the maze."""
-        size = f"{self.width}" if self.width==self.height else f"{self.width}x{self.height}"
         history = '-'.join(self._history)
+        size = f"{self.width}x{self.height}"
         string = f"maze{size}_{history}"
         return string
 
@@ -356,7 +356,7 @@ class Maze:
         self._solution.add(self._entrance)
         return
 
-    def depth_first_search(self):
+    def depth_first_search(self): # ALERT BUG
         start = self.node_at(0,0)
         visited = {start}
         startIter = self.adjacent_to(start,connected=True)
@@ -492,6 +492,7 @@ class Maze:
         value_to_color = lambda value: wall_color if value else air_color
         # Convert to image
         image = Maze.raster_to_image(raster, value_to_color)
+        image.filename = f"{self.name()}.png"
         return image
 
     def generate_solutionimage(self, wall_air_marker_colors=None):
@@ -510,6 +511,7 @@ class Maze:
         value_to_color = lambda value: wall_color if value==(-1) else air_color if value==0 else marker_color(value)
         # Convert to image
         image = Maze.raster_to_image(raster, value_to_color)
+        image.filename = f"{self.name()}_solution.png"
         return image
 
     def generate_colorimage(self, gradient_colors=None):
@@ -522,9 +524,11 @@ class Maze:
             gradient_colors = list(col.hex_to_tuple(color) for color in hex_colors)
         air_color = lambda value: col.interpolate(gradient_colors, param=value/peak)
         peak = max(itertools.chain(*raster)) or 1
+        print(f"{peak=}")
         value_to_color = lambda value: wall_color if value==(-1) else air_color(value)
         # Convert to image
         image = Maze.raster_to_image(raster, value_to_color)
+        image.filename = f"{self.name()}_distances.png"
         return image
 
     @staticmethod

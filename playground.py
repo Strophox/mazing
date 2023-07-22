@@ -68,7 +68,7 @@ def run_and_print_time(title, f):
 def main():
     dimensions = (16,16)
     maze = Maze.growing_tree(*dimensions)
-    cache_image = (None, None)
+    cache_image = None
     #import textwrap # remove source code multiline string indents
     help_text = """
 ~:--------------------------------------:~
@@ -78,28 +78,34 @@ def main():
  :  help   - show this menu
  Building:
  :  build  - make new maze
- :  join   - remove dead ends
+ ;  join   - remove dead ends
  Viewing:
  :  print  - text art of maze
  :  img    - png image of maze
  Solving:
  :  solve  - text art solution
- :  imgsol - png solution
+ ;  imgsol - png solution
  Visualisation:
- :  data   - analysis of maze
- :  imgcol - png colored distances
+ ;  data   - analysis of maze
+ ;  imgcol - png colored distances
  Settings:
- :  size   - set size of next maze
- :  save   - save last png image
- :  load   - load maze from string
+ ;  size   - set size of next maze
+ ;  save   - save last png image
+ ;  load   - load maze from string
  (Commands are autocompleted)
  (Blank command to exit)
 ~:--------------------------------------:~
 """.strip()
-    commands = [l[1] for line in help_text.split('\n') if (l:=line.split()) and l[0]==':']
+    commands = {l[1]:l[0]==':' for line in help_text.split('\n') if (l:=line.split()) and l[0] in ":;"}
     command = "help"
     while True:
         match command:
+            case "asdf":
+                maze = Maze.from_repr( (['tree'], (0, 0), (5, 5), [[8, 1, 12, 9, 5, 12], [3, 5, 14, 3, 12, 10], [9, 12, 3, 12, 10, 10], [10, 11, 4, 11, 6, 10], [10, 2, 9, 6, 8, 10], [3, 5, 7, 5, 6, 2]])
+ )
+                preview(maze)
+                command = "data"
+                continue
             case "build": # Allow user to choose method and build new maze
                 builders = {x.__name__:x for x in [
                     Maze.growing_tree,
@@ -129,24 +135,21 @@ def main():
                 except Exception as e:
                     print(f"<error: {e}>")
             case "img": # Generate image of current maze and open in external program
-                print(f"[making and showing maze image externally]")
-                cache_image = ("",maze.generate_image())
-                cache_image[1].show()
+                cached_image = run_and_print_time("generating image",lambda:maze.generate_image())
+                cached_image.show()
             case "imgsol": # Generate image of current maze with solution and open in external program
                 if maze.has_solution() is None:
                     run_and_print_time("solving",lambda:maze.breadth_first_search())
-                solutionimage = run_and_print_time("generating solution image",lambda:maze.generate_solutionimage())
-                cache_image = ("_solution",solutionimage)
-                cache_image[1].show()
+                cached_image = run_and_print_time("generating solution image",lambda:maze.generate_solutionimage())
+                cached_image.show()
             case "imgcol":
                 #if maze.has_solution() is None:
                     #print("To generate map image first solve the maze!")
                 #else:
                 if maze.has_solution() is None:
                     run_and_print_time("solving",lambda:maze.breadth_first_search())
-                colorimage = run_and_print_time("generating color image",lambda:maze.generate_colorimage())
-                cache_image = ("_distances",colorimage)
-                cache_image[1].show()
+                cached_image = run_and_print_time("generating color image",lambda:maze.generate_colorimage())
+                cached_image.show()
             case "join": # Make current maze unicursal
                 run_and_print_time("joining",lambda:maze.make_unicursal())
                 preview(maze)
@@ -173,8 +176,10 @@ def main():
                 for name,printer in printers.items():
                     print(f"{name}:\n{printer(maze)}")
             case "save": # Generate image of current maze and save as file
-                filename = f"{maze.name()}{cache_image[0]}.png"
-                run_and_print_time("saving",lambda:cache_image[1].save(filename))
+                if cached_image is None:
+                    print("No image generated yet, see `help` on ways of doing so")
+                else:
+                    run_and_print_time("saving",lambda:cached_image.save(cached_image.filename))
             case "size": # Allow user to save new maze size
                 user_input = input(f"Enter new dimensions 'X Y' (currently: {dimensions[0]} {dimensions[1]}) > ")
                 try:
@@ -189,7 +194,7 @@ def main():
             case _: # Non-empty, unrecognized command
                 print("[unrecognized command]")
         # Get user input and possibly exit loop
-        user_input = input(f"\n| {' | '.join(commands)} > ")
+        user_input = input(f"\n| {' | '.join(cmd for cmd,flag in commands.items() if flag)} > ")
         if not user_input.strip():
             print("goodbye")
             break

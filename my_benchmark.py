@@ -1,6 +1,6 @@
 # OUTLINE BEGIN
 """
-A small benchmark script that tests and times some methods from `maze.py`.
+A small benchmark script that tests and times some methods from `state.py`.
 
 Note to self: do `python3 -m scalene small_benchmark.py`
 """
@@ -20,120 +20,118 @@ import time
 __ = lambda n: (2**n, 2**n)
 
 SEQ_00 = [
-      (r"BEGIN", lambda maze: maze
+      (r"BEGIN", lambda state: state
 
-    ),("test unit", lambda maze:
+    ),("test unit", lambda state:
         print("hello, world")
 
-    ),(r"END", lambda maze: maze)
+    ),(r"END", lambda state: state)
 ]
 
 SEQ_01 = [
-      (r"BEGIN", lambda maze: maze
+      (r"BEGIN", lambda state: state
 
-    ),("maze  0", lambda maze:
+    ),("maze  0", lambda state:
         Maze(*__(0))
-    ),("maze  1", lambda maze:
+    ),("maze  1", lambda state:
         Maze(*__(1))
-    ),("maze  2", lambda maze:
+    ),("maze  2", lambda state:
         Maze(*__(2))
-    ),("maze  3", lambda maze:
+    ),("maze  3", lambda state:
         Maze(*__(3))
-    ),("maze  4", lambda maze:
+    ),("maze  4", lambda state:
         Maze(*__(4))
-    ),("maze  5", lambda maze:
+    ),("maze  5", lambda state:
         Maze(*__(5))
-    ),("maze  6", lambda maze:
+    ),("maze  6", lambda state:
         Maze(*__(6))
-    ),("maze  7", lambda maze:
+    ),("maze  7", lambda state:
         Maze(*__(7))
-    ),("maze  8", lambda maze:
+    ),("maze  8", lambda state:
         Maze(*__(8))
-    ),("maze  9", lambda maze:
+    ),("maze  9", lambda state:
         Maze(*__(9))
-    ),("maze 10", lambda maze:
+    ),("maze 10", lambda state:
         Maze(*__(10))
-    ),("maze 11", lambda maze:
+    ),("maze 11", lambda state:
         Maze(*__(11))
-    ),("maze 12", lambda maze:
+    ),("maze 12", lambda state:
         Maze(*__(12))
-    ),("maze 13", lambda maze:
+    ),("maze 13", lambda state:
         Maze(*__(13))
-    ),("maze 14", lambda maze:
+    ),("maze 14", lambda state:
         Maze(*__(14))
-    ),("maze 15", lambda maze:
+    ),("maze 15", lambda state:
         Maze(*__(15))
-    ),("maze 16", lambda maze:
+    ),("maze 16", lambda state:
         Maze(*__(16))
 
-    ),(r"END", lambda maze: maze)
+    ),(r"END", lambda state: state)
 ]
 
 SEQ_02 = [
     (N := 10) and()or
-      (r"BEGIN", lambda maze: maze
+      (r"BEGIN", lambda state: state
 
-    ),("random_edges", lambda maze:
+    ),("random_edges", lambda state:
         Maze.random_edges(*__(N))
-    ),("growing_tree", lambda maze:
+    ),("growing_tree", lambda state:
         Maze.growing_tree(*__(N))
-    ),("backtracker", lambda maze:
+    ),("backtracker", lambda state:
         Maze.backtracker(*__(N))
-    ),("prim", lambda maze:
+    ),("prim", lambda state:
         Maze.prim(*__(N))
-    ),("kruskal", lambda maze:
+    ),("kruskal", lambda state:
         Maze.kruskal(*__(N))
-    ),("wilson", lambda maze:
+    ),("wilson", lambda state:
         Maze.wilson(*__(N))
-    ),("division", lambda maze:
+    ),("division", lambda state:
         Maze.division(*__(N))
 
-    ),(r"END", lambda maze: maze)
+    ),(r"END", lambda state: state)
 ]
 
 SEQ_03 = [
-      (r"BEGIN", lambda maze: maze
+      (r"BEGIN", lambda state: state
 
-    ),("division", lambda maze:
+    ),("division", lambda state:
         Maze.division(*__(9))
-    ),("growing_tree (fast_pop)", lambda maze:
-        Maze.growing_tree(*__(9),fast_pop=True)
-    ),("wilson", lambda maze:
-        Maze.wilson(*__(7))
-    ),("SAVE image", lambda maze:
-        maze.generate_image().save(f"{maze.generate_name()}.png") and()or maze # <- cursed sequential expression composition
-    ),("make_unicursal", lambda maze:
-        maze.make_unicursal() and()or maze
-    ),("SAVE image", lambda maze:
-        maze.generate_image().save(f"{maze.generate_name()}.png") and()or maze
+    ),("growing_tree", lambda state:
+        Maze.growing_tree(*__(9),index_choice=lambda mxi:random.randint(0,mxi+1))
+    ),("growing_tree (fast_pop)", lambda state:
+        Maze.growing_tree(*__(9),index_choice=lambda mxi:random.randint(0,mxi+1),fast_pop=True)
 
-    ),(r"END", lambda maze: maze)
+    ),(r"END", lambda state: state)
 ]
 
 SEQ_04 = [
-      (r"BEGIN", lambda maze: maze
+      (r"BEGIN", lambda state: state
 
-    ),("backtracker", lambda maze:
+    ),("backtracker", lambda state:
         Maze.backtracker(*__(10))
-    ),("breadth_first_search", lambda maze:
-        maze.breadth_first_search() and()or maze
-    ),("SHOW solutionimage", lambda maze:
-        maze.generate_solutionimage().show() and()or maze
+    ),("breadth_first_search", lambda state:
+        state.breadth_first_search() and()or state# <- cursed sequential expression composition
+    ),("SHOW solutionimage", lambda state:
+        state.generate_solutionimage().show() and()or state
+    ),("make_unicursal", lambda state:
+        state.make_unicursal() and()or state
+    ),("SHOW solutionimage", lambda state:
+        state.generate_solutionimage().show() and()or state
 
-    ),(r"END", lambda maze: maze)
+    ),(r"END", lambda state: state)
 ]
 
 SEQ_05 = [
-      (r"BEGIN", lambda maze: maze
+      (r"BEGIN", lambda state: state
 
-    ),("backtracker", lambda maze:
+    ),("growing_tree", lambda state:
         Maze.growing_tree(256,256)
-    ),("breadth_first_search", lambda maze:
-        maze.breadth_first_search() and()or maze
-    ),("SAVE colorimage", lambda maze:
-        maze.generate_colorimage().save(f"benchmark_{maze.name()}.png") and()or maze
+    ),("breadth_first_search", lambda state:
+        state.breadth_first_search() and()or state
+    ),("SAVE colorimage", lambda state:
+        state.generate_colorimage().save(f"benchmark_{state.name()}.png") and()or state
 
-    ),(r"END", lambda maze: maze)
+    ),(r"END", lambda state: state)
 ]
 
 SEQ_CHOSEN = SEQ_05
@@ -154,10 +152,10 @@ def run_benchmark_on(sequence):
     Args:
         sequence (list(str, callable(Maze) -> Maze)): A list of 'actions' where an 'action' has a name and does computation on a Maze and returns a Maze
     """
-    main_maze = None
+    main_state = None
     for (title,action) in sequence:
         begin_time = time.perf_counter()
-        main_maze  = action(main_maze)
+        main_state  = action(main_state)
         end_time   = time.perf_counter()
         print(f"['{title}' completed in {end_time-begin_time:.03f}s]")
     return
