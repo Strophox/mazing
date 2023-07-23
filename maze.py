@@ -334,6 +334,23 @@ class Maze:
         self._breadth_first_search(start)
         return
 
+    def compute_branchdistances(self):
+        for node in self.nodes():
+            node.distance = float('inf')
+        for node in self.nodes(): # TODO optimize
+            if node.distance == float('inf'):
+                node.distance = 0
+                previous = None
+                current = node
+                while True:
+                    neighbors = [nbr for nbr in self.connected_to(current) if nbr!=previous]
+                    if len(neighbors) != 1:
+                        break
+                    previous = current
+                    current = neighbors[0]
+                    current.distance = previous.distance + 1
+        return
+
     def compute_solution(self, recompute_distances=True):
         if recompute_distances:
             self.compute_distances()
@@ -443,38 +460,38 @@ class Maze:
         if show_solution:
             if self.solution_nodes is None:
                 raise RuntimeError("cannot show solution path before computing it")
-            mkval = lambda is_wall, x,y: (-1) if is_wall else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self.solution_nodes else 0
+            mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self.solution_nodes and nx<self.width-1 and ny<self.height-1 and self.node_at(nx,ny) in self.solution_nodes else 0
         elif show_distances:
             if self.entrance.distance == float('inf'):
                 raise RuntimeError("cannot show distances before computing them")
-            mkval = lambda is_wall, x,y: (-1) if is_wall or self.node_at(x,y).distance==float('inf') else self.node_at(x,y).distance
+            mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall or self.node_at(x,y).distance==float('inf') else self.node_at(x,y).distance
         else:
-            mkval = lambda is_wall, x,y: (+1) if is_wall else 0
+            mkval = lambda is_wall, x,y, nx,ny: (+1) if is_wall else 0
         # Top-left corner
-        val = mkval(True, 0,0)
+        val = mkval(True, 0,0, 0,0)
         raster = [[val]]
         # Top wall
         for x,node in enumerate(self._grid[0]):
-            val = mkval(node.has_wall(UP),x,0)
+            val = mkval(node.has_wall(UP),x,0, x,0)
             raster[0] += [val] * corridorwidth
-            val = mkval(True,x,0)
+            val = mkval(True,x,0, x,0)
             raster[0] += [val]
         # Middle and bottom rows of string
         for y,row in enumerate(self._grid):
             # Left wall
-            val = mkval(row[0].has_wall(LEFT), 0,y)
+            val = mkval(row[0].has_wall(LEFT), 0,y, 0,y)
             row1 = [val]
-            val = mkval(True, 0,y)
+            val = mkval(True, 0,y, 0,y)
             row2 = [val]
             # Middle and bottom walls (2 blocks/node)
             for x,node in enumerate(row):
-                val = mkval(False, x,y)
+                val = mkval(False, x,y, x,y)
                 row1 += [val] * corridorwidth
-                val = mkval(node.has_wall(RIGHT), x,y)
+                val = mkval(node.has_wall(RIGHT), x,y, x+1,y)
                 row1 += [val]
-                val = mkval(node.has_wall(DOWN), x,y)
+                val = mkval(node.has_wall(DOWN), x,y, x,y+1)
                 row2 += [val] * corridorwidth
-                val = mkval(column_wall(x,y), x,y)
+                val = mkval(column_wall(x,y), x,y, x,y)
                 row2 += [val]
             raster += [row1] * corridorwidth
             raster += [row2]
@@ -487,13 +504,13 @@ class Maze:
         image.putdata(colors)
         return image
 
-    def generate_image(self, wall_air_colors=(colortools.hex_to_tuple(0x000000),colortools.hex_to_tuple(0xFFFFFF))):
+    def generate_image(self, wall_air_colors=(colortools.hex_to_tuple(0x000000),colortools.hex_to_tuple(0xFFFFFF)), corridorwidth=1):
         """Generate a handle to a (PIL) Image object presenting the maze.
 
         Args:
             raster (list(list(bool))): Bit map to be rendered (default is self.generate_raster())
         """
-        raster = self.generate_raster()
+        raster = self.generate_raster(corridorwidth=corridorwidth)
         # color conversion
         (wall_color, air_color) = wall_air_colors
         value_to_color = lambda value: wall_color if value else air_color
@@ -502,10 +519,10 @@ class Maze:
         image.filename = f"{self.name()}.png"
         return image
 
-    def generate_solutionimage(self, wall_air_marker_colors=None):
+    def generate_solutionimage(self, wall_air_marker_colors=None, corridorwidth=1):
         if self.solution_nodes is None:
             self.compute_solution()
-        raster = self.generate_raster(show_solution=True)
+        raster = self.generate_raster(corridorwidth=corridorwidth,show_solution=True)
         # color conversion
         if wall_air_marker_colors is None:
             peak = self.exit.distance or 1
@@ -523,10 +540,8 @@ class Maze:
         image.filename = f"{self.name()}_solution.png"
         return image
 
-    def generate_colorimage(self, gradient_colors=None):
-        if self.entrance.distance == float('inf'):
-            self.compute_distances()
-        raster = self.generate_raster(show_distances=True)
+    def generate_colorimage(self, gradient_colors=None, corridorwidth=1):
+        raster = self.generate_raster(corridorwidth=corridorwidth,show_distances=True)
         # color conversion
         wall_color = colortools.hex_to_tuple(0x000000)
         if gradient_colors is None:
