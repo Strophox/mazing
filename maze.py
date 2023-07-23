@@ -329,11 +329,27 @@ class Maze:
         return
 
     def compute_stats(self):
+        def nearest_branch_distance(node):
+            dist = 0
+            previous = None
+            current = node
+            while True:
+                neighbors = [nbr for nbr in self.connected_to(current) if nbr!=previous]
+                if len(neighbors) != 1:
+                    break
+                dist += 1
+                previous = current
+                current = neighbors[0]
+            return dist
+        is_dead_end = lambda node: (node._edges in [1,2,4,8])
         # Prepare accumulators for tiles and distance stats
         self.compute_solution()
         tiles_counts = [0 for _ in range(0b10000)]
+        branch_distances = []
         for node in self.nodes():
             tiles_counts[node._edges] += 1
+            if is_dead_end(node):
+                branch_distances.append(nearest_branch_distance(node))
             # Preparation for next part
             if node not in self.solution_nodes:
                 node.distance = float('inf')
@@ -343,13 +359,13 @@ class Maze:
             for offshoot in self.connected_to(node):
                 if offshoot not in self.solution_nodes:
                     lengths = []
-                    updater = lambda n: lengths.append(n.distance) if n._edges in [1,2,4,8] else None
-                    self._breadth_first_search(offshoot, scanr=updater)
+                    length_adder = lambda n: lengths.append(n.distance) if is_dead_end(n) else None
+                    self._breadth_first_search(offshoot, scanr=length_adder)
                     maxlength = max(lengths)
                     avglength = sum(lengths)/len(lengths)
                     offshoots_maxlengths.append(maxlength)
                     offshoots_avglengths.append(avglength)
-        return (tiles_counts, offshoots_maxlengths, offshoots_avglengths)
+        return (tiles_counts, branch_distances, offshoots_maxlengths, offshoots_avglengths)
 
     def set_longest_path(self):
         #remote_nodes = []

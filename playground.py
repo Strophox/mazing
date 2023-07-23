@@ -72,90 +72,107 @@ def benchmark(title, function):
     print(f"['{title}' completed in {time_taken:.03f}s]")
     return result
 
-def analyse(maze):
+def analysis(maze):
     temp = (maze.entrance,maze.exit)
+    # Statistics helpers
+    expectation = lambda numbers: sum(numbers) / len(numbers)
+    variance = lambda numbers: sum(x**2 for x in numbers)/len(numbers) - expectation(numbers)**2
+    # Formatter helpers
     hbar = lambda num_cols, fill_level: '#' * round(fill_level * num_cols)
     fmt_perc = lambda perc: f"{perc:.2%}"
     fmt_float = lambda float_: f"{float_:.01f}"
+    def fmt_dataset(heading, numbers):
+        statistics = {
+            "Expectation":
+                expectation(numbers),
+            "Deviation":
+                variance(numbers)**.5,
+            "Maximum":
+                max(numbers),
+        }
+        CWtitle = max(len(title) for title in statistics)
+        CWstat = max(len(fmt_float(stat)) for stat in statistics.values())
+        stats_header = f" :  {heading}"
+        stats_list = '\n'.join(
+            f" :      {title.rjust(CWtitle)}  {fmt_float(stat).rjust(CWstat)}"
+            for (title,stat) in statistics.items()
+        )
+        string = f"""
+{stats_header}
+{stats_list}
+        """.strip()
+        return string
+    # General stuff
     nodecount = maze.width * maze.height
-    expectation = lambda numbers: sum(numbers) / len(numbers)
-    variance = lambda numbers: sum(x**2 for x in numbers)/len(numbers) - expectation(numbers)**2
     stats_general = f"""
  General Information.
  :    Name  '{maze.name()}'
  :   Width  {maze.width}
  :  Height  {maze.height}
  :    Area  {maze.width*maze.height}
-    """.strip('\n')
+    """.strip()
     # Solution stuff
     if maze.solution_nodes is None:
         benchmark("solving maze", lambda:
             maze.compute_solution())
     len_solution = len(maze.solution_nodes)
-    (tiles_counts,offshoots_maxlengths,offshoots_avglengths) = benchmark("computing other stats", lambda:
+    (tiles_counts,branch_distances,offshoots_maxlengths,offshoots_avglengths) = benchmark("computing other stats", lambda:
         maze.compute_stats())
-    lenCW = len(fmt_float(max(offshoots_maxlengths)))
     stats_solution = f"""
  Solution Path Statistics.
  :  Length of solution path
- :      {len_solution} ({fmt_perc(len_solution/nodecount)} of area)
+ :      {len_solution}  ({fmt_perc(len_solution/nodecount)} of area)
  :  Number of offshooting paths from solution
  :      {len(offshoots_maxlengths)}
- :  Maximum distance of an offshooting path
- :      Expectation  {fmt_float(expectation(offshoots_maxlengths)).rjust(lenCW)}
- :        Deviation  {fmt_float(variance(offshoots_maxlengths)**.5).rjust(lenCW)}
- :          Maximum  {fmt_float(max(offshoots_maxlengths)).rjust(lenCW)}
- :  Average distance of an offshooting path
- :      Expectation  {fmt_float(expectation(offshoots_avglengths)).rjust(lenCW)}
- :        Deviation  {fmt_float(variance(offshoots_avglengths)**.5).rjust(lenCW)}
- :          Maximum  {fmt_float(max(offshoots_avglengths)).rjust(lenCW)}
-    """.strip('\n')
-    # Tile stuff
+ {fmt_dataset("Maximum distance of an offshooting path", offshoots_maxlengths)}
+ {fmt_dataset("Average distance of an offshooting path", offshoots_avglengths)}
+    """.strip()
+    # Node stuff
     make_perc = lambda *tileselection: sum(tiles_counts[t] for t in tileselection) / nodecount
     rows = {
-        'dead ends':
+        "dead ends":
             make_perc(0b0001,0b0010,0b0100,0b1000),
-        'tunnels':
+        "tunnels":
             make_perc(0b0011,0b0101,0b0110,0b1001,0b1010,0b1100),
-        'three-ways':
+        "three-ways":
             make_perc(0b0111,0b1011,0b1101,0b1110),
-        'intersections':
+        "intersections":
             make_perc(0b1111)
     }
-    titleCW = max(len(title) for title in rows)
-    percCW = max(len(fmt_perc(perc)) for perc in rows.values())
+    CWtitle = max(len(title) for title in rows)
+    CWperc = max(len(fmt_perc(perc)) for perc in rows.values())
     table = '\n'.join(
-        f" :  {title.rjust(titleCW)} {fmt_perc(perc).rjust(percCW)} {hbar(CW()-5-titleCW-percCW, perc)}"
+        f" :  {title.rjust(CWtitle)} {fmt_perc(perc).rjust(CWperc)} {hbar(CW()-5-CWtitle-CWperc, perc)}"
         for (title,perc) in rows.items()
     )
-    stats_tiles = f"""
- Tile Statistics.
+    stats_nodes = f"""
+ Node Statistics.
 {table}
-    """.strip('\n')
+    """.strip()
     # Distance stuff
     len_longest_path = benchmark("finding longest path", lambda:
         maze.set_longest_path())
     stats_distance = f"""
  Distance Statistics.
  :  Longest possible path
- :      {len_longest_path} ({fmt_perc(len_longest_path/nodecount)} of area)
-    """.strip('\n')
+ :      {len_longest_path}  ({fmt_perc(len_longest_path/nodecount)} of area)
+ {fmt_dataset("Distance from dead end to nearest three-way/intersection", branch_distances)}
+    """.strip()
     # Final print
     hrulefill = f"~:{'-'*(CW()-4)}:~"
     stats_all = f"""
 {hrulefill}
-{stats_general}
+ {stats_general}
 {hrulefill}
-{stats_tiles}
+ {stats_nodes}
 {hrulefill}
-{stats_distance}
+ {stats_distance}
 {hrulefill}
-{stats_solution}
+ {stats_solution}
 {hrulefill}
     """.strip('\n')
-    print(stats_all)
     (maze.entrance,maze.exit) = temp
-    return
+    return stats_all
 
 # FUNCTIONS END
 
@@ -221,7 +238,9 @@ def main():
                 else:
                     print(CANCEL_TEXT,end='')
             case "data":
-                analyse(maze)
+                stats_text = benchmark("total maze analysis execution", lambda:
+                    analysis(maze))
+                print(stats_text)
             case "help": # Show help menu
                 print(help_text)
             case "hackerman": # hehe
@@ -233,17 +252,20 @@ def main():
                 except Exception as e:
                     print(f"<error: {e}>")
             case "img": # Generate image of current maze and open in external program
-                latest_image = benchmark("generating image", lambda:maze.generate_image())
+                latest_image = benchmark("generating image", lambda:
+                    maze.generate_image())
                 latest_image.show()
             case "imgsol": # Generate image of current maze with solution and open in external program
                 benchmark("solving", lambda:
                     maze.compute_solution())
-                latest_image = benchmark("generating image", lambda:maze.generate_solutionimage())
+                latest_image = benchmark("generating image", lambda:
+                    maze.generate_solutionimage())
                 latest_image.show()
             case "imgcol":
                 benchmark("computing distances", lambda:
                     maze.compute_distances())
-                latest_image = benchmark("generating image", lambda:maze.generate_colorimage())
+                latest_image = benchmark("generating image", lambda:
+                    maze.generate_colorimage())
                 latest_image.show()
             case "join": # Make current maze unicursal
                 benchmark("making unicursal", lambda:
@@ -281,11 +303,12 @@ def main():
                 else:
                     print(CANCEL_TEXT,end='')
             case "save": # Generate image of current maze and save as file
-                if latest_image is not None:
-                    benchmark("saving",lambda:
-                        latest_image.save(latest_image.filename))
-                else:
-                    print("No image generated yet, see `help` on how to do so")
+                if latest_image is None:
+                    print("No image type has been chosen to be generated in the past, so I'll generate a standard one for you...")
+                    latest_image = benchmark("generating image", lambda:
+                        maze.generate_image())
+                benchmark("saving",lambda:
+                    latest_image.save(latest_image.filename))
             case "size": # Allow user to save new maze size
                 user_input = input(f"Enter sidelength (e.g. '32') or dimensions (e.g. '80 40') (currently = {dimensions[0]} {dimensions[1]}) > ").strip()
                 if user_input:
@@ -306,10 +329,12 @@ def main():
                     maze.compute_solution())
                 preview(maze, lambda maze: maze.str_frame_ascii(show_solution=True))
             case "view":
-                if latest_image is not None:
-                    latest_image.show()
-                else:
-                    print("No image generated yet, see `help` on how to do so")
+                if latest_image is None:
+                    print("No image type has been chosen to be generated in the past, so I'll generate a standard one for you...")
+                    latest_image = benchmark("generating image", lambda:
+                        maze.generate_image())
+                benchmark("opening external editor",lambda:
+                    latest_image.show())
             case _: # Non-empty, unrecognized command
                 print("Unrecognized command")
         # Get user input and possibly exit loop
