@@ -319,7 +319,7 @@ def main():
                     print(CANCEL_TEXT,end='')
             case "print": # Print currently stored maze in all available styles
                 cellcount = maze.width*maze.height
-                if cellcount < PRINT_LIMIT or input(f"Maze contains a lot of cells ({cellcount}), proceed anyway ('Y')? >")=='Y':
+                if cellcount < CELL_LIMIT or input(f"Maze contains a lot of cells ({cellcount}), proceed anyway ('Y')? >")=='Y':
                     printers = {x.__name__:x for x in [
                         Maze.str_raster,
                         Maze.str_block_double,
@@ -330,10 +330,10 @@ def main():
                         Maze.str_frame,
                         Maze.str_frame_ascii,
                         Maze.str_frame_ascii_small,
+                        repr
                     ]}
                     for name,printer in printers.items():
                         print(f"{name}:\n{printer(maze)}")
-                    print(f"Maze `repr`:\n{repr_string}")
                 else:
                     print(CANCEL_TEXT,end='')
             case "save": # Generate image of current maze and save as file
@@ -361,7 +361,16 @@ def main():
             case "solve":
                 benchmark("solving",lambda:
                     maze.compute_solution())
-                preview(maze, lambda maze: maze.str_frame_ascii(show_solution=True))
+                cellcount = maze.width*maze.height
+                if cellcount < CELL_LIMIT or input(f"Maze contains a lot of cells ({cellcount}), proceed anyway ('Y')? >")=='Y':
+                    printers = {x.__name__:x for x in [
+                        lambda m:Maze.str_frame_ascii(maze, show_solution=True),
+                        lambda m:Maze.str_frame_ascii_small(maze, show_solution=True),
+                    ]}
+                    for name,printer in printers.items():
+                        print(f"{name}:\n{printer(maze)}")
+                else:
+                    print(CANCEL_TEXT,end='')
             case "view":
                 if latest_image is None:
                     print("No image type has been chosen to be generated in the past, so I'll generate a standard one for you...")

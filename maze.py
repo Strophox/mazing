@@ -701,9 +701,11 @@ class Maze:
             linestr += [row2]
         return '\n'.join(''.join(line) for line in linestr)
 
-    def str_frame_ascii_small(self):
+    def str_frame_ascii_small(self, show_solution=False):
         """Produce a minimal (ASCII) frame string presentation of the maze."""
         wall = self.has_wall
+        if show_solution and self.solution_nodes is None:
+            raise RuntimeError("cannot show solution path before searching for it")
         # Corner cases are nasty, dude;
         """ ,___, ,___, ,___, ,___,
             |   | | __| | | | | |_|
@@ -735,6 +737,17 @@ class Maze:
             elif y<self.height-1 and wall(x,y+1,RIGHT) and not (wall(x,y,DOWN) and x<self.width-1 and wall(x+1,y,DOWN)): return ','
             elif wall(x,y,DOWN) or (x<self.width-1 and wall(x+1,y,DOWN)): return '_'
             else: return '.'
+        def trsfm1(char):
+            if show_solution and self.node_at(x,y) in self.solution_nodes:
+                return {'_':'L', ' ':'!'}[char]
+            else:
+                return char
+        def trsfm2(char):
+            if show_solution and self.node_at(x,y) in self.solution_nodes and x<self.width-1 and self.node_at(x+1,y) in self.solution_nodes:
+                return {'|':'|', ',':'L', '_':'L', '.':'!'}[char]
+            else:
+                return char
+
         string = [] # Here we instead add chars to a list and join at the end, for fun
         # Top-left corner
         string.append(cornersegment_top_left())
@@ -749,10 +762,10 @@ class Maze:
             string.append(cornersegment_left(y))
             # Middle and right walls (2 chars/node)
             for x in range(self.width):
-                string.append('_' if wall(x,y,DOWN) else ' ')
-                string.append(cornersegment(x,y))
+                string.append(trsfm1('_' if wall(x,y,DOWN) else ' '))
+                string.append(trsfm2(cornersegment(x,y)))
         return ''.join(string)
-
+#### print(maze.str_frame_ascii_small(show_solution=True))
 #    def recursively_backtrack(self):
 #        """Carve a maze using simple randomized depth-first-search.
 #
