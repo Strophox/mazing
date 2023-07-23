@@ -52,14 +52,15 @@ def autocomplete(input_word, full_words):
 
 def preview(maze, printer=Maze.str_frame):
     """Print maze to the console iff within given size limit."""
-    string = printer(maze)
-    stringwidth = string.find('\n') + 1
-    stringheight = string.count('\n') + 1
     cellcount = maze.width*maze.height
-    if maze.width*maze.height < CELL_LIMIT and stringwidth <= CW() and stringheight <= CH():
-        print(printer(maze))
-    else:
-        print(f"[maze too large for console preview ({cellcount} cells), consider an image option]")
+    if maze.width*maze.height < CELL_LIMIT:
+        string = printer(maze)
+        stringwidth = string.find('\n') + 1
+        stringheight = string.count('\n') + 1
+        if stringwidth <= CW() and stringheight <= CH():
+            print(printer(maze))
+            return
+    print(f"[maze too large for console preview ({cellcount} cells), consider an image option]")
     return
 
 def benchmark(title, function):
@@ -307,8 +308,8 @@ def main():
                     try:
                         nums = [int(s) for s in user_input.split()]
                         if len(nums) == 4:
-                            self.set_entrance(nums[0], nums[1])
-                            self.set_exit(nums[2], nums[3])
+                            maze.set_entrance(nums[0], nums[1])
+                            maze.set_exit(nums[2], nums[3])
                         else:
                             raise ValueError("invalid number of arguments")
                     except ValueError as e:
@@ -329,17 +330,17 @@ def main():
                 latest_image = benchmark("generating image", lambda:
                     maze.generate_image())
                 latest_image.show()
+            case "imgcol":
+                benchmark("computing distances", lambda:
+                    maze.compute_distances())
+                latest_image = benchmark("generating image", lambda:
+                    maze.generate_colorimage(gradient_colors=colormap,raster=maze.generate_raster(show_distances=True,columnated=False)))
+                latest_image.show()
             case "imgsol": # Generate image of current maze with solution and open in external program
                 benchmark("solving", lambda:
                     maze.compute_solution())
                 latest_image = benchmark("generating image", lambda:
                     maze.generate_solutionimage())
-                latest_image.show()
-            case "imgcol":
-                benchmark("computing distances", lambda:
-                    maze.compute_distances())
-                latest_image = benchmark("generating image", lambda:
-                    maze.generate_colorimage(gradient_colors=colormap))
                 latest_image.show()
             case "join": # Make current maze unicursal
                 benchmark("making unicursal", lambda:
@@ -429,6 +430,5 @@ def main():
 if __name__=="__main__": main()
 
 # MAIN END
-
 
 #[[8,9,13,5,5,5,12,1,5,13,13,5,5,4,9,12],[11,6,2,9,12,1,7,5,5,14,2,9,13,5,6,10],[3,12,9,6,3,5,5,5,12,10,9,6,3,12,9,6],[9,14,3,12,1,13,4,9,6,2,10,1,5,6,10,8],[10,3,5,6,9,7,12,3,5,5,6,8,9,5,6,10],[10,9,5,4,10,8,3,5,12,9,5,6,3,12,9,6],[10,11,5,5,6,3,13,4,10,11,5,5,12,10,3,12],[10,3,12,8,9,13,6,1,6,10,1,12,3,14,9,14],[3,12,10,10,10,3,5,12,1,7,12,3,12,3,6,10],[9,14,11,14,11,5,12,3,5,4,10,9,7,4,9,6],[10,10,2,10,10,1,14,8,8,9,6,10,1,12,10,8],[10,3,12,10,10,8,11,6,10,3,5,7,4,3,6,10],[10,8,11,7,14,10,3,12,11,5,5,13,12,8,9,14],[10,10,10,9,6,10,9,6,10,1,13,6,3,6,2,10],[10,10,10,2,9,6,10,1,7,12,3,5,12,1,13,14],[3,6,3,5,6,1,7,5,5,6,1,5,7,5,6,2]]

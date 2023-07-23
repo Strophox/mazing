@@ -4,22 +4,20 @@ Contains the main `Maze` class,
 
 This file contains all important maze-relation implementations to store, create and modify grid mazes.
 
-### Work in Progress:
-- General:
-    * a l l   d o c s t r i n g s   m u s t   b e   c h e c k e d   ( d e a t h )
-    * longest path
-    * colormaps
-- Printers:
-    * FIXME generate_raster
+### Ideas/Work in Progress:
+- General
+    * a l l   d o c s t r i n g s   m u s t   b e   c h e c k e d   ( p a i n )
+    * Is generate_raster rly bug-free??
+- Printers
     * PIL GIF
-    * CHALLENGE str_frame solution
-- Builders:
+    * Challenge' str_frame solution
+- Builders
     * division; alternate on aspect ratio
     * division; rooms
-    * CHALLENGE compose algorithms
-- Solvers:
+    * Challenge' compose algorithms
+- Solvers
     * A* pathfinder
-- ETC Dreams:
+- ETC Dreams
     * curses maze navigator
     * CHALLENGE doom; "░▒▓█.,-~:;=!*#$@"
 """
@@ -821,6 +819,7 @@ class Maze:
             index_choice = lambda max_index: -1 if random.random()<0.75 else random.randint(0,max_index)
         start.flag = True
         bucket = [start]
+        #### IMAGES = []
         while bucket:
             n = index_choice(len(bucket)-1)
             node = bucket[n]
@@ -830,6 +829,7 @@ class Maze:
                 maze.connect(node,neighbor)
                 neighbor.flag = True
                 bucket.append(neighbor)
+                #### IMAGES.append(maze.generate_image(raster=maze.generate_raster(corridorwidth=3)))
             else:
                 if fast_pop:
                     if len(bucket) > 1 and n != -1:
@@ -838,6 +838,7 @@ class Maze:
                 else:
                     bucket.pop(n)
         maze._log_action("tree")
+        #### IMAGES[0].save('test.gif', save_all=True, append_images=IMAGES[1:], optimize=True, duration=30, loop=0)
         return maze
 
     @staticmethod
@@ -937,7 +938,7 @@ class Maze:
         return maze
 
     @staticmethod
-    def division(width, height, slice_bias=1.0, pivot_choice=None):
+    def division(width, height, slice_direction_choice=None, pivot_choice=None, roomlength=0):
         """Build a random maze using randomized divide-and-conquer.
 
         Args:
@@ -948,15 +949,18 @@ class Maze:
         maze = Maze(width, height)
         if pivot_choice is None:
             pivot_choice = lambda l,r: (l+r)//2
-            #pivot_choice = lambda l,r: min(max(l,int(random.gauss((l+r)/2,(l+r)/2**6))),r)
+            #pivot_choice = lambda l,r: min(max(l,int(random.gauss((l+r)/2,(l+r)/2**5))),r)
             #pivot_choice = lambda l,r: random.triangular(l,r)
             #pivot_choice = lambda l,r: random.randint(l,r)
-        def divide(topleft, bottomright, prev_horz):
+        if slice_direction_choice is None:
+            slice_direction_choice = lambda w,h, prev: h > w if h != w else random.getrandbits(1)
+            #slice_direction_choice = lambda w,h, prev: prev ^ (random.random() < 1.9)
+            #slice_direction_choice = lambda w,h, prev: random.getrandbits(1)
+        def divide(topleft, bottomright, prev_dir):
             (x0,y0), (x1,y1) = topleft, bottomright
-            if x0==x1 or y0==y1: return
-            horizontal_cut = random.getrandbits(1)
-            while prev_horz==horizontal_cut and random.random() < slice_bias:
-                horizontal_cut = random.getrandbits(1)
+            width,height = (x1-x0), (y1-y0)
+            if width < 1 or height < 1 or roomlength and width < roomlength and height < roomlength and random.random() < 1/(width*height): return
+            horizontal_cut = slice_direction_choice(width, height, prev_dir)
             if horizontal_cut:
                 yP = pivot_choice(y0,y1-1)
                 for x in range(x0,x1+1):
