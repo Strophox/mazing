@@ -7,14 +7,12 @@ This file contains all important maze-relation implementations to store, create 
 ### Ideas/Work in Progress:
 - General
     * a l l   d o c s t r i n g s   m u s t   b e   c h e c k e d   ( p a i n )
-    * Is generate_raster rly bug-free??
+    * (Is generate_raster rly bug-free??)
 - Printers
     * PIL GIF
-    * Challenge' str_frame solution
+    * (? str_frame solution)
 - Builders
-    * division; alternate on aspect ratio
-    * division; rooms
-    * Challenge' compose algorithms
+    * (? compose algorithms)
 - Solvers
     * A* pathfinder
 - ETC Dreams
@@ -432,7 +430,7 @@ class Maze:
         if progressed:self._log_action("unicursal")
         return
 
-    def generate_raster(self, corridorwidth=1, columnated=True, show_solution=False, show_distances=False): # TODO
+    def generate_raster(self, wall_air_ratio=(1,1), columnated=True, show_solution=False, show_distances=False): # TODO wall_air_ratio
         """
         normal:
             wall = +1  air = 0
@@ -451,6 +449,7 @@ class Maze:
             list(list(bool)): 2D raster of the maze
         """
         wall = self.has_wall
+        (wallM, airM) = wall_air_ratio
         if columnated:
             column_wall = lambda x,y: True
         else:
@@ -465,34 +464,27 @@ class Maze:
             mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall or self.node_at(x,y).distance==float('inf') else self.node_at(x,y).distance
         else:
             mkval = lambda is_wall, x,y, nx,ny: (+1) if is_wall else 0
+        raster = []
         # Top-left corner
-        val = mkval(True, 0,0, 0,0)
-        raster = [[val]]
+        row1 = [mkval(True, 0,0, 0,0)] * wallM
         # Top wall
         for x,node in enumerate(self._grid[0]):
-            val = mkval(node.has_wall(UP),x,0, x,0)
-            raster[0] += [val] * corridorwidth
-            val = mkval(True,x,0, x,0)
-            raster[0] += [val]
+            row1 += [mkval(node.has_wall(UP),x,0, x,0)] * airM
+            row1 += [mkval(True,x,0, x,0)] * wallM
+        raster += [row1] * wallM
         # Middle and bottom rows of string
         for y,row in enumerate(self._grid):
             # Left wall
-            val = mkval(row[0].has_wall(LEFT), 0,y, 0,y)
-            row1 = [val]
-            val = mkval(True, 0,y, 0,y)
-            row2 = [val]
+            row1 = [mkval(row[0].has_wall(LEFT), 0,y, 0,y)] * wallM
+            row2 = [mkval(True, 0,y, 0,y)] * wallM
             # Middle and bottom walls (2 blocks/node)
             for x,node in enumerate(row):
-                val = mkval(False, x,y, x,y)
-                row1 += [val] * corridorwidth
-                val = mkval(node.has_wall(RIGHT), x,y, x+1,y)
-                row1 += [val]
-                val = mkval(node.has_wall(DOWN), x,y, x,y+1)
-                row2 += [val] * corridorwidth
-                val = mkval(column_wall(x,y), x,y, x,y)
-                row2 += [val]
-            raster += [row1] * corridorwidth
-            raster += [row2]
+                row1 += [mkval(False, x,y, x,y)] * airM
+                row1 += [mkval(node.has_wall(RIGHT), x,y, x+1,y)] * wallM
+                row2 += [mkval(node.has_wall(DOWN), x,y, x,y+1)] * airM
+                row2 += [mkval(column_wall(x,y), x,y, x,y)] * wallM
+            raster += [row1] * airM
+            raster += [row2] * wallM
         return raster
 
     @staticmethod
@@ -670,11 +662,11 @@ class Maze:
                 string += make_tile(x<self.width-1 and wall(x+1,y,DOWN),wall(x,y,RIGHT),wall(x,y,DOWN),y<self.height-1 and wall(x,y+1,RIGHT))
         return string
 
-    def str_frame_ascii(self, corridorwidth=1, show_solution=False):
+    def str_frame_ascii(self, air_ratio=1, show_solution=False):
         """Produce an (ASCII) frame string presentation of the maze.
 
         Args:
-            corridorwidth (int): Multiplier of how much wider corridors should be compared to the walls (default is 1)
+            air_ratio (int): Multiplier of how much wider corridors should be compared to the walls (default is 1)
             show_marked_nodes (bool): Whether solution should be displayed if calculated (default is True)
 
         Returns:
@@ -686,7 +678,7 @@ class Maze:
         linestr = [['+']]
         # Top wall
         for node in self._grid[0]:
-            linestr[0] += ['---' if node.has_wall(UP) else '   '] * corridorwidth
+            linestr[0] += ['---' if node.has_wall(UP) else '   '] * air_ratio
             linestr[0] += ['+']
         # Middle and bottom rows of string
         for row in self._grid:
@@ -695,11 +687,11 @@ class Maze:
             row2 = ['+']
             # Middle and bottom walls (2 blocks/node)
             for node in row:
-                row1 += [f' {"." if show_solution and node in self.solution_nodes else " "} '] * corridorwidth
+                row1 += [f' {"." if show_solution and node in self.solution_nodes else " "} '] * air_ratio
                 row1 += ['|' if node.has_wall(RIGHT) else ' ']
-                row2 += ['---' if node.has_wall(DOWN) else '   '] * corridorwidth
+                row2 += ['---' if node.has_wall(DOWN) else '   '] * air_ratio
                 row2 += ['+']
-            linestr += [row1] * corridorwidth
+            linestr += [row1] * air_ratio
             linestr += [row2]
         return '\n'.join(''.join(line) for line in linestr)
 

@@ -218,9 +218,10 @@ def analysis(maze):
 
 def main():
     dimensions = (16,16)
+    wall_air_ratio = (1, 2)
     maze = Maze.backtracker(*dimensions)
     colormap = None
-    latest_image = None
+    image = None
     #import textwrap # remove source code multiline string indents
     help_text = """
 ~:--------------------------------------:~
@@ -245,6 +246,7 @@ def main():
  ;  imgsol - png solution image
  :  imgcol - png distance map
  :  color  - set colormap -> `imgcol`
+ :  sizing - set ratio of wall:air size
  :  view   - view latest image
  :  save   - save latest image
  (Commands are autocompleted if possible)
@@ -297,13 +299,13 @@ def main():
                         elif len(nums) == 2:
                             dimensions = (nums[0], nums[1])
                         else:
-                            raise ValueError("too many arguments")
+                            raise ValueError("invalid number of arguments")
                     except ValueError as e:
                         print(f"[error: {e}]")
                 else:
                     print(CANCEL_TEXT,end='')
             case "goal":
-                user_input = input(f"Enter entrance & exit coordinates (default: '0 0 -1 -1') (currently = {maze.entrance.coordinates[0]} {maze.entrance.coordinates[1]} {maze.exit.coordinates[0]} {maze.exit.coordinates[1]}) > ").strip()
+                user_input = input(f"Enter entrance & exit coordinates (default = '0 0 -1 -1', currently = {maze.entrance.coordinates[0]} {maze.entrance.coordinates[1]} {maze.exit.coordinates[0]} {maze.exit.coordinates[1]}) > ").strip()
                 if user_input:
                     try:
                         nums = [int(s) for s in user_input.split()]
@@ -327,21 +329,21 @@ def main():
                 except Exception as e:
                     print(f"<error: {e}>")
             case "img": # Generate image of current maze and open in external program
-                latest_image = benchmark("generating image", lambda:
-                    maze.generate_image())
-                latest_image.show()
+                image = benchmark("generating image", lambda:
+                    maze.generate_image(raster=maze.generate_raster(wall_air_ratio=wall_air_ratio)))
+                image.show()
             case "imgcol":
                 benchmark("computing distances", lambda:
                     maze.compute_distances())
-                latest_image = benchmark("generating image", lambda:
-                    maze.generate_colorimage(gradient_colors=colormap,raster=maze.generate_raster(show_distances=True,columnated=False)))
-                latest_image.show()
+                image = benchmark("generating image", lambda:
+                    maze.generate_colorimage(gradient_colors=colormap,raster=maze.generate_raster(show_distances=True,columnated=False,wall_air_ratio=wall_air_ratio)))
+                image.show()
             case "imgsol": # Generate image of current maze with solution and open in external program
                 benchmark("solving", lambda:
                     maze.compute_solution())
-                latest_image = benchmark("generating image", lambda:
-                    maze.generate_solutionimage())
-                latest_image.show()
+                image = benchmark("generating image", lambda:
+                    maze.generate_solutionimage(raster=maze.generate_raster(show_solution=True,wall_air_ratio=wall_air_ratio)))
+                image.show()
             case "join": # Make current maze unicursal
                 benchmark("making unicursal", lambda:
                     maze.make_unicursal())
@@ -351,7 +353,8 @@ def main():
                 if user_input:
                     try:
                         data = eval(user_input)
-                        maze = benchmark("loading into maze", Maze.from_repr(data))
+                        maze = benchmark("loading into maze", lambda:
+                            Maze.from_repr(data))
                         preview(maze)
                     except Exception as e:
                         print(f"[could not load maze: {e}]")
@@ -381,12 +384,23 @@ def main():
                 else:
                     print(CANCEL_TEXT,end='')
             case "save": # Generate image of current maze and save as file
-                if latest_image is None:
-                    print("No image type has been chosen to be generated in the past, so I'll generate a standard one for you...")
-                    latest_image = benchmark("generating image", lambda:
-                        maze.generate_image())
+                if image is None:
+                    print("No image type has been tried yet, please choose one first (see `help`)")
                 benchmark("saving",lambda:
-                    latest_image.save(latest_image.filename))
+                    image.save(image.filename))
+            case "sizing":
+                user_input = input(f"Enter wall:air ratio (default = 1 1, currently = {wall_air_ratio[0]} {wall_air_ratio[1]}) > ").strip()
+                if user_input:
+                    try:
+                        nums = [int(s) for s in user_input.split()]
+                        if len(nums) == 2:
+                            wall_air_ratio = (nums[0], nums[1])
+                        else:
+                            raise ValueError("invalid number of arguments")
+                    except ValueError as e:
+                        print(f"[error: {e}]")
+                else:
+                    print(CANCEL_TEXT,end='')
             case "stats":
                 stats_text = benchmark("total maze analysis execution", lambda:
                     analysis(maze))
@@ -407,12 +421,10 @@ def main():
                 else:
                     print(CANCEL_TEXT,end='')
             case "view":
-                if latest_image is None:
-                    print("No image type has been chosen to be generated in the past, so I'll generate a standard one for you...")
-                    latest_image = benchmark("generating image", lambda:
-                        maze.generate_image())
+                if image is None:
+                    print("No image type has been tried yet, please choose one first (see `help`)")
                 benchmark("opening external editor",lambda:
-                    latest_image.show())
+                    image.show())
             case _: # Non-empty, unrecognized command
                 print("Unrecognized command")
         # Get user input and possibly exit loop
@@ -431,4 +443,4 @@ if __name__=="__main__": main()
 
 # MAIN END
 
-#[[8,9,13,5,5,5,12,1,5,13,13,5,5,4,9,12],[11,6,2,9,12,1,7,5,5,14,2,9,13,5,6,10],[3,12,9,6,3,5,5,5,12,10,9,6,3,12,9,6],[9,14,3,12,1,13,4,9,6,2,10,1,5,6,10,8],[10,3,5,6,9,7,12,3,5,5,6,8,9,5,6,10],[10,9,5,4,10,8,3,5,12,9,5,6,3,12,9,6],[10,11,5,5,6,3,13,4,10,11,5,5,12,10,3,12],[10,3,12,8,9,13,6,1,6,10,1,12,3,14,9,14],[3,12,10,10,10,3,5,12,1,7,12,3,12,3,6,10],[9,14,11,14,11,5,12,3,5,4,10,9,7,4,9,6],[10,10,2,10,10,1,14,8,8,9,6,10,1,12,10,8],[10,3,12,10,10,8,11,6,10,3,5,7,4,3,6,10],[10,8,11,7,14,10,3,12,11,5,5,13,12,8,9,14],[10,10,10,9,6,10,9,6,10,1,13,6,3,6,2,10],[10,10,10,2,9,6,10,1,7,12,3,5,12,1,13,14],[3,6,3,5,6,1,7,5,5,6,1,5,7,5,6,2]]
+#(['2023.07.24-00h41m38', 'tree', 'dfs'], (0, 0), (31, 31), [[1, 13, 5, 12, 9, 5, 5, 5, 5, 12, 1, 13, 5, 12, 8, 9, 5, 5, 5, 13, 13, 5, 5, 5, 5, 5, 12, 9, 5, 5, 12, 8], [9, 6, 1, 7, 6, 8, 9, 5, 12, 3, 5, 6, 9, 6, 11, 7, 4, 9, 12, 2, 3, 12, 9, 5, 5, 4, 10, 11, 12, 8, 10, 10], [10, 9, 12, 9, 4, 11, 6, 9, 14, 9, 13, 12, 10, 1, 7, 12, 9, 6, 3, 5, 5, 6, 3, 12, 9, 5, 6, 2, 10, 10, 3, 14], [11, 6, 10, 3, 5, 6, 9, 6, 10, 10, 10, 2, 3, 5, 12, 10, 10, 9, 13, 5, 12, 9, 13, 6, 10, 1, 13, 5, 6, 10, 9, 6], [10, 8, 3, 12, 9, 5, 6, 1, 6, 10, 10, 9, 5, 5, 6, 2, 10, 2, 3, 12, 2, 10, 10, 9, 6, 9, 6, 1, 13, 14, 3, 12], [10, 3, 12, 10, 10, 9, 12, 9, 5, 6, 10, 10, 9, 12, 9, 12, 3, 13, 12, 11, 5, 6, 3, 6, 9, 6, 9, 13, 6, 2, 9, 6], [10, 9, 14, 10, 11, 6, 3, 14, 1, 12, 3, 6, 10, 3, 6, 3, 12, 2, 10, 3, 12, 1, 13, 5, 6, 9, 14, 2, 9, 12, 10, 8], [3, 6, 10, 10, 2, 9, 12, 3, 5, 7, 12, 9, 7, 12, 1, 12, 10, 9, 6, 8, 10, 9, 6, 9, 5, 6, 3, 5, 6, 3, 7, 14], [9, 4, 10, 3, 5, 6, 3, 5, 12, 8, 10, 3, 12, 10, 9, 6, 3, 6, 9, 7, 6, 10, 8, 3, 12, 1, 13, 5, 12, 9, 12, 10], [11, 5, 6, 9, 13, 12, 9, 5, 6, 10, 10, 1, 6, 10, 10, 9, 5, 5, 6, 9, 5, 14, 11, 5, 7, 5, 6, 1, 6, 10, 10, 10], [3, 12, 1, 6, 10, 2, 3, 12, 9, 14, 3, 5, 5, 6, 10, 10, 9, 4, 9, 6, 9, 14, 2, 9, 5, 5, 5, 5, 5, 14, 10, 2], [8, 10, 9, 12, 3, 12, 9, 6, 10, 3, 12, 1, 5, 12, 11, 6, 11, 12, 11, 4, 10, 10, 9, 6, 9, 5, 12, 9, 12, 2, 3, 12], [10, 3, 6, 11, 5, 6, 11, 12, 11, 12, 11, 5, 5, 6, 10, 1, 6, 3, 6, 9, 6, 10, 10, 8, 10, 1, 7, 6, 3, 5, 5, 14], [11, 5, 4, 10, 9, 12, 10, 10, 2, 10, 2, 9, 5, 12, 3, 5, 5, 13, 5, 6, 1, 6, 10, 10, 10, 9, 5, 12, 9, 12, 9, 6], [11, 5, 5, 6, 10, 10, 2, 10, 9, 6, 9, 6, 9, 14, 9, 12, 9, 6, 9, 5, 5, 5, 6, 10, 3, 6, 9, 6, 10, 2, 3, 12], [3, 5, 12, 9, 6, 3, 5, 6, 10, 9, 6, 8, 10, 2, 10, 3, 6, 9, 6, 9, 5, 5, 5, 7, 12, 9, 6, 8, 11, 12, 9, 6], [8, 9, 6, 3, 5, 5, 5, 12, 3, 7, 5, 6, 3, 5, 6, 9, 5, 6, 1, 7, 5, 4, 9, 5, 14, 10, 1, 7, 14, 3, 6, 8], [10, 10, 1, 13, 5, 12, 9, 6, 9, 5, 12, 9, 5, 5, 5, 6, 8, 9, 13, 5, 5, 5, 6, 8, 10, 3, 5, 12, 3, 5, 12, 10], [10, 3, 5, 6, 9, 6, 3, 12, 3, 12, 10, 3, 12, 9, 5, 5, 7, 6, 3, 12, 9, 5, 12, 10, 10, 9, 12, 10, 9, 4, 10, 10], [11, 5, 5, 4, 10, 9, 12, 3, 5, 6, 10, 9, 6, 3, 5, 5, 5, 12, 9, 6, 10, 9, 6, 3, 7, 6, 10, 10, 10, 9, 6, 10], [11, 5, 5, 12, 10, 10, 3, 5, 5, 12, 10, 3, 5, 5, 12, 9, 4, 10, 3, 12, 10, 3, 5, 12, 1, 12, 10, 10, 3, 7, 5, 14], [3, 13, 4, 3, 6, 3, 5, 12, 8, 11, 7, 5, 5, 12, 10, 11, 12, 10, 8, 10, 3, 12, 8, 3, 12, 10, 10, 10, 9, 5, 12, 2], [8, 10, 9, 5, 5, 5, 12, 10, 3, 6, 9, 5, 12, 2, 10, 2, 3, 7, 6, 3, 13, 6, 3, 12, 10, 11, 6, 10, 11, 4, 3, 12], [11, 6, 3, 5, 5, 12, 3, 6, 9, 12, 10, 8, 3, 12, 10, 9, 5, 5, 5, 12, 3, 5, 12, 10, 10, 3, 12, 3, 6, 9, 12, 10], [10, 9, 5, 5, 4, 10, 9, 5, 6, 3, 6, 3, 12, 10, 10, 10, 9, 5, 4, 3, 5, 12, 3, 14, 3, 12, 11, 4, 9, 6, 10, 10], [10, 3, 12, 9, 13, 6, 3, 5, 5, 12, 1, 13, 6, 10, 3, 6, 10, 9, 5, 13, 12, 10, 9, 7, 4, 10, 2, 9, 6, 8, 3, 14], [10, 9, 6, 10, 2, 9, 5, 5, 5, 6, 9, 6, 9, 6, 9, 5, 7, 6, 9, 6, 2, 10, 2, 9, 12, 10, 9, 6, 9, 7, 5, 6], [10, 11, 12, 3, 12, 10, 9, 4, 9, 5, 7, 12, 3, 12, 3, 5, 5, 12, 3, 5, 12, 3, 5, 14, 3, 6, 10, 1, 14, 9, 12, 8], [10, 10, 3, 12, 10, 10, 3, 5, 7, 12, 8, 11, 12, 11, 12, 9, 4, 3, 12, 9, 14, 9, 5, 6, 9, 5, 6, 8, 11, 6, 3, 14], [10, 10, 9, 6, 10, 3, 5, 5, 12, 3, 14, 10, 2, 10, 3, 6, 9, 5, 6, 10, 2, 10, 9, 4, 10, 9, 5, 6, 2, 9, 12, 10], [10, 2, 3, 12, 3, 13, 5, 4, 3, 12, 2, 3, 12, 3, 5, 5, 6, 1, 12, 3, 5, 6, 3, 12, 10, 3, 5, 5, 5, 6, 10, 10], [3, 5, 5, 7, 4, 3, 5, 5, 5, 7, 5, 5, 7, 5, 5, 5, 5, 5, 7, 5, 5, 5, 5, 6, 3, 5, 5, 5, 5, 5, 6, 2]])
