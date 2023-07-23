@@ -19,7 +19,7 @@ import shutil
 # CONSTANTS BEGIN
 
 CANCEL_TEXT = "*canceled\n"
-PRINT_LIMIT = 100_000
+CELL_LIMIT = 10_000
 CW = lambda: shutil.get_terminal_size()[0]
 CH = lambda: shutil.get_terminal_size()[1]
 
@@ -49,19 +49,16 @@ def autocomplete(input_word, full_words):
     else:
         return input_word
 
-def fits_into_console(string):
-    stringwidth = string.find('\n') + 1
-    stringheight = string.count('\n') + 1
-    return stringwidth <= CW() and stringheight <= CH()
-
 def preview(maze, printer=Maze.str_frame):
     """Print maze to the console iff within given size limit."""
     string = printer(maze)
-    charcount = len(string)
-    if charcount < PRINT_LIMIT and fits_into_console(string):
+    stringwidth = string.find('\n') + 1
+    stringheight = string.count('\n') + 1
+    cellcount = maze.width*maze.height
+    if maze.width*maze.height < CELL_LIMIT and stringwidth <= CW() and stringheight <= CH():
         print(printer(maze))
     else:
-        print(f"[maze too large for console preview ({charcount} characters), consider an image option]")
+        print(f"[maze too large for console preview ({cellcount} cells), consider an image option]")
     return
 
 def benchmark(title, function):
@@ -73,15 +70,45 @@ def benchmark(title, function):
     return result
 
 def analysis(maze):
+    # This function is a huge f*cking mess
     temp = (maze.entrance,maze.exit)
     # Statistics helpers
-    expectation = lambda numbers: sum(numbers) / len(numbers)
-    variance = lambda numbers: sum(x**2 for x in numbers)/len(numbers) - expectation(numbers)**2
+    expectation = lambda sample: not sample or sum(sample) / len(sample)
+    variance = lambda sample: not sample or sum(x**2 for x in sample)/len(sample) - expectation(sample)**2
+    def sample_to_distribution_chart(pos_int_sample, bars=8):
+        if not pos_int_sample: return dict()
+        distribution = [pos_int_sample.count(x) for x in range(int(max(pos_int_sample))+1)]
+        sum_distribution = len(pos_int_sample)
+        #distr_upper = len(distribution) # Naïve: take all values
+        #xs = [x for x in range(len(distribution)) if sum(distribution[0:x+1])/sum_distribution > 0.95]
+        #distr_upper_ = min(xs) # Better: take 95% and go linear
+        l,r = 0,len(distribution)
+        x = (l+r)//2
+        strictly_increasing = True
+        while l < r:
+            key = sum(distribution[0:x+1]) / sum_distribution
+            if key < 0.95:
+                l, x = x, (x+r)//2+1
+                if not strictly_increasing:
+                    break
+            else:
+                strictly_increasing = False
+                x, r = (l+x)//2, x
+        distr_upper = x # Best: Binary search
+        sum_distr = sum(distribution)
+        slotwidth = (distr_upper // bars) or 1
+        distribution_chart = {
+            f"[{x}, {x+slotwidth})":
+                sum(distribution[x:x+slotwidth]) / sum_distr
+            for x in range(0, distr_upper, slotwidth)
+        }
+        return distribution_chart
     # Formatter helpers
     hbar = lambda num_cols, fill_level: '#' * round(fill_level * num_cols)
     fmt_perc = lambda perc: f"{perc:.2%}"
     fmt_float = lambda float_: f"{float_:.01f}"
     def fmt_dataset(heading, numbers):
+        if not numbers: return f"No valid data for '{heading}' statistics."
         statistics = {
             "Expectation":
                 expectation(numbers),
@@ -97,11 +124,17 @@ def analysis(maze):
             f" :      {title.rjust(CWtitle)}  {fmt_float(stat).rjust(CWstat)}"
             for (title,stat) in statistics.items()
         )
-        string = f"""
-{stats_header}
-{stats_list}
-        """.strip()
+        string = f"""{stats_header}\n{stats_list}"""
         return string
+    def fmt_barchart(distribution):
+        if not distribution: return f"No valid data for bar chart."
+        CWtitle = max(len(title) for title in distribution)
+        CWperc = max(len(fmt_perc(perc)) for perc in distribution.values())
+        table = '\n'.join(
+            f" :  {title.rjust(CWtitle)} {fmt_perc(perc).rjust(CWperc)} {hbar(CW()-6-CWtitle-CWperc, perc)}"
+            for (title,perc) in distribution.items()
+        )
+        return table
     # General stuff
     nodecount = maze.width * maze.height
     stats_general = f"""
@@ -118,18 +151,24 @@ def analysis(maze):
     len_solution = len(maze.solution_nodes)
     (tiles_counts,branch_distances,offshoots_maxlengths,offshoots_avglengths) = benchmark("computing other stats", lambda:
         maze.compute_stats())
+    offshoots_maxlengths_distribution = benchmark("distr. chart 2",lambda:
+        sample_to_distribution_chart(offshoots_maxlengths))
+    offshoots_avglengths_distribution = benchmark("distr. chart 3",lambda:
+        sample_to_distribution_chart(offshoots_avglengths))
     stats_solution = f"""
  Solution Path Statistics.
  :  Length of solution path
  :      {len_solution}  ({fmt_perc(len_solution/nodecount)} of area)
  :  Number of offshooting paths from solution
  :      {len(offshoots_maxlengths)}
- {fmt_dataset("Maximum distance of an offshooting path", offshoots_maxlengths)}
- {fmt_dataset("Average distance of an offshooting path", offshoots_avglengths)}
+{fmt_dataset("Maximum distance of an offshooting path", offshoots_maxlengths)}
+{fmt_barchart(offshoots_maxlengths_distribution)}
+{fmt_dataset("Average distance of an offshooting path", offshoots_avglengths)}
+{fmt_barchart(offshoots_avglengths_distribution)}
     """.strip()
     # Node stuff
     make_perc = lambda *tileselection: sum(tiles_counts[t] for t in tileselection) / nodecount
-    rows = {
+    nodetypes = {
         "dead ends":
             make_perc(0b0001,0b0010,0b0100,0b1000),
         "tunnels":
@@ -139,24 +178,20 @@ def analysis(maze):
         "intersections":
             make_perc(0b1111)
     }
-    CWtitle = max(len(title) for title in rows)
-    CWperc = max(len(fmt_perc(perc)) for perc in rows.values())
-    table = '\n'.join(
-        f" :  {title.rjust(CWtitle)} {fmt_perc(perc).rjust(CWperc)} {hbar(CW()-5-CWtitle-CWperc, perc)}"
-        for (title,perc) in rows.items()
-    )
     stats_nodes = f"""
  Node Statistics.
-{table}
+{fmt_barchart(nodetypes)}
     """.strip()
     # Distance stuff
     len_longest_path = benchmark("finding longest path", lambda:
         maze.set_longest_path())
+    branch_distance_distribution_chart = benchmark("distr. chart 1",lambda:sample_to_distribution_chart(branch_distances))
     stats_distance = f"""
  Distance Statistics.
  :  Longest possible path
  :      {len_longest_path}  ({fmt_perc(len_longest_path/nodecount)} of area)
- {fmt_dataset("Distance from dead end to nearest three-way/intersection", branch_distances)}
+{fmt_dataset("Distance from dead end to nearest three-way/intersection", branch_distances)}
+{fmt_barchart(branch_distance_distribution_chart)}
     """.strip()
     # Final print
     hrulefill = f"~:{'-'*(CW()-4)}:~"
@@ -283,9 +318,8 @@ def main():
                 else:
                     print(CANCEL_TEXT,end='')
             case "print": # Print currently stored maze in all available styles
-                repr_string = repr(maze)
-                charcount = len(repr_string)
-                if charcount < PRINT_LIMIT or input(f"Maze contains a lot of cells ({maze.width*maze.height}), proceed anyway ('Y')? >")=='Y':
+                cellcount = maze.width*maze.height
+                if cellcount < PRINT_LIMIT or input(f"Maze contains a lot of cells ({cellcount}), proceed anyway ('Y')? >")=='Y':
                     printers = {x.__name__:x for x in [
                         Maze.str_raster,
                         Maze.str_block_double,

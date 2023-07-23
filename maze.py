@@ -81,6 +81,10 @@ class Node:
         """Connect the node into the given directions."""
         self._edges |= direction
 
+    def remove_edge(self, direction):
+        """Connect the node into the given directions."""
+        self._edges &= ~direction
+
     def toggle_edge(self, direction):
         """Connect/disconnect the node into the given directions."""
         self._edges ^= direction
@@ -107,6 +111,17 @@ class Maze:
     - Maze modification
         * make_unicursal
     """
+    #_ALGORITHMS = {
+            #0: ("unknown", Maze),
+            #1: ("tree", Maze
+                    #Maze.growing_tree,
+                    #Maze.backtracker,
+                    #Maze.prim,
+                    #Maze.kruskal,
+                    #Maze.wilson,
+                    #Maze.division,
+                    #Maze.random_edges
+        #}
 
     def __init__(self, width, height):
         """Initialize a node by its size.
@@ -243,7 +258,7 @@ class Maze:
         """
         return self.node_at(x,y).has_wall(direction)
 
-    def connect(self, node0, node1):
+    def connect(self, node0, node1, invert=False):
         """Toggle the connection between two nodes in the maze.
 
         Args:
@@ -254,8 +269,12 @@ class Maze:
         if abs(dx) + abs(dy) != 1:
             raise ValueError("nodes to connect must be neighbors")
         get_dir = lambda dx,dy: (LEFT if dx<0 else RIGHT) if dx else (UP if dy<0 else DOWN)
-        node0.toggle_edge(get_dir(dx,dy))
-        node1.toggle_edge(get_dir(-dx,-dy))
+        if invert:
+            node0.remove_edge(get_dir(dx,dy))
+            node1.remove_edge(get_dir(-dx,-dy))
+        else:
+            node0.put_edge(get_dir(dx,dy))
+            node1.put_edge(get_dir(-dx,-dy))
         return
 
     def adjacent_to(self, node):
@@ -362,7 +381,7 @@ class Maze:
                     length_adder = lambda n: lengths.append(n.distance) if is_dead_end(n) else None
                     self._breadth_first_search(offshoot, scanr=length_adder)
                     maxlength = max(lengths)
-                    avglength = sum(lengths)/len(lengths)
+                    avglength = round(sum(lengths)/len(lengths))
                     offshoots_maxlengths.append(maxlength)
                     offshoots_avglengths.append(avglength)
         return (tiles_counts, branch_distances, offshoots_maxlengths, offshoots_avglengths)
@@ -767,7 +786,7 @@ class Maze:
             start_coord = (random.randrange(maze.width),random.randrange(maze.height))
         start = maze.node_at(*start_coord)
         if index_choice is None:
-            index_choice = lambda max_index: -1 if random.random()<0.95 else random.randint(0,max_index)
+            index_choice = lambda max_index: -1 if random.random()<0.75 else random.randint(0,max_index)
         start.flag = True
         bucket = [start]
         while bucket:
@@ -853,7 +872,7 @@ class Maze:
         def backtrack_walk(tail_node, origin):
             while tail_node != origin:
                 prev_node = next(maze.connected_to(tail_node))
-                maze.connect(tail_node,prev_node) # DANGER actually disconnecting
+                maze.connect(tail_node,prev_node,invert=True)
                 tail_node.flag = 0
                 tail_node = prev_node
         if start_coord is None:
@@ -909,7 +928,7 @@ class Maze:
             if horizontal_cut:
                 yP = pivot_choice(y0,y1-1)
                 for x in range(x0,x1+1):
-                    maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1)) # DANGER actually disconnect
+                    maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1),invert=True)
                 x = random.randint(x0,x1)
                 maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1))
                 divide((x0,y0), (x1,yP), True)
@@ -917,7 +936,7 @@ class Maze:
             else:
                 xP = pivot_choice(x0,x1-1)
                 for y in range(y0,y1+1):
-                    maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y)) # DANGER actually disconnect
+                    maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y),invert=True)
                 y = random.randint(y0,y1)
                 maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y))
                 divide((x0,y0), (xP,y1), False)
