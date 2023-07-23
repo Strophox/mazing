@@ -7,11 +7,11 @@ This file contains all important maze-relation implementations to store, create 
 ### Work in Progress:
 - General:
     * a l l   d o c s t r i n g s   m u s t   b e   c h e c k e d   ( d e a t h )
+    * longest path
+    * colormaps
 - Printers:
-    * distance heatmap (official standards?)
     * FIXME generate_raster
     * PIL GIF
-    * str_frame_ascii_small solution
     * CHALLENGE str_frame solution
 - Builders:
     * division; alternate on aspect ratio
@@ -169,8 +169,8 @@ class Maze:
         assert (type(grid[0]) == list)
         assert (len(grid[0]) > 0)
         maze = Maze(len(grid[0]),len(grid))
-        for x in range(maze.height):
-            for y in range(maze.width):
+        for y in range(maze.height):    # `x` and `y` were swappe for these
+            for x in range(maze.width): # two loops for a long time - epic bug
                 assert (type(grid[y][x]) == int)
                 maze.node_at(x,y).set_edges(grid[y][x])
         assert (type(entrance_coordinates) == tuple)
@@ -460,7 +460,7 @@ class Maze:
         if show_solution:
             if self.solution_nodes is None:
                 raise RuntimeError("cannot show solution path before computing it")
-            mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self.solution_nodes and nx<self.width-1 and ny<self.height-1 and self.node_at(nx,ny) in self.solution_nodes else 0
+            mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self.solution_nodes and nx<self.width and ny<self.height and self.node_at(nx,ny) in self.solution_nodes else 0
         elif show_distances:
             if self.entrance.distance == float('inf'):
                 raise RuntimeError("cannot show distances before computing them")
@@ -498,66 +498,67 @@ class Maze:
         return raster
 
     @staticmethod
-    def raster_to_image(raster, value_to_color):
+    def _raster_to_image(raster, value_to_color):
         colors = [value_to_color(value) for value in itertools.chain(*raster)]
         image = Image.new('RGB', (len(raster[0]),len(raster)))
         image.putdata(colors)
         return image
 
-    def generate_image(self, wall_air_colors=(colortools.hex_to_tuple(0x000000),colortools.hex_to_tuple(0xFFFFFF)), corridorwidth=1):
+    def generate_image(self, wall_air_colors=(colortools.parse_hex('#000000'),colortools.parse_hex('#FFFFFF')), raster=None):
         """Generate a handle to a (PIL) Image object presenting the maze.
 
         Args:
             raster (list(list(bool))): Bit map to be rendered (default is self.generate_raster())
         """
-        raster = self.generate_raster(corridorwidth=corridorwidth)
+        if raster is None:
+            raster = self.generate_raster()
         # color conversion
         (wall_color, air_color) = wall_air_colors
         value_to_color = lambda value: wall_color if value else air_color
         # Convert to image
-        image = Maze.raster_to_image(raster, value_to_color)
+        image = Maze._raster_to_image(raster, value_to_color)
         image.filename = f"{self.name()}.png"
         return image
 
-    def generate_solutionimage(self, wall_air_marker_colors=None, corridorwidth=1):
-        if self.solution_nodes is None:
-            self.compute_solution()
-        raster = self.generate_raster(corridorwidth=corridorwidth,show_solution=True)
+    def generate_solutionimage(self, wall_air_marker_colors=None, raster=None):
+        if raster is None:
+            if self.solution_nodes is None:
+                self.compute_solution()
+            raster = self.generate_raster(show_solution=True)
         # color conversion
         if wall_air_marker_colors is None:
             peak = self.exit.distance or 1
-            wall_color = colortools.hex_to_tuple(0x000000)
-            air_color = colortools.hex_to_tuple(0xFFFFFF)
+            wall_color = colortools.parse_hex('#000000')
+            air_color = colortools.parse_hex('#FFFFFF')
             marker_color = lambda value: colortools.convert((360*value/peak, 1, 1),'HSV','RGB')
-            #marker_color = colortools.hex_to_tuple(0x007FFF)
+            #marker_color = colortools.parse_hex('#007FFF')
         else:
             wall_color = wall_air_marker_colors[0]
             air_color = wall_air_marker_colors[1]
             marker_color = lambda value: wall_air_marker_colors[2]
         value_to_color = lambda value: wall_color if value==(-1) else air_color if value==0 else marker_color(value)
         # Convert to image
-        image = Maze.raster_to_image(raster, value_to_color)
+        image = Maze._raster_to_image(raster, value_to_color)
         image.filename = f"{self.name()}_solution.png"
         return image
 
-    def generate_colorimage(self, gradient_colors=None, corridorwidth=1):
-        raster = self.generate_raster(corridorwidth=corridorwidth,show_distances=True)
+    def generate_colorimage(self, gradient_colors=None, raster=None):
+        if raster is None:
+            raster = self.generate_raster(show_distances=True)
         # color conversion
-        wall_color = colortools.hex_to_tuple(0x000000)
+        wall_color = colortools.parse_hex('#000000')
         if gradient_colors is None:
-            hex_colors = [0xFFFFFF, 0x00007F, 0x7FFF00, 0x7F3F00, 0x7FCBFF, 0x7F00FF, 0xFFFF7F, 0x000000]
-            #hex_colors = [0xFFFFFF, 0x003F7F, 0xFFFF7F, 0x7F003F]
-            gradient_colors = list(colortools.hex_to_tuple(color) for color in hex_colors)
+            gradient_colors = colortools.COLORMAPS['viridis'][::-1]
         air_color = lambda value: colortools.interpolate(gradient_colors, param=value/peak)
         peak = max(itertools.chain(*raster)) or 1
         value_to_color = lambda value: wall_color if value==(-1) else air_color(value)
         # Convert to image
-        image = Maze.raster_to_image(raster, value_to_color)
+        image = Maze._raster_to_image(raster, value_to_color)
         image.filename = f"{self.name()}_distances.png"
         return image
 
     @staticmethod
-    def raster_to_string(raster, value_to_chars):
+    def _raster_to_string(raster, value_to_chars):
         string = '\n'.join(
             ''.join(
                 value_to_chars(value) for value in row
@@ -565,7 +566,7 @@ class Maze:
         )
         return string
 
-    def str_raster(self, wall='#', air=None):
+    def str_raster(self, wall='#', air=None, raster=None):
         """Produce a binary string presentation of the maze.
 
         Args:
@@ -578,22 +579,24 @@ class Maze:
         """
         if air is None:
             air = len(wall)*' '
-        raster = self.generate_raster()
+        if raster is None:
+            raster = self.generate_raster()
         value_to_chars = lambda value: wall if value else air
-        string = Maze.raster_to_string(raster, value_to_chars)
+        string = Maze._raster_to_string(raster, value_to_chars)
         return string
 
-    def str_block_double(self):
+    def str_block_double(self, raster=None):
         """Produce a wide (unicode) block string presentation of the maze."""
-        return self.str_raster(wall='██')
+        return self.str_raster(wall='██', raster=raster)
 
-    def str_block(self):
+    def str_block(self, raster=None):
         """Produce a (unicode) block string presentation of the maze."""
-        return self.str_raster(wall='█')
+        return self.str_raster(wall='█',raster=raster)
 
-    def str_block_half(self):
+    def str_block_half(self, raster=None):
         """Produce a (unicode) half-block string presentation of the maze."""
-        raster = self.generate_raster()
+        if raster is None:
+            raster = self.generate_raster()
         # Pad raster to even height
         if len(raster)%2!=0:
             raster.append([False for _ in raster[0]])
@@ -606,9 +609,10 @@ class Maze:
         )
         return string
 
-    def str_block_quarter(self):
+    def str_block_quarter(self, raster=None):
         """Produce a (unicode) quarter-block string presentation of the maze."""
-        raster = self.generate_raster()
+        if raster is None:
+            raster = self.generate_raster()
         # Pad bitmap to even height and width
         if len(raster)%2!=0:
             raster.append([False for _ in raster[0]])
@@ -701,7 +705,7 @@ class Maze:
             linestr += [row2]
         return '\n'.join(''.join(line) for line in linestr)
 
-    def str_frame_ascii_small(self, show_solution=False):
+    def str_frame_ascii_small(self, show_solution=False, columnated=True):
         """Produce a minimal (ASCII) frame string presentation of the maze."""
         wall = self.has_wall
         if show_solution and self.solution_nodes is None:
@@ -722,29 +726,29 @@ class Maze:
         def cornersegment_top_left():
             if wall(0,0,LEFT): return ','
             elif wall(0,0,UP): return '_'
-            else: return '.'
+            else: return '.' if columnated else ' '
         def cornersegment_top(x):
             if wall(x,0,RIGHT) and not (wall(x,0,UP) and x<self.width-1 and wall(x+1,0,UP)): return ','
             elif wall(x,0,UP) or (x<self.width-1 and wall(x+1,0,UP)): return '_'
-            else: return '.'
+            else: return '.' if columnated else ' '
         def cornersegment_left(y):
             if wall(0,y,LEFT): return '|'
             elif y!=self.height-1 and wall(0,y+1,LEFT): return ','
             elif wall(0,y,DOWN): return '_'
-            else: return '.'
+            else: return '.' if columnated else ' '
         def cornersegment(x, y):
             if wall(x,y,RIGHT): return '|'
             elif y<self.height-1 and wall(x,y+1,RIGHT) and not (wall(x,y,DOWN) and x<self.width-1 and wall(x+1,y,DOWN)): return ','
             elif wall(x,y,DOWN) or (x<self.width-1 and wall(x+1,y,DOWN)): return '_'
-            else: return '.'
+            else: return '.' if columnated else ' '
         def trsfm1(char):
             if show_solution and self.node_at(x,y) in self.solution_nodes:
-                return {'_':'L', ' ':'!'}[char]
+                return {'_':'i', ' ':'!'}[char]
             else:
                 return char
         def trsfm2(char):
             if show_solution and self.node_at(x,y) in self.solution_nodes and x<self.width-1 and self.node_at(x+1,y) in self.solution_nodes:
-                return {'|':'|', ',':'L', '_':'L', '.':'!'}[char]
+                return {'|':'|', ',':'i', '_':'i', '.':'!'}[char]
             else:
                 return char
 

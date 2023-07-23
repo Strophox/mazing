@@ -9,9 +9,10 @@ Run as main and use console to build, view ... mazes.
 
 # IMPORTS BEGIN
 
-from maze import Maze
 import time
 import shutil
+from maze import Maze
+import colortools
 
 # IMPORTS END
 
@@ -216,7 +217,8 @@ def analysis(maze):
 
 def main():
     dimensions = (16,16)
-    maze = Maze.growing_tree(*dimensions)
+    maze = Maze.backtracker(*dimensions)
+    colormap = None
     latest_image = None
     #import textwrap # remove source code multiline string indents
     help_text = """
@@ -225,29 +227,31 @@ def main():
 ~:--------------------------------------:~
  Enter a command to achieve its effect:
  ;  help   - show this menu
- Building
+ Maze Generation
  ;  build  - make new maze
+ :  dim    - set dimensions for next build
+ :  load   - load maze from input
+ Modification
+ :  maxim  - find & set longest path
+ :  goal   - manually set entrance & exit
  :  join   - remove dead ends
- Viewing
+ Console Viewing
  ;  print  - text art of maze
- ;  img    - png image of maze
- Solving
- ;  solve  - text art solution
- :  imgsol - png solution
- Visualisation
- :  data   - stats about current maze
- :  imgcol - png colored distances
- Settings
- :  size   - set size of next maze
- :  view   - view last generated image
- :  save   - save last generated image
- :  load   - load maze from string
- (Commands are autocompleted)
+ :  txtsol - text art, solutions
+ :  stats  - ~statistics of maze
+ External Imaging
+ ;  img    - png image
+ ;  imgsol - png solution image
+ :  imgcol - png distance map
+ :  color  - set colormap -> `imgcol`
+ :  view   - view latest image
+ :  save   - save latest image
+ (Commands are autocompleted if possible)
  Enter blank command to quit
 ~:--------------------------------------:~
     """.strip()
-    commands = {l[1]:l[0]==';' for line in help_text.splitlines() if (l:=line.split()) and l[0] in ":;"}
-    command_prompt = f"\n| {' | '.join(cmd for cmd, in_selection in commands.items() if in_selection)} > "
+    commands = {l[1]:selection_flag==';' for line in help_text.splitlines() if (l:=line.split()) and (selection_flag:=l[0]) in ":;"}
+    command_prompt = f"\n| {' | '.join(cmd for cmd,sel_flag in commands.items() if sel_flag)} > "
     command = "help"
     while True:
         match command:
@@ -269,13 +273,48 @@ def main():
                             builders[buildername](*dimensions))
                         preview(maze)
                     else:
-                        print(f"[unrecognized building method '{buildername}']")
+                        print(f"[unrecognized algorithm '{buildername}']")
                 else:
                     print(CANCEL_TEXT,end='')
-            case "data":
-                stats_text = benchmark("total maze analysis execution", lambda:
-                    analysis(maze))
-                print(stats_text)
+            case "color":
+                user_input = input(f"Choose colormap\n| {' | '.join(colortools.COLORMAPS)} > ").strip()
+                if user_input:
+                    colormapname = autocomplete(user_input,colortools.COLORMAPS)
+                    if colormapname in colortools.COLORMAPS:
+                        if colormapname != user_input:
+                            print(f"-> {colormapname}")
+                        colormap = colortools.COLORMAPS[colormapname][::-1]
+                    else:
+                        print(f"[unrecognized colormap '{colormapname}']")
+            case "dim": # Allow user to save new maze size
+                user_input = input(f"Enter sidelength (e.g. '32') or dimensions (e.g. '80 40') (currently = {dimensions[0]} {dimensions[1]}) > ").strip()
+                if user_input:
+                    try:
+                        nums = [int(s) for s in user_input.split()]
+                        if len(nums) == 1:
+                            dimensions = (nums[0], nums[0])
+                        elif len(nums) == 2:
+                            dimensions = (nums[0], nums[1])
+                        else:
+                            raise ValueError("too many arguments")
+                    except ValueError as e:
+                        print(f"[error: {e}]")
+                else:
+                    print(CANCEL_TEXT,end='')
+            case "goal":
+                user_input = input(f"Enter entrance & exit coordinates (default: '0 0 -1 -1') (currently = {maze.entrance.coordinates[0]} {maze.entrance.coordinates[1]} {maze.exit.coordinates[0]} {maze.exit.coordinates[1]}) > ").strip()
+                if user_input:
+                    try:
+                        nums = [int(s) for s in user_input.split()]
+                        if len(nums) == 4:
+                            self.set_entrance(nums[0], nums[1])
+                            self.set_exit(nums[2], nums[3])
+                        else:
+                            raise ValueError("invalid number of arguments")
+                    except ValueError as e:
+                        print(f"[error: {e}]")
+                else:
+                    print(CANCEL_TEXT,end='')
             case "help": # Show help menu
                 print(help_text)
             case "hackerman": # hehe
@@ -300,7 +339,7 @@ def main():
                 benchmark("computing distances", lambda:
                     maze.compute_distances())
                 latest_image = benchmark("generating image", lambda:
-                    maze.generate_colorimage())
+                    maze.generate_colorimage(gradient_colors=colormap))
                 latest_image.show()
             case "join": # Make current maze unicursal
                 benchmark("making unicursal", lambda:
@@ -317,6 +356,10 @@ def main():
                         print(f"[could not load maze: {e}]")
                 else:
                     print(CANCEL_TEXT,end='')
+            case "maxim":
+                len_longest_path = benchmark("computing longest path", lambda:
+                    maze.set_longest_path())
+                print(f"Longest path of length {len_longest_path} (of {maze.width*maze.height} total cells) found!")
             case "print": # Print currently stored maze in all available styles
                 cellcount = maze.width*maze.height
                 if cellcount < CELL_LIMIT or input(f"Maze contains a lot of cells ({cellcount}), proceed anyway ('Y')? >")=='Y':
@@ -343,30 +386,21 @@ def main():
                         maze.generate_image())
                 benchmark("saving",lambda:
                     latest_image.save(latest_image.filename))
-            case "size": # Allow user to save new maze size
-                user_input = input(f"Enter sidelength (e.g. '32') or dimensions (e.g. '80 40') (currently = {dimensions[0]} {dimensions[1]}) > ").strip()
-                if user_input:
-                    try:
-                        nums = [int(s) for s in user_input.split()]
-                        if len(nums) == 1:
-                            dimensions = (nums[0], nums[0])
-                        elif len(nums) == 2:
-                            dimensions = (nums[0], nums[1])
-                        else:
-                            raise ValueError("too many arguments")
-                    except ValueError as e:
-                        print(f"[error: {e}]")
-                else:
-                    print(CANCEL_TEXT,end='')
-            case "solve":
+            case "stats":
+                stats_text = benchmark("total maze analysis execution", lambda:
+                    analysis(maze))
+                print(stats_text)
+            case "txtsol":
                 benchmark("solving",lambda:
                     maze.compute_solution())
                 cellcount = maze.width*maze.height
                 if cellcount < CELL_LIMIT or input(f"Maze contains a lot of cells ({cellcount}), proceed anyway ('Y')? >")=='Y':
-                    printers = {x.__name__:x for x in [
-                        lambda m:Maze.str_frame_ascii(maze, show_solution=True),
-                        lambda m:Maze.str_frame_ascii_small(maze, show_solution=True),
-                    ]}
+                    printers = {
+                        'str_frame_ascii':
+                            lambda m:Maze.str_frame_ascii(maze, show_solution=True),
+                        'str_frame_ascii_small':
+                            lambda m:Maze.str_frame_ascii_small(maze, show_solution=True),
+                    }
                     for name,printer in printers.items():
                         print(f"{name}:\n{printer(maze)}")
                 else:
