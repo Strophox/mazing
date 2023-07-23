@@ -20,8 +20,8 @@ import shutil
 
 CANCEL_TEXT = "*canceled\n"
 PRINT_LIMIT = 100_000
-WX = lambda: shutil.get_terminal_size()[0]
-WY = lambda: shutil.get_terminal_size()[1]
+CW = lambda: shutil.get_terminal_size()[0]
+CH = lambda: shutil.get_terminal_size()[1]
 
 # CONSTANTS END
 
@@ -52,7 +52,7 @@ def autocomplete(input_word, full_words):
 def fits_into_console(string):
     stringwidth = string.find('\n') + 1
     stringheight = string.count('\n') + 1
-    return stringwidth <= WX() and stringheight <= WY()
+    return stringwidth <= CW() and stringheight <= CH()
 
 def preview(maze, printer=Maze.str_frame):
     """Print maze to the console iff within given size limit."""
@@ -72,6 +72,91 @@ def benchmark(title, function):
     print(f"['{title}' completed in {time_taken:.03f}s]")
     return result
 
+def analyse(maze):
+    temp = (maze.entrance,maze.exit)
+    hbar = lambda num_cols, fill_level: '#' * round(fill_level * num_cols)
+    fmt_perc = lambda perc: f"{perc:.2%}"
+    fmt_float = lambda float_: f"{float_:.01f}"
+    nodecount = maze.width * maze.height
+    expectation = lambda numbers: sum(numbers) / len(numbers)
+    variance = lambda numbers: sum(x**2 for x in numbers)/len(numbers) - expectation(numbers)**2
+    stats_general = f"""
+ General Information.
+ :    Name  '{maze.name()}'
+ :   Width  {maze.width}
+ :  Height  {maze.height}
+ :    Area  {maze.width*maze.height}
+    """.strip('\n')
+    # Solution stuff
+    if maze.solution_nodes is None:
+        benchmark("solving maze", lambda:
+            maze.compute_solution())
+    len_solution = len(maze.solution_nodes)
+    (tiles_counts,offshoots_maxlengths,offshoots_avglengths) = benchmark("computing other stats", lambda:
+        maze.compute_stats())
+    lenCW = len(fmt_float(max(offshoots_maxlengths)))
+    stats_solution = f"""
+ Solution Path Statistics.
+ :  Length of solution path
+ :      {len_solution} ({fmt_perc(len_solution/nodecount)} of area)
+ :  Number of offshooting paths from solution
+ :      {len(offshoots_maxlengths)}
+ :  Maximum distance of an offshooting path
+ :      Expectation  {fmt_float(expectation(offshoots_maxlengths)).rjust(lenCW)}
+ :        Deviation  {fmt_float(variance(offshoots_maxlengths)**.5).rjust(lenCW)}
+ :          Maximum  {fmt_float(max(offshoots_maxlengths)).rjust(lenCW)}
+ :  Average distance of an offshooting path
+ :      Expectation  {fmt_float(expectation(offshoots_avglengths)).rjust(lenCW)}
+ :        Deviation  {fmt_float(variance(offshoots_avglengths)**.5).rjust(lenCW)}
+ :          Maximum  {fmt_float(max(offshoots_avglengths)).rjust(lenCW)}
+    """.strip('\n')
+    # Tile stuff
+    make_perc = lambda *tileselection: sum(tiles_counts[t] for t in tileselection) / nodecount
+    rows = {
+        'dead ends':
+            make_perc(0b0001,0b0010,0b0100,0b1000),
+        'tunnels':
+            make_perc(0b0011,0b0101,0b0110,0b1001,0b1010,0b1100),
+        'three-ways':
+            make_perc(0b0111,0b1011,0b1101,0b1110),
+        'intersections':
+            make_perc(0b1111)
+    }
+    titleCW = max(len(title) for title in rows)
+    percCW = max(len(fmt_perc(perc)) for perc in rows.values())
+    table = '\n'.join(
+        f" :  {title.rjust(titleCW)} {fmt_perc(perc).rjust(percCW)} {hbar(CW()-5-titleCW-percCW, perc)}"
+        for (title,perc) in rows.items()
+    )
+    stats_tiles = f"""
+ Tile Statistics.
+{table}
+    """.strip('\n')
+    # Distance stuff
+    len_longest_path = benchmark("finding longest path", lambda:
+        maze.set_longest_path())
+    stats_distance = f"""
+ Distance Statistics.
+ :  Longest possible path
+ :      {len_longest_path} ({fmt_perc(len_longest_path/nodecount)} of area)
+    """.strip('\n')
+    # Final print
+    hrulefill = f"~:{'-'*(CW()-4)}:~"
+    stats_all = f"""
+{hrulefill}
+{stats_general}
+{hrulefill}
+{stats_tiles}
+{hrulefill}
+{stats_distance}
+{hrulefill}
+{stats_solution}
+{hrulefill}
+    """.strip('\n')
+    print(stats_all)
+    (maze.entrance,maze.exit) = temp
+    return
+
 # FUNCTIONS END
 
 
@@ -88,19 +173,19 @@ def main():
 ~:--------------------------------------:~
  Enter a command to achieve its effect:
  ;  help   - show this menu
- Building:
+ Building
  ;  build  - make new maze
  :  join   - remove dead ends
- Viewing:
+ Viewing
  ;  print  - text art of maze
  ;  img    - png image of maze
- Solving:
+ Solving
  ;  solve  - text art solution
  :  imgsol - png solution
- Visualisation:
+ Visualisation
  :  data   - stats about current maze
  :  imgcol - png colored distances
- Settings:
+ Settings
  :  size   - set size of next maze
  :  view   - view last generated image
  :  save   - save last generated image
@@ -108,8 +193,8 @@ def main():
  (Commands are autocompleted)
  Enter blank command to quit
 ~:--------------------------------------:~
-""".strip()
-    commands = {l[1]:l[0]==';' for line in help_text.split('\n') if (l:=line.split()) and l[0] in ":;"}
+    """.strip()
+    commands = {l[1]:l[0]==';' for line in help_text.splitlines() if (l:=line.split()) and l[0] in ":;"}
     command_prompt = f"\n| {' | '.join(cmd for cmd, in_selection in commands.items() if in_selection)} > "
     command = "help"
     while True:
@@ -128,31 +213,15 @@ def main():
                 if user_input:
                     buildername = autocomplete(user_input,builders)
                     if buildername in builders:
-                        maze = benchmark(buildername, lambda:builders[buildername](*dimensions))
+                        maze = benchmark(buildername, lambda:
+                            builders[buildername](*dimensions))
                         preview(maze)
                     else:
                         print(f"[unrecognized building method '{buildername}']")
                 else:
                     print(CANCEL_TEXT,end='')
             case "data":
-                hrulefill = lambda: print(f"~:{'-'*(WX()-4)}:~")
-                longest_path_distance = benchmark("finding longest path", lambda:maze.set_longest_path())
-                (tiles_counts, distances_counts) = benchmark("computing other stats", lambda:maze.compute_stats())
-                hrulefill()
-                print(" Tile distribution:")
-                max_tilecount = max(tiles_counts)
-                for tile,tilecount in zip(" ╶╵└╴─┘┴╷┌│├┐┬┤┼",tiles_counts):
-                    print(f"{tile} | {'#'*round(tilecount/max_tilecount * (WX()-2-3))}")
-                max_distance = max(distances_counts)
-                max_distancecount = max(distances_counts.values())
-                hrulefill()
-                print(" Distance distribution.")
-                for dist in range(max_distance+1):
-                    distancecount = distances_counts.get(dist, 0)
-                    print(f"{dist} | {'#'*round(distancecount/max_distancecount * (WX()-3-3))}")
-                hrulefill()
-                print(f" The longest path in the maze measures {longest_path_distance}")
-                hrulefill()
+                analyse(maze)
             case "help": # Show help menu
                 print(help_text)
             case "hackerman": # hehe
@@ -167,15 +236,18 @@ def main():
                 latest_image = benchmark("generating image", lambda:maze.generate_image())
                 latest_image.show()
             case "imgsol": # Generate image of current maze with solution and open in external program
-                benchmark("solving", lambda:maze.compute_solution())
+                benchmark("solving", lambda:
+                    maze.compute_solution())
                 latest_image = benchmark("generating image", lambda:maze.generate_solutionimage())
                 latest_image.show()
             case "imgcol":
-                benchmark("computing distances", lambda:maze.compute_distances())
+                benchmark("computing distances", lambda:
+                    maze.compute_distances())
                 latest_image = benchmark("generating image", lambda:maze.generate_colorimage())
                 latest_image.show()
             case "join": # Make current maze unicursal
-                benchmark("making unicursal", lambda:maze.make_unicursal())
+                benchmark("making unicursal", lambda:
+                    maze.make_unicursal())
                 preview(maze)
             case "load": # Let user load maze from a copied `repr` of a maze
                 user_input = input("Enter `repr` string of a maze > ").strip()
@@ -210,7 +282,8 @@ def main():
                     print(CANCEL_TEXT,end='')
             case "save": # Generate image of current maze and save as file
                 if latest_image is not None:
-                    run_and_print_time("saving",lambda:latest_image.save(latest_image.filename))
+                    benchmark("saving",lambda:
+                        latest_image.save(latest_image.filename))
                 else:
                     print("No image generated yet, see `help` on how to do so")
             case "size": # Allow user to save new maze size
@@ -229,7 +302,8 @@ def main():
                 else:
                     print(CANCEL_TEXT,end='')
             case "solve":
-                benchmark("solving",lambda:maze.compute_solution())
+                benchmark("solving",lambda:
+                    maze.compute_solution())
                 preview(maze, lambda maze: maze.str_frame_ascii(show_solution=True))
             case "view":
                 if latest_image is not None:

@@ -10,6 +10,7 @@ This file contains all important maze-relation implementations to store, create 
 - Printers:
     * distance heatmap (official standards?)
     * FIXME generate_raster
+    * PIL GIF
     * str_frame_ascii_small solution
     * CHALLENGE str_frame solution
 - Builders:
@@ -286,17 +287,20 @@ class Maze:
             if 0<y             and node.has_edge(UP):    yield self.node_at(x,y-1)
             if y<self.height-1 and node.has_edge(DOWN):  yield self.node_at(x,y+1)
 
-    def make_unicursal(self):
-        """Convert self into a unicursal/ maze by removing no dead ends."""
-        for node in self.nodes():
-            while sum(1 for _ in self.connected_to(node)) <= 1:
-                neighbor = random.choice(list(self.connected_to(node,invert=True)))
-                self.connect(node,neighbor)
-                progressed = True # NOTE icky
-        if progressed:self._log_action("unicursal")
+    def _breadth_first_search(self, start, scanr=lambda _:None):
+        queue = collections.deque(maxlen=3*max(self.width,self.height))
+        queue.append(start)
+        start.distance = 0 ; scanr(start)
+        while queue:
+            current = queue.popleft()
+            neighbors = list(self.connected_to(current))
+            for neighbor in neighbors:
+                if neighbor.distance == float('inf'):
+                    queue.append(neighbor)
+                    neighbor.distance = current.distance + 1 ; scanr(neighbor)
         return
 
-    def compute_distances(self, start_coord=None, scanr=None):
+    def compute_distances(self, start_coord=None):
         """Compute all node distances using breadth first search.
 
         Args:
@@ -308,23 +312,13 @@ class Maze:
             start = self.node_at(*start_coord)
         for node in self.nodes():
             node.distance = float('inf')
-        queue = collections.deque(maxlen=3*max(self.width,self.height))
-        queue.append(start)
-        start.distance = 0
-        while queue:
-            current = queue.popleft()
-            neighbors = list(self.connected_to(current))
-            for neighbor in neighbors:
-                if neighbor.distance == float('inf'):
-                    queue.append(neighbor)
-                    neighbor.distance = current.distance + 1
-                    if scanr is not None:
-                        scanr(neighbor)
+        self._breadth_first_search(start)
         return
 
-    def compute_solution(self):
+    def compute_solution(self, recompute_distances=True):
+        if recompute_distances:
+            self.compute_distances()
         self.solution_nodes = set()
-        self.compute_distances()
         if self.exit.distance == float('inf'):
             return
         current = self.exit
@@ -335,14 +329,27 @@ class Maze:
         return
 
     def compute_stats(self):
+        # Prepare accumulators for tiles and distance stats
+        self.compute_solution()
         tiles_counts = [0 for _ in range(0b10000)]
-        distances_counts  = dict()
-        def update(node):
+        for node in self.nodes():
             tiles_counts[node._edges] += 1
-            distances_counts.setdefault(node.distance, 0)
-            distances_counts[node.distance] += 1
-        self.compute_distances(scanr=update)
-        return (tiles_counts, distances_counts)
+            # Preparation for next part
+            if node not in self.solution_nodes:
+                node.distance = float('inf')
+        offshoots_maxlengths = []
+        offshoots_avglengths = []
+        for node in self.solution_nodes:
+            for offshoot in self.connected_to(node):
+                if offshoot not in self.solution_nodes:
+                    lengths = []
+                    updater = lambda n: lengths.append(n.distance) if n._edges in [1,2,4,8] else None
+                    self._breadth_first_search(offshoot, scanr=updater)
+                    maxlength = max(lengths)
+                    avglength = sum(lengths)/len(lengths)
+                    offshoots_maxlengths.append(maxlength)
+                    offshoots_avglengths.append(avglength)
+        return (tiles_counts, offshoots_maxlengths, offshoots_avglengths)
 
     def set_longest_path(self):
         #remote_nodes = []
@@ -364,6 +371,16 @@ class Maze:
         farthest = max(self.nodes(), key=lambda n:n.distance)
         self.exit = farthest
         return self.exit.distance
+
+    def make_unicursal(self):
+        """Convert self into a unicursal/ maze by removing no dead ends."""
+        for node in self.nodes():
+            while sum(1 for _ in self.connected_to(node)) <= 1:
+                neighbor = random.choice(list(self.connected_to(node,invert=True)))
+                self.connect(node,neighbor)
+                progressed = True # NOTE icky
+        if progressed:self._log_action("unicursal")
+        return
 
     def generate_raster(self, corridorwidth=1, columnated=True, show_solution=False, show_distances=False): # TODO
         """
