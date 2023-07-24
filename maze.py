@@ -24,10 +24,10 @@ This file contains all important maze-relation implementations to store, create 
 
 # IMPORTS BEGIN
 
+import random
 import itertools # chain
 import collections # deque
 import time # strftime
-import random
 from PIL import Image
 import colortools
 
@@ -84,7 +84,12 @@ class Node:
     def toggle_edge(self, direction):
         """Connect/disconnect the node into the given directions."""
         self._edges ^= direction
-
+####
+#### Plan?
+#### - Fix division algorithm (no delteing walls beforehand - wasteful)
+#### - maze isntance builders/carvers!
+#### -
+####
 class Maze:
     """
     A class to store and interact with a maze grid.
@@ -254,13 +259,18 @@ class Maze:
         """
         return self.node_at(x,y).has_wall(direction)
 
-    def connect(self, node0, node1, invert=False):
+    def connect(self, item0, item1, invert=False):
         """Toggle the connection between two nodes in the maze.
 
         Args:
             node0, node1 (Node): Two nodes in the maze that lie adjacent
         """
-        (x0,y0), (x1,y1) = node0.coordinates, node1.coordinates
+        if isinstance(item0, Node):
+            node0, node1 = item0, item1
+            (x0,y0), (x1,y1) = item0.coordinates, item1.coordinates
+        else:
+            node0, node1 = self.node_at(*item0), self.node_at(*item1)
+            (x0,y0), (x1,y1) = item0, item1
         dx, dy = x1-x0, y1-y0
         if abs(dx) + abs(dy) != 1:
             raise ValueError("nodes to connect must be neighbors")
@@ -944,26 +954,26 @@ class Maze:
             #slice_direction_choice = lambda w,h, prev: random.getrandbits(1)
         def divide(topleft, bottomright, prev_dir):
             (x0,y0), (x1,y1) = topleft, bottomright
-            width,height = (x1-x0), (y1-y0)
-            if width < 1 or height < 1 or roomlength and width < roomlength and height < roomlength and random.random() < 1/(width*height): return
-            horizontal_cut = slice_direction_choice(width, height, prev_dir)
-            if horizontal_cut:
-                yP = pivot_choice(y0,y1-1)
+            ewidth, eheight = (x1-x0), (y1-y0)
+            if ewidth < 1 or eheight < 1 or roomlength and ewidth < roomlength and eheight < roomlength and random.random() < 1/((ewidth+1)*(eheight+1)):
                 for x in range(x0,x1+1):
-                    maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1),invert=True)
+                    for y in range(y0,y1+1):
+                        if x < x1: maze.connect((x,y),(x+1,y))
+                        if y < y1: maze.connect((x,y),(x,y+1))
+                return
+            cut_horizontally = slice_direction_choice(ewidth, eheight, prev_dir)
+            if cut_horizontally:
+                yP = pivot_choice(y0,y1-1)
                 x = random.randint(x0,x1)
                 maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1))
                 divide((x0,y0), (x1,yP), True)
                 divide((x0,yP+1), (x1,y1), True)
             else:
                 xP = pivot_choice(x0,x1-1)
-                for y in range(y0,y1+1):
-                    maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y),invert=True)
                 y = random.randint(y0,y1)
                 maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y))
                 divide((x0,y0), (xP,y1), False)
                 divide((xP+1,y0), (x1,y1), False)
-        maze._join_nodes()
         divide((0,0), (maze.width-1,maze.height-1), maze.width)
         maze._log_action("DIVISION")
         return maze
