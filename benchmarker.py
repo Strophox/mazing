@@ -464,6 +464,7 @@ def run_on(sequence):
 # MAIN BEGIN
 
 def main():
+    raise RuntimeError("FIXME: this entire module will have to be redone")
     run_on(CHOSEN_SEQUENCE)
     return
 

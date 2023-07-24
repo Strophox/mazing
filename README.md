@@ -1,5 +1,5 @@
-# mazing
-Generating and playing around with mazes
+# 'mazing
+Generating, visualising, playing around with mazes
 
 
 ## What is this?
@@ -69,7 +69,7 @@ Graph algorithms are interesting, and ASCII art is cute, and, and messing with m
 
 ### Unicode art
 
-*Note: Unfortunately it may happen that special characters don't display correctly (uneven character width);*
+*Note: Unfortunately it may happen that certain special characters don't display correctly (uneven character width);*
 ```
 ╷ ┌───────────┬─────────────┬───┐
 │ ╵ ╷ ┌───┬─╴ └───╴ ╷ ┌─────┘ ╷ │

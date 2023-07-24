@@ -222,7 +222,7 @@ def analysis(maze):
 def main():
     dimensions = (16,16)
     wall_air_ratio = (1, 1)
-    maze = Maze.backtracker(*dimensions)
+    maze = Maze(*dimensions)
     colormap = None
     image = None
     #import textwrap # remove source code multiline string indents
@@ -276,8 +276,9 @@ def main():
                 if user_input:
                     buildername = autocomplete(user_input,builders)
                     if buildername in builders:
-                        maze = benchmark(buildername, lambda:
-                            builders[buildername](*dimensions))
+                        maze = Maze(*dimensions)
+                        benchmark(buildername, lambda:
+                            builders[buildername](maze))
                         preview(maze)
                     else:
                         print(f"[unrecognized algorithm '{buildername}']")

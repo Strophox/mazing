@@ -8,6 +8,7 @@ This file contains all important maze-relation implementations to store, create 
 - General
     * a l l   d o c s t r i n g s   m u s t   b e   c h e c k e d   ( p a i n )
     * (Is generate_raster rly bug-free??)
+    * Learn numpy to optimize stuf
 - Printers
     * PIL GIF
     * (? str_frame solution)
@@ -112,17 +113,6 @@ class Maze:
     - Maze modification
         * make_unicursal
     """
-    #_ALGORITHMS = {
-            #0: ("unknown", Maze),
-            #1: ("tree", Maze
-                    #Maze.growing_tree,
-                    #Maze.backtracker,
-                    #Maze.prim,
-                    #Maze.kruskal,
-                    #Maze.wilson,
-                    #Maze.division,
-                    #Maze.random_edges
-        #}
 
     def __init__(self, width, height):
         """Initialize a node by its size.
@@ -192,18 +182,6 @@ class Maze:
         self._history.append(title)
         return
 
-    def _join_nodes(self):
-        """Join all nodes within the maze """
-        for y,row in enumerate(self._grid):
-            for x,node in enumerate(row):
-                direction = 0b0000
-                if 0<x:             direction |= LEFT
-                if x<self.width-1:  direction |= RIGHT
-                if 0<y:             direction |= UP
-                if y<self.height-1: direction |= DOWN
-                node.put_edge(direction)
-        return
-
     def name(self):
         """Generate human-readable name for the maze."""
         history = '-'.join(self._history)
@@ -211,21 +189,45 @@ class Maze:
         string = f"maze{size}_{history}"
         return string
 
-    def nodes(self):
+    def nodes(self, area=None):
         """Produce iterator over the nodes of the maze."""
-        return itertools.chain(*self._grid)
+        if area is None:
+            return (node for row in self._grid for node in row)
+        else:
+            (x0,y0,x1,y1) = area
+            return (node for row in self._grid[y0:y1+1] for node in row[x0:x1+1])
 
-    def edges(self):
+    def edges(self, area=None):
         """Produce iterator over the edges of the maze."""
         edge_iterators = []
-        rows = self._grid
-        for row in rows:
-            row_shifted_right = iter(row) ; next(row_shifted_right)
-            edge_iterators.append(zip(row,row_shifted_right))
-        rows_below = iter(rows) ; next(rows_below)
-        for row,row_below in zip(rows,rows_below):
-            edge_iterators.append(zip(row,row_below))
-        return itertools.chain(*edge_iterators)
+        if area is None:
+            rows = self._grid
+            # Horizontal edges
+            for row in rows:
+                row_shifted_right = iter(row) ; next(row_shifted_right)
+                edge_iterators.append(zip(row,row_shifted_right))
+            # Vertical edges
+            rows_below = iter(rows) ; next(rows_below)
+            for row,row_below in zip(rows,rows_below):
+                edge_iterators.append(zip(row,row_below))
+        else:
+            (x0,y0,x1,y1) = area
+            edge_iterators = []
+            # Horizontal edges
+            rows_slice = self._grid[y0:y1+1]
+            for row in rows_slice:
+                row_slice = row[x0:x1+1]
+                row_slice_right = row[x0+1:x1+1]
+                edges = zip(row_slice,row_slice_right)
+                edge_iterators.append(edges)
+            # Vertical edges
+            rows_slice_below = self._grid[y0+1:y1+1]
+            for row,row_below in zip(rows_slice,rows_slice_below):
+                row_slice = row[x0:x1+1]
+                row_slice_below = row_below[x0:x1+1]
+                edges = zip(row_slice,row_slice_below)
+                edge_iterators.append(edges)
+        return (edge for itr in edge_iterators for edge in itr)
 
     def set_entrance(self, x, y):
         self.entrance = self.node_at(x,y)
@@ -784,22 +786,24 @@ class Maze:
                 string.append(trsfm2(cornersegment(x,y)))
         return ''.join(string)
 
-    @staticmethod
-    def random_edges(width, height, edge_probability=0.5):
+    def random_edges(self, area=None, edge_probability=0.5):
         """Build a bogus maze by flipping a coin on every edge.
 
         Args:
             width, height (int): Positive integer dimensions of desired maze
         """
-        maze = Maze(width,height)
-        for edge in maze.edges():#NOTICE
+        mark = Maze.ALGORITHMS['random edges']
+        if area is None:
+            area = (0,0,self.width-1,self.height-1)
+        (x0,y0,x1,y1) = area
+        for (node0,node1) in self.edges(area):
+            node0.mark = node1.mark = mark
             if random.random() < edge_probability:
-                maze.connect(*edge)
-        maze._log_action("bogo")
-        return maze
+                self.connect(node0,node1)
+        return
 
     @staticmethod
-    def growing_tree(width, height, start_coord=None, index_choice=None, fast_pop=False):
+    def growing_tree(maze, width, height, start_coord=None, index_choice=None, fast_pop=False):
         """Build a random maze using the '(random) growing tree' algorithm.
 
         Args:
@@ -808,7 +812,6 @@ class Maze:
             index_choice (callable(int) -> int): Function to pick an index between 0 and a given max_index, used to determine behaviour of the algorithm (default is lambda max_index: -1 if random.random()<0.95 else random.randint(0,max_index))
             fast_pop (bool): Whether to switch chosen element with last element when removing from active set. This is to speed up generation of large, random mazes (default is False)
         """
-        maze = Maze(width, height)
         if start_coord is None:
             start_coord = (random.randrange(maze.width),random.randrange(maze.height))
         start = maze.node_at(*start_coord)
@@ -978,6 +981,23 @@ class Maze:
         divide((0,0), (maze.width-1,maze.height-1), maze.width)
         maze._log_action("DIVISION")
         return maze
+
+    ALGORITHMS = {
+        'random edges':
+            random_edges,
+        'growing tree':
+            growing_tree,
+        'backtracker':
+            backtracker,
+        'prim':
+            prim,
+        'kruskal':
+            kruskal,
+        'wilson':
+            wilson,
+        'division':
+            division,
+    }
 
 # CLASSES END
 
