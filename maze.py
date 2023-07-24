@@ -303,6 +303,8 @@ class Maze:
             if y<self.height-1 and node.has_edge(DOWN):  yield self.node_at(x,y+1)
 
     def _breadth_first_search(self, start, scanr=lambda _:None):
+        if start.distance != float('inf'):
+            return
         queue = collections.deque(maxlen=3*max(self.width,self.height))
         queue.append(start)
         start.distance = 0 ; scanr(start)
@@ -360,7 +362,7 @@ class Maze:
             self.solution_nodes.add(current)
         return
 
-    def set_longest_path(self):
+    def compute_longest_path(self):
         #remote_nodes = []
         #def add_to_remote_nodes(node):
             #if not remote_nodes:
@@ -373,11 +375,23 @@ class Maze:
                     #remote_nodes.append(node)
                 #elif remote_nodes[0].distance > node.distance:
                     #pass
-        self.compute_distances()
-        farthest = max(self.nodes(), key=lambda n:n.distance)
+        for node in self.nodes():
+            node.distance = float('inf')
+        global counter
+        counter = 0
+        def increment_counter(n):
+            global counter
+            counter += 1
+        for node in self.nodes():
+            if counter == self.width*self.height:
+                break
+            self._breadth_first_search(node, scanr=increment_counter)
+        farthest = max((n for n in self.nodes() if n.distance<float('inf')), key=lambda n:n.distance)
         self.entrance = farthest
-        self.compute_distances()
-        farthest = max(self.nodes(), key=lambda n:n.distance)
+        for node in self.nodes():
+            node.distance = float('inf')
+        self._breadth_first_search(self.entrance)
+        farthest = max((n for n in self.nodes() if n.distance<float('inf')), key=lambda n:n.distance)
         self.exit = farthest
         return self.exit.distance
 
@@ -767,7 +781,7 @@ class Maze:
             width, height (int): Positive integer dimensions of desired maze
         """
         maze = Maze(width,height)
-        for edge in maze.edges():
+        for edge in maze.edges():#NOTICE
             if random.random() < edge_probability:
                 maze.connect(*edge)
         maze._log_action("bogo")
@@ -795,7 +809,7 @@ class Maze:
         while bucket:
             n = index_choice(len(bucket)-1)
             node = bucket[n]
-            neighbors = [nb for nb in maze.adjacent_to(node) if not nb.flag]
+            neighbors = [nb for nb in maze.adjacent_to(node) if not nb.flag] #NOTICE
             if neighbors:
                 neighbor = random.choice(neighbors)
                 maze.connect(node,neighbor)
@@ -960,5 +974,3 @@ class Maze:
 # MAIN BEGIN
 # No main
 # MAIN END
-
-# {{{ BEGIN END }}} ALERT ATTENTION DANGER HACK SECURITY BUG FIXME DEPRECATED TASK TODO TBD WARNING CAUTION NOLINT ### NOTE NOTICE TEST TESTING

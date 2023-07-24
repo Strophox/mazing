@@ -186,7 +186,7 @@ def analysis(maze):
     """.strip()
     # Distance stuff
     len_longest_path = benchmark("finding longest path", lambda:
-        maze.set_longest_path())
+        maze.compute_longest_path())
     sum_branch_distances = sum(branch_distances)
     branch_distance_distribution_chart = benchmark("distr. chart 1",lambda:sample_to_distribution_chart(branch_distances))
     stats_distance = f"""
@@ -372,7 +372,7 @@ def main():
                     print(CANCEL_TEXT,end='')
             case "maxim":
                 len_longest_path = benchmark("computing longest path", lambda:
-                    maze.set_longest_path())
+                    maze.compute_longest_path())
                 print(f"Longest path of length {len_longest_path} (of {maze.width*maze.height} total cells) found!")
             case "print": # Print currently stored maze in all available styles
                 cellcount = maze.width*maze.height

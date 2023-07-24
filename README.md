@@ -1,7 +1,8 @@
 # mazing
 Generating and playing around with mazes
 
-## What it is
+
+## What is this?
 A central `maze.py` script provides a Maze class to interact with mazes.
 Functionality of interest implemented thus far includes:
 - 7 different maze generation algorithms (backtracker, growing tree, prim, kruskal, wilson, divide and conquer)
@@ -10,15 +11,19 @@ Functionality of interest implemented thus far includes:
 - 8 different ways to print as ASCII/Unicode art
 - 3 image visualisation methods (normal, show solution, color distances)
 
-## How it's used
+
+## How is it used?
 Run `playground.py` as main to directly try most stuff out, or `import maze` and use as documented in the module.
 
-## Why
-- Graph algorithms are interesting,
-- ASCII art is cute,
-- and messing with mazes is tons of fun =)
 
-## Examples
+## Don't you have exams to write?
+Graph algorithms are interesting, and ASCII art is cute, and, and messing with mazes is tons of fun...
+
+
+## Text Art Examples
+
+### ASCII art
+
 ```
 +   +---+---+---+---+---+---+---+---+---+
 |               |                       |
@@ -61,6 +66,9 @@ Run `playground.py` as main to directly try most stuff out, or `import maze` and
 | ,__ | , |___|_| |_| | , ,__ __|
 |_|_____|___|_________|_|_|____ |
 ```
+
+### Unicode art
+
 *Note: Unfortunately it may happen that special characters don't display correctly (uneven character width);*
 ```
 ╷ ┌───────────┬─────────────┬───┐
@@ -137,3 +145,6 @@ Run `playground.py` as main to directly try most stuff out, or `import maze` and
 │  └┘  └┘  ││  └┘  └────────┘  │
 └──────────┘└──────────────────┘
 ```
+
+## Image Examples
++ *` TODO `*
