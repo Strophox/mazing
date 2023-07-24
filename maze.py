@@ -133,7 +133,7 @@ class Maze:
         self.entrance = self.node_at(0,0)
         self.exit = self.node_at(-1,-1)
         self.solution_nodes = None
-        self._history = [time.strftime('%Y.%m.%d-%Hh%Mm%S')]
+        self._history = []
 
     def __repr__(self):
         string = (
@@ -335,9 +335,9 @@ class Maze:
             node.distance = float('inf')
         for node in self.nodes(): # TODO optimize
             if node.distance == float('inf'):
-                node.distance = 0
                 previous = None
                 current = node
+                if node._edges in [1,2,4,8]: node.distance = 0 # ugly hack
                 while True:
                     neighbors = [nbr for nbr in self.connected_to(current) if nbr!=previous]
                     if len(neighbors) != 1:
@@ -360,7 +360,38 @@ class Maze:
             self.solution_nodes.add(current)
         return
 
-    def compute_stats(self):
+    def set_longest_path(self):
+        #remote_nodes = []
+        #def add_to_remote_nodes(node):
+            #if not remote_nodes:
+                #remote_nodes.append(node)
+            #else:
+                #if remote_nodes[0].distance < node.distance:
+                    #remote_nodes.clear()
+                    #remote_nodes.append(node)
+                #elif remote_nodes[0].distance == node.distance:
+                    #remote_nodes.append(node)
+                #elif remote_nodes[0].distance > node.distance:
+                    #pass
+        self.compute_distances()
+        farthest = max(self.nodes(), key=lambda n:n.distance)
+        self.entrance = farthest
+        self.compute_distances()
+        farthest = max(self.nodes(), key=lambda n:n.distance)
+        self.exit = farthest
+        return self.exit.distance
+
+    def make_unicursal(self):
+        """Convert self into a unicursal/ maze by removing no dead ends."""
+        for node in self.nodes():
+            while sum(1 for _ in self.connected_to(node)) <= 1:
+                neighbor = random.choice(list(self.connected_to(node,invert=True)))
+                self.connect(node,neighbor)
+                progressed = True # NOTE icky
+        if progressed:self._log_action("unicursal")
+        return
+
+    def generate_stats(self):
         def nearest_branch_distance(node):
             dist = 0
             previous = None
@@ -399,37 +430,6 @@ class Maze:
                     offshoots_avglengths.append(avglength)
         return (tiles_counts, branch_distances, offshoots_maxlengths, offshoots_avglengths)
 
-    def set_longest_path(self):
-        #remote_nodes = []
-        #def add_to_remote_nodes(node):
-            #if not remote_nodes:
-                #remote_nodes.append(node)
-            #else:
-                #if remote_nodes[0].distance < node.distance:
-                    #remote_nodes.clear()
-                    #remote_nodes.append(node)
-                #elif remote_nodes[0].distance == node.distance:
-                    #remote_nodes.append(node)
-                #elif remote_nodes[0].distance > node.distance:
-                    #pass
-        self.compute_distances()
-        farthest = max(self.nodes(), key=lambda n:n.distance)
-        self.entrance = farthest
-        self.compute_distances()
-        farthest = max(self.nodes(), key=lambda n:n.distance)
-        self.exit = farthest
-        return self.exit.distance
-
-    def make_unicursal(self):
-        """Convert self into a unicursal/ maze by removing no dead ends."""
-        for node in self.nodes():
-            while sum(1 for _ in self.connected_to(node)) <= 1:
-                neighbor = random.choice(list(self.connected_to(node,invert=True)))
-                self.connect(node,neighbor)
-                progressed = True # NOTE icky
-        if progressed:self._log_action("unicursal")
-        return
-
     def generate_raster(self, wall_air_ratio=(1,1), columnated=True, show_solution=False, show_distances=False): # TODO wall_air_ratio
         """
         normal:
@@ -437,7 +437,7 @@ class Maze:
         show_solution:
             wall = -1  air = 0  marker = [1,2..]
         show_distances:
-            wall = -1  air = [0,1..]  unreachable = -1
+            wall = -1  air = [0,1..]  unreachable = -2
         """
         """Return a simple 2D raster representation of the maze.
 
@@ -459,9 +459,7 @@ class Maze:
                 raise RuntimeError("cannot show solution path before computing it")
             mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self.solution_nodes and nx<self.width and ny<self.height and self.node_at(nx,ny) in self.solution_nodes else 0
         elif show_distances:
-            if self.entrance.distance == float('inf'):
-                raise RuntimeError("cannot show distances before computing them")
-            mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall or self.node_at(x,y).distance==float('inf') else self.node_at(x,y).distance
+            mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else (-2) if self.node_at(x,y).distance==float('inf') else self.node_at(x,y).distance
         else:
             mkval = lambda is_wall, x,y, nx,ny: (+1) if is_wall else 0
         raster = []
@@ -507,7 +505,7 @@ class Maze:
         value_to_color = lambda value: wall_color if value else air_color
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
-        image.filename = f"{self.name()}.png"
+        image.filename = f"{self.name()}_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.png"
         return image
 
     def generate_solutionimage(self, wall_air_marker_colors=None, raster=None):
@@ -529,7 +527,7 @@ class Maze:
         value_to_color = lambda value: wall_color if value==(-1) else air_color if value==0 else marker_color(value)
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
-        image.filename = f"{self.name()}_solution.png"
+        image.filename = f"{self.name()}_sol_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.png"
         return image
 
     def generate_colorimage(self, gradient_colors=None, raster=None):
@@ -537,14 +535,15 @@ class Maze:
             raster = self.generate_raster(show_distances=True)
         # color conversion
         wall_color = colortools.parse_hex('#000000')
+        unreachable_color = colortools.parse_hex('#7f7f7f')
         if gradient_colors is None:
             gradient_colors = colortools.COLORMAPS['viridis'][::-1]
         air_color = lambda value: colortools.interpolate(gradient_colors, param=value/peak)
         peak = max(itertools.chain(*raster)) or 1
-        value_to_color = lambda value: wall_color if value==(-1) else air_color(value)
+        value_to_color = lambda value: wall_color if value==(-1) else unreachable_color if value==(-2) else air_color(value)
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
-        image.filename = f"{self.name()}_distances.png"
+        image.filename = f"{self.name()}_dist_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.png"
         return image
 
     @staticmethod
@@ -759,25 +758,6 @@ class Maze:
                 string.append(trsfm1('_' if wall(x,y,DOWN) else ' '))
                 string.append(trsfm2(cornersegment(x,y)))
         return ''.join(string)
-#### print(maze.str_frame_ascii_small(show_solution=True))
-#    def recursively_backtrack(self):
-#        """Carve a maze using simple randomized depth-first-search.
-#
-#        Simple standalone implementation and tries to fill out every unvisited node but prone to function recursion limit for large mazes (see growing tree instead).
-#        """
-#        randomized = lambda it: random.shuffle(ls:=list(it)) or ls # randomize iterator
-#        def dfs(node):
-#            for neighbor in randomized(self.adjacent_to(node)):
-#                if not neighbor.flag:
-#                    neighbor.flag = True
-#                    self.connect(node,neighbor)
-#                    dfs(neighbor)
-#        for node in self.nodes():
-#            if not node.flag:
-#                node.flag = True
-#                dfs(node)
-#        self._infotags.append("backtracked")
-#        return
 
     @staticmethod
     def random_edges(width, height, edge_probability=0.5):
@@ -829,7 +809,7 @@ class Maze:
                     bucket.pop()
                 else:
                     bucket.pop(n)
-        maze._log_action("tree")
+        maze._log_action("TREE")
         #### IMAGES[0].save('test.gif', save_all=True, append_images=IMAGES[1:], optimize=True, duration=30, loop=0)
         return maze
 
@@ -842,7 +822,7 @@ class Maze:
             start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
         maze = Maze.growing_tree(width, height, start_coord, index_choice=lambda max_index: random.randint(0,max_index))
-        maze._log_action("prim")
+        maze._log_action("PRIM")
         return maze
 
     @staticmethod
@@ -854,7 +834,7 @@ class Maze:
             start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
         maze = Maze.growing_tree(width, height, start_coord, index_choice=lambda max_index: -1)
-        maze._log_action("dfs")
+        maze._log_action("DFS")
         return maze
 
     @staticmethod
@@ -882,7 +862,7 @@ class Maze:
                     node.flag = bigger.flag
                     members[bigger.flag].append(node)
                 if len(members[bigger.flag])==maze.width*maze.height: break
-        maze._log_action("kruskal")
+        maze._log_action("KRUSKAL")
         return maze
 
     @staticmethod
@@ -926,7 +906,7 @@ class Maze:
                     elif next_node.flag < generation:
                         maze.connect(curr_node,next_node)
                         break
-        maze._log_action("wilson")
+        maze._log_action("WILSON")
         return maze
 
     @staticmethod
@@ -971,7 +951,7 @@ class Maze:
                 divide((xP+1,y0), (x1,y1), False)
         maze._join_nodes()
         divide((0,0), (maze.width-1,maze.height-1), maze.width)
-        maze._log_action("division")
+        maze._log_action("DIVISION")
         return maze
 
 # CLASSES END

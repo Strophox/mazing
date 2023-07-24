@@ -152,7 +152,7 @@ def analysis(maze):
             maze.compute_solution())
     len_solution = len(maze.solution_nodes)
     (tiles_counts,branch_distances,offshoots_maxlengths,offshoots_avglengths) = benchmark("computing other stats", lambda:
-        maze.compute_stats())
+        maze.generate_stats())
     offshoots_maxlengths_distribution = benchmark("distr. chart 2",lambda:
         sample_to_distribution_chart(offshoots_maxlengths))
     offshoots_avglengths_distribution = benchmark("distr. chart 3",lambda:
@@ -165,9 +165,9 @@ def analysis(maze):
  :      {len(offshoots_maxlengths)}
 {fmt_dataset("Maximum distance of an offshooting path", offshoots_maxlengths)}
 {fmt_barchart(offshoots_maxlengths_distribution)}
-{fmt_dataset("Average distance of an offshooting path", offshoots_avglengths)}
-{fmt_barchart(offshoots_avglengths_distribution)}
     """.strip()
+#{fmt_dataset("Average distance of an offshooting path", offshoots_avglengths)}
+#{fmt_barchart(offshoots_avglengths_distribution)}
     # Node stuff
     make_perc = lambda *tileselection: sum(tiles_counts[t] for t in tileselection) / nodecount
     nodetypes = {
@@ -187,11 +187,14 @@ def analysis(maze):
     # Distance stuff
     len_longest_path = benchmark("finding longest path", lambda:
         maze.set_longest_path())
+    sum_branch_distances = sum(branch_distances)
     branch_distance_distribution_chart = benchmark("distr. chart 1",lambda:sample_to_distribution_chart(branch_distances))
     stats_distance = f"""
  Distance Statistics.
  :  Longest possible path
  :      {len_longest_path}  ({fmt_perc(len_longest_path/nodecount)} of area)
+ :  Number of nodes on spanning tree leaf branches
+ :      {sum_branch_distances}  ({fmt_perc(sum_branch_distances/nodecount)} of area)
 {fmt_dataset("Distance from dead end to nearest three-way/intersection", branch_distances)}
 {fmt_barchart(branch_distance_distribution_chart)}
     """.strip()
@@ -218,7 +221,7 @@ def analysis(maze):
 
 def main():
     dimensions = (16,16)
-    wall_air_ratio = (1, 2)
+    wall_air_ratio = (1, 1)
     maze = Maze.backtracker(*dimensions)
     colormap = None
     image = None
@@ -245,8 +248,9 @@ def main():
  ;  img    - png image
  ;  imgsol - png solution image
  :  imgcol - png distance map
+ :  imgbrc - branch dist. of spann. tree
  :  color  - set colormap -> `imgcol`
- :  sizing - set ratio of wall:air size
+ :  ratio  - set ratio of wall:air size
  :  view   - view latest image
  :  save   - save latest image
  (Commands are autocompleted if possible)
@@ -332,6 +336,12 @@ def main():
                 image = benchmark("generating image", lambda:
                     maze.generate_image(raster=maze.generate_raster(wall_air_ratio=wall_air_ratio)))
                 image.show()
+            case "imgbrc":
+                benchmark("computing distances", lambda:
+                    maze.compute_branchdistances())
+                image = benchmark("generating image", lambda:
+                    maze.generate_colorimage(gradient_colors=colormap,raster=maze.generate_raster(show_distances=True,columnated=False,wall_air_ratio=wall_air_ratio)))
+                image.show()
             case "imgcol":
                 benchmark("computing distances", lambda:
                     maze.compute_distances())
@@ -383,12 +393,7 @@ def main():
                         print(f"{name}:\n{printer(maze)}")
                 else:
                     print(CANCEL_TEXT,end='')
-            case "save": # Generate image of current maze and save as file
-                if image is None:
-                    print("No image type has been tried yet, please choose one first (see `help`)")
-                benchmark("saving",lambda:
-                    image.save(image.filename))
-            case "sizing":
+            case "ratio":
                 user_input = input(f"Enter wall:air ratio (default = 1 1, currently = {wall_air_ratio[0]} {wall_air_ratio[1]}) > ").strip()
                 if user_input:
                     try:
@@ -401,6 +406,12 @@ def main():
                         print(f"[error: {e}]")
                 else:
                     print(CANCEL_TEXT,end='')
+            case "save": # Generate image of current maze and save as file
+                if image is None:
+                    print("No image type has been tried yet, please choose one first (see `help`)")
+                else:
+                    benchmark(f"saving {image.filename}",lambda:
+                        image.save(image.filename))
             case "stats":
                 stats_text = benchmark("total maze analysis execution", lambda:
                     analysis(maze))
@@ -423,8 +434,9 @@ def main():
             case "view":
                 if image is None:
                     print("No image type has been tried yet, please choose one first (see `help`)")
-                benchmark("opening external editor",lambda:
-                    image.show())
+                else:
+                    benchmark(f"opening {image.filename} in external editor",lambda:
+                        image.show())
             case _: # Non-empty, unrecognized command
                 print("Unrecognized command")
         # Get user input and possibly exit loop
