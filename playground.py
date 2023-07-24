@@ -9,6 +9,7 @@ Run as main and use console to build, view ... mazes.
 
 # IMPORTS BEGIN
 
+import random
 import time
 import shutil
 from maze import Maze
@@ -110,7 +111,7 @@ def analysis(maze):
     fmt_perc = lambda perc: f"{perc:.2%}"
     fmt_float = lambda float_: f"{float_:.01f}"
     def fmt_dataset(heading, numbers):
-        if not numbers: return f"No valid data for '{heading}' statistics."
+        if not numbers: return f" : -- No valid data for '{heading}' statistics."
         statistics = {
             "Expectation":
                 expectation(numbers),
@@ -129,7 +130,7 @@ def analysis(maze):
         string = f"""{stats_header}\n{stats_list}"""
         return string
     def fmt_barchart(distribution):
-        if not distribution: return f"No valid data for bar chart."
+        if not distribution: return f" : -- No valid data for bar chart."
         CWtitle = max(len(title) for title in distribution)
         CWperc = max(len(fmt_perc(perc)) for perc in distribution.values())
         table = '\n'.join(
@@ -139,18 +140,21 @@ def analysis(maze):
         return table
     # General stuff
     nodecount = maze.width * maze.height
+    algorithm_shares = {alg_name:alg_nodecount/nodecount for alg_name,alg_nodecount in maze.generate_algorithm_shares().items()}
     stats_general = f"""
  General Information.
  :    Name  '{maze.name()}'
  :   Width  {maze.width}
  :  Height  {maze.height}
  :    Area  {maze.width*maze.height}
+ :  Distribution chart of node types, by algorithm used:
+{fmt_barchart(algorithm_shares)}
     """.strip()
     # Solution stuff
-    if maze.solution_nodes is None:
+    if maze.solution is None:
         benchmark("solving maze", lambda:
             maze.compute_solution())
-    len_solution = len(maze.solution_nodes)
+    len_solution = len(maze.solution)
     (tiles_counts,branch_distances,offshoots_maxlengths,offshoots_avglengths) = benchmark("computing other stats", lambda:
         maze.generate_stats())
     offshoots_maxlengths_distribution = benchmark("distr. chart 2",lambda:
@@ -164,9 +168,11 @@ def analysis(maze):
  :  Number of offshooting paths from solution
  :      {len(offshoots_maxlengths)}
 {fmt_dataset("Maximum distance of an offshooting path", offshoots_maxlengths)}
+ :  Distribution chart:
 {fmt_barchart(offshoots_maxlengths_distribution)}
     """.strip()
 #{fmt_dataset("Average distance of an offshooting path", offshoots_avglengths)}
+# :  (Distribution chart:)
 #{fmt_barchart(offshoots_avglengths_distribution)}
     # Node stuff
     make_perc = lambda *tileselection: sum(tiles_counts[t] for t in tileselection) / nodecount
@@ -182,6 +188,7 @@ def analysis(maze):
     }
     stats_nodes = f"""
  Node Statistics.
+ :  Distribution chart of node types, by connectivity:
 {fmt_barchart(nodetypes)}
     """.strip()
     # Distance stuff
@@ -196,6 +203,7 @@ def analysis(maze):
  :  Number of nodes on spanning tree leaf branches
  :      {sum_branch_distances}  ({fmt_perc(sum_branch_distances/nodecount)} of area)
 {fmt_dataset("Distance from dead end to nearest three-way/intersection", branch_distances)}
+ :  Distribution chart:
 {fmt_barchart(branch_distance_distribution_chart)}
     """.strip()
     # Final print
@@ -223,6 +231,7 @@ def main():
     dimensions = (16,16)
     wall_air_ratio = (1, 1)
     maze = Maze(*dimensions)
+    random.choice(list(Maze.ALGORITHMS.values()))(maze)
     colormap = None
     image = None
     #import textwrap # remove source code multiline string indents
@@ -263,15 +272,7 @@ def main():
     while True:
         match command:
             case "build": # Allow user to choose method and build new maze
-                builders = {x.__name__:x for x in [
-                    Maze.growing_tree,
-                    Maze.backtracker,
-                    Maze.prim,
-                    Maze.kruskal,
-                    Maze.wilson,
-                    Maze.division,
-                    Maze.random_edges
-                ]}
+                builders = Maze.ALGORITHMS
                 user_input = input(f"Choose algorithm\n| {' | '.join(builders)} > ").strip()
                 if user_input:
                     buildername = autocomplete(user_input,builders)
@@ -364,7 +365,7 @@ def main():
                 if user_input:
                     try:
                         data = eval(user_input)
-                        maze = benchmark("loading into maze", lambda:
+                        maze = benchmark("loading maze", lambda:
                             Maze.from_repr(data))
                         preview(maze)
                     except Exception as e:
@@ -446,7 +447,7 @@ def main():
             print("goodbye")
             break
         # We autocomplete unambiguous user input so the playground program could be used more quickly
-        command = autocomplete(user_input.strip().lower(), commands)
+        command = autocomplete(user_input.strip(), commands)
         # Show to the user what command he autocompleted to
         if command != user_input:
             print(f"-> {command}")
