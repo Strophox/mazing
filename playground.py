@@ -21,7 +21,7 @@ import colortools
 # CONSTANTS BEGIN
 
 CANCEL_TEXT = "*canceled\n"
-CELL_LIMIT = 10_000
+CELL_PRINT_LIMIT = 10_000
 CW = lambda: shutil.get_terminal_size()[0]
 CH = lambda: shutil.get_terminal_size()[1]
 
@@ -54,7 +54,7 @@ def autocomplete(input_word, full_words):
 def preview(maze, printer=Maze.str_frame):
     """Print maze to the console iff within given size limit."""
     cellcount = maze.width*maze.height
-    if maze.width*maze.height < CELL_LIMIT:
+    if maze.width*maze.height < CELL_PRINT_LIMIT:
         string = printer(maze)
         stringwidth = string.find('\n') + 1
         stringheight = string.count('\n') + 1
@@ -72,6 +72,265 @@ def benchmark(title, function):
     print(f"['{title}' completed in {time_taken:.03f}s]")
     return result
 
+def maybe_get_new_from_string_options(options, prompt_text):
+    user_input = input(f"| {' | '.join(options)}\n{prompt_text} > ").strip()
+    if not user_input:
+        print(CANCEL_TEXT,end='')
+        return
+    option = autocomplete(user_input,options)
+    if option not in options:
+        print(f"[unrecognized option '{builder_name}']")
+        return
+    return option
+
+def maybe_get_new_dimensions(old_dimensions):
+    user_input = input(f"Enter sidelength (e.g. '32') or full dimensions (e.g. '80 40') (previously = {old_dimensions[0]} {old_dimensions[1]}) > ").strip()
+    if not user_input:
+        print(CANCEL_TEXT,end='')
+        return
+    try:
+        nums = [int(s) for s in user_input.split()]
+        if len(nums) not in {1,2}:
+            raise ValueError("invalid number of arguments")
+        new_dimensions = (nums[0], nums[0]) if len(nums)==1 else (nums[0], nums[1])
+        return new_dimensions
+    except ValueError as e:
+        print(f"[error: {e}]")
+
+def maybe_set_new_entrance_exit(maze):
+    user_input = input(f"Enter entrance & exit coordinates (default = '0 0 -1 -1', previously = {maze.entrance.coordinates[0]} {maze.entrance.coordinates[1]} {maze.exit.coordinates[0]} {maze.exit.coordinates[1]}) > ").strip()
+    if not user_input:
+        print(CANCEL_TEXT,end='')
+        return
+    try:
+        nums = [int(s) for s in user_input.split()]
+        if len(nums) != 4:
+            raise ValueError("invalid number of arguments")
+        maze.set_entrance(nums[0], nums[1])
+        maze.set_exit(nums[2], nums[3])
+        return True
+    except ValueError as e:
+        print(f"[error: {e}]")
+    return
+
+def maybe_load_new_maze():
+    user_input = input("Enter `repr` string of a maze > ").strip()
+    if not user_input:
+        print(CANCEL_TEXT,end='')
+        return
+    try:
+        data = eval(user_input)
+        new_maze = benchmark("loading maze", lambda: Maze.from_repr(data))
+        preview(new_maze)
+        return new_maze
+    except Exception as e:
+        print(f"[could not load maze: {e}]")
+    return
+
+def maybe_print_maze(maze):
+    cellcount = maze.width * maze.height
+    if cellcount >= CELL_PRINT_LIMIT and not input(f"Maze contains a lot of cells ({cellcount}), proceed anyway ('Y')? >")=='Y':
+        print(CANCEL_TEXT,end='')
+        return
+    printers = {x.__name__:x for x in [
+        Maze.str_raster,
+        Maze.str_block_double,
+        Maze.str_block,
+        Maze.str_block_half,
+        Maze.str_block_quarter,
+        Maze.str_pipes,
+        Maze.str_frame,
+        Maze.str_frame_ascii,
+        Maze.str_frame_ascii_small,
+        repr
+    ]}
+    for name,printer in printers.items():
+        print(f"{name}:\n{printer(maze)}")
+    return
+
+def maybe_get_new_ratio(old_ratio):
+    user_input = input(f"Enter wall:air ratio (default = 1 1, previously = {old_ratio[0]} {old_ratio[1]}) > ").strip()
+    if not user_input:
+        print(CANCEL_TEXT,end='')
+        return
+    try:
+        nums = [int(s) for s in user_input.split()]
+        if len(nums) != 2:
+            raise ValueError("invalid number of arguments")
+        else:
+            new_ratio = (nums[0], nums[1])
+            return new_ratio
+    except ValueError as e:
+        print(f"[error: {e}]")
+    return
+
+def maybe_print_solution(maze):
+    benchmark("solving",lambda:
+        maze.compute_solution())
+    cellcount = maze.width * maze.height
+    if cellcount >= CELL_PRINT_LIMIT and not input(f"Maze contains a lot of cells ({cellcount}), proceed anyway ('Y')? >")=='Y':
+        print(CANCEL_TEXT,end='')
+        return
+    printers = {
+        'str_frame_ascii':
+            lambda m:Maze.str_frame_ascii(maze, show_solution=True),
+        'str_frame_ascii_small':
+            lambda m:Maze.str_frame_ascii_small(maze, show_solution=True),
+    }
+    for name,printer in printers.items():
+        print(f"{name}:\n{printer(maze)}")
+    return
+
+def maybe_get_new_only(old_only):
+    user_input = input(f"Enter number `n` such that only every `n`th frame is recorded during building process (e.g. '3' saves only third the frames) (previously = {old_only}) > ").strip()
+    if not user_input:
+        print(CANCEL_TEXT,end='')
+        return
+    try:
+        new_only = int(user_input)
+        return new_only
+    except ValueError as e:
+        print(f"[error: {e}]")
+
+def maybe_get_new_ms(old_ms):
+    user_input = input(f"Enter number of milliseconds per animation frame (e.g. '17' ~ 60fps) (previously = {old_ms}) > ").strip()
+    if not user_input:
+        print(CANCEL_TEXT,end='')
+        return
+    try:
+        new_ms = int(user_input)
+        return new_ms
+    except ValueError as e:
+        print(f"[error: {e}]")
+
+def animation_helper(dimensions, ratio, colormap_name):
+    new_maze = None
+    maze_runners = {
+        'backtracker': (lambda maze, record_frame:
+            Maze.grow_tree(maze,record_frame=record_frame)
+        ),
+    }
+    runner_name = 'backtracker'
+    image_generator_name = 'img'
+    image_generators = { #### color,ratio
+        'img': (lambda maze:
+            maze.generate_image(
+                raster=maze.generate_raster(
+                    wall_air_ratio=ratio
+                )
+            )
+        ),
+        'imgbrc': (lambda maze:
+            maze.compute_distances()
+            and()or maze.generate_colorimage(
+                gradient_colors=colortools.COLORMAPS[colormap_name][::-1],
+                raster=maze.generate_raster(
+                    show_distances=True,
+                    columnated=False,
+                    wall_air_ratio=ratio
+                )
+            )
+        ),
+        'imgcol': (lambda maze:
+            maze.compute_branchdistances()
+            and()or maze.generate_colorimage(
+                gradient_colors=colortools.COLORMAPS[colormap_name][::-1],
+                raster=maze.generate_raster(
+                    show_distances=True,
+                    columnated=False,
+                    wall_air_ratio=ratio
+                )
+            )
+        ),
+    }
+    only = 1
+    ms = 30
+    options_information_text = lambda: f"""
+~:--------------------------------------:~
+Animation Helper
+~:--------------------------------------:~
+ Change values or begin recording anim.:
+ :  start  - begin rendering process
+ Available settings
+ :  build  - choose building method
+ ;    = '{runner_name}'
+ :  imging - type of images to generate
+ ;    = '{image_generator_name}'
+ :  color  - set colormap (if used)
+ ;    = '{colormap_name}'
+ :  dim    - set dimensions of maze
+ ;    = {dimensions[0]} {dimensions[1]}
+ :  ratio  - ratio of wall:air in image
+ ;    = {ratio[0]} {ratio[1]}
+ :  timefr - ms between animation frames
+ ;    = {ms}
+ :  onlyfr  - only record n-th frame
+ ;    = {only}
+ Expected resolution       = {1+dimensions[0]*sum(ratio)} x {1+dimensions[1]*sum(ratio)}
+ Expected number of frames = {dimensions[0]*dimensions[1] // only}
+ Expected animation length = {ms * (dimensions[0]*dimensions[1] // only) / 1000:.02f}s
+~:--------------------------------------:~
+    """.strip()
+    options = {l[1] for line in options_information_text().splitlines() if (l:=line.split()) and (selection_flag:=l[0]) in ":"}
+    options_selection_text = f"Change settings or start animation with 'start' >"
+    option = 'help'
+    while True:
+        match option:
+            case 'build':
+                new_runner_name =  maybe_get_new_from_string_options(maze_runners, "Choose algorithm to build maze")
+                if new_runner_name is not None:
+                    runner_name = new_runner_name
+            case 'imging':
+                new_image_generator_name =  maybe_get_new_from_string_options(image_generators, "Choose imaging technique to make animation")
+                if new_image_generator_name is not None:
+                    image_generator_name = new_image_generator_name
+            case 'color':
+                new_colormap_name = maybe_get_new_from_string_options(colortools.COLORMAPS, f"Choose colormap (previously = {old_colormap_name})")
+                if new_colormap_name is not None:
+                    colormap_name = new_colormap_name
+            case 'dim':
+                new_dimensions = maybe_get_new_dimensions(dimensions)
+                if new_dimensions is not None:
+                    dimensions = new_dimensions
+            case 'ratio':
+                new_ratio = maybe_get_new_ratio(ratio)
+                if new_ratio is not None:
+                    ratio = new_ratio
+            case 'onlyfr':
+                new_only = maybe_get_new_only(only)
+                if new_only is not None:
+                    only = new_only
+            case 'timefr':
+                new_ms = maybe_get_new_ms(ms)
+                if new_ms is not None:
+                    ms = new_ms
+            case 'help':
+                pass
+            case 'start':
+                (filename, new_maze) = benchmark("animation process", lambda:
+                    Maze.save_animation(
+                        *dimensions,
+                        maze_runner=maze_runners[runner_name],
+                        image_generator=image_generators[image_generator_name],
+                        frame_only=only,
+                        frame_ms=ms,
+                        alert_progress_steps=10,
+                    )
+                )
+                print(f"Animation was saved under {filename}")
+            case _:
+                print("Unrecognized option")
+        print(options_information_text())
+        user_input = input(options_selection_text).strip()
+        if not user_input:
+            print("Exiting Animation Helper")
+            break
+        option = autocomplete(user_input, options)
+        if option != user_input:
+            print(f"-> {option}")
+    return new_maze
+
+# {{{
 def analysis(maze):
     # This function is a huge f*cking mess
     temp = (maze.entrance,maze.exit)
@@ -221,6 +480,7 @@ def analysis(maze):
     """.strip('\n')
     (maze.entrance,maze.exit) = temp
     return stats_all
+# }}}
 
 # FUNCTIONS END
 
@@ -229,13 +489,13 @@ def analysis(maze):
 
 def main():
     dimensions = (16,16)
-    wall_air_ratio = (1, 1)
+    ratio = (1, 1)
     maze = Maze(*dimensions)
     random.choice(list(Maze.ALGORITHMS.values()))(maze)
-    colormap = None
+    colormap_name = 'viridis'
     image = None
     #import textwrap # remove source code multiline string indents
-    help_text = """
+    commands_information_text = lambda: f"""
 ~:--------------------------------------:~
  A Mazing Playground
 ~:--------------------------------------:~
@@ -262,195 +522,112 @@ def main():
  :  ratio  - set ratio of wall:air size
  :  view   - view latest image
  :  save   - save latest image
- :  anim   - animation editor
+ :  anim!  - open animation helper
  (Commands are autocompleted if possible)
  Enter blank command to quit
 ~:--------------------------------------:~
     """.strip()
-    commands = {l[1]:selection_flag==';' for line in help_text.splitlines() if (l:=line.split()) and (selection_flag:=l[0]) in ":;"}
-    command_prompt = f"\n| {' | '.join(cmd for cmd,sel_flag in commands.items() if sel_flag)} > "
-    command = "help"
+    commands = {l[1]:selection_flag==';' for line in commands_information_text().splitlines() if (l:=line.split()) and (selection_flag:=l[0]) in ":;"}
+    commands_selection_text = f"\n| {' | '.join(cmd for cmd,sel_flag in commands.items() if sel_flag)} > "
+    command = 'help'
     while True:
         match command:
-            case "anim":
-                maze = Maze.save_animation(16,16, lambda maze,take_snapshot:Maze.grow_tree(maze,start_coord=(0,0),take_snapshot=take_snapshot))
-            case "build": # Allow user to choose method and build new maze
-                builders = Maze.ALGORITHMS
-                user_input = input(f"Choose algorithm\n| {' | '.join(builders)} > ").strip()
-                if user_input:
-                    buildername = autocomplete(user_input,builders)
-                    if buildername in builders:
-                        maze = Maze(*dimensions)
-                        benchmark(buildername, lambda:
-                            builders[buildername](maze))
-                        preview(maze)
-                    else:
-                        print(f"[unrecognized algorithm '{buildername}']")
-                else:
-                    print(CANCEL_TEXT,end='')
-            case "color":
-                user_input = input(f"Choose colormap\n| {' | '.join(colortools.COLORMAPS)} > ").strip()
-                if user_input:
-                    colormapname = autocomplete(user_input,colortools.COLORMAPS)
-                    if colormapname in colortools.COLORMAPS:
-                        if colormapname != user_input:
-                            print(f"-> {colormapname}")
-                        colormap = colortools.COLORMAPS[colormapname][::-1]
-                    else:
-                        print(f"[unrecognized colormap '{colormapname}']")
-            case "dim": # Allow user to save new maze size
-                user_input = input(f"Enter sidelength (e.g. '32') or dimensions (e.g. '80 40') (currently = {dimensions[0]} {dimensions[1]}) > ").strip()
-                if user_input:
-                    try:
-                        nums = [int(s) for s in user_input.split()]
-                        if len(nums) == 1:
-                            dimensions = (nums[0], nums[0])
-                        elif len(nums) == 2:
-                            dimensions = (nums[0], nums[1])
-                        else:
-                            raise ValueError("invalid number of arguments")
-                    except ValueError as e:
-                        print(f"[error: {e}]")
-                else:
-                    print(CANCEL_TEXT,end='')
-            case "goal":
-                user_input = input(f"Enter entrance & exit coordinates (default = '0 0 -1 -1', currently = {maze.entrance.coordinates[0]} {maze.entrance.coordinates[1]} {maze.exit.coordinates[0]} {maze.exit.coordinates[1]}) > ").strip()
-                if user_input:
-                    try:
-                        nums = [int(s) for s in user_input.split()]
-                        if len(nums) == 4:
-                            maze.set_entrance(nums[0], nums[1])
-                            maze.set_exit(nums[2], nums[3])
-                        else:
-                            raise ValueError("invalid number of arguments")
-                    except ValueError as e:
-                        print(f"[error: {e}]")
-                else:
-                    print(CANCEL_TEXT,end='')
-            case "help": # Show help menu
-                print(help_text)
-            case "hackerman": # hehe
+            case 'anim!':
+                new_maze = animation_helper(dimensions, ratio, colormap_name)
+                if new_maze is not None:
+                    maze = new_maze
+            case 'build': # Allow user to choose method and build new maze
+                new_builder_name = maybe_get_new_from_string_options(Maze.ALGORITHMS, "Choose algorithm to build maze")
+                if new_builder_name is not None:
+                    maze = Maze(*dimensions)
+                    benchmark(new_builder_name, lambda:
+                        Maze.ALGORITHMS[new_builder_name](maze))
+                    preview(maze)
+            case 'color':
+                new_colormap_name = maybe_get_new_from_string_options(colortools.COLORMAPS, f"Choose colormap (previously = {old_colormap_name})")
+                if new_colormap_name is not None:
+                    colormap_name = new_colormap_name
+            case 'dim': # Allow user to save new maze size
+                new_dimensions = maybe_get_new_dimensions(dimensions)
+                if new_dimensions is not None:
+                    dimensions = new_dimensions
+            case 'goal':
+                maybe_set_new_entrance_exit(maze)
+            case 'help': # Show help menu
+                print(commands_information_text())
+            case 'hackerman': # hehe
                 injection = []
-                while user_input:=input(">>> "):
-                    injection.append(user_input)
-                try:
-                    exec('\n'.join(injection))
-                except Exception as e:
-                    print(f"<error: {e}>")
-            case "img": # Generate image of current maze and open in external program
+                while user_input:=input(">>> "): injection.append(user_input)
+                try: exec('\n'.join(injection))
+                except Exception as e: print(f"<error: {e}>")
+            case 'img': # Generate image of current maze and open in external program
                 image = benchmark("generating image", lambda:
-                    maze.generate_image(raster=maze.generate_raster(wall_air_ratio=wall_air_ratio)))
+                    maze.generate_image(raster=maze.generate_raster(wall_air_ratio=ratio)))
                 image.show()
-            case "imgbrc":
+            case 'imgbrc':
                 benchmark("computing distances", lambda:
                     maze.compute_branchdistances())
                 image = benchmark("generating image", lambda:
-                    maze.generate_colorimage(gradient_colors=colormap,raster=maze.generate_raster(show_distances=True,columnated=False,wall_air_ratio=wall_air_ratio)))
+                    maze.generate_colorimage(gradient_colors=colortools.COLORMAPS[colormap_name][::-1],raster=maze.generate_raster(show_distances=True,columnated=False,wall_air_ratio=ratio)))
                 image.show()
-            case "imgcol":
+            case 'imgcol':
                 benchmark("computing distances", lambda:
                     maze.compute_distances())
                 image = benchmark("generating image", lambda:
-                    maze.generate_colorimage(gradient_colors=colormap,raster=maze.generate_raster(show_distances=True,columnated=False,wall_air_ratio=wall_air_ratio)))
+                    maze.generate_colorimage(gradient_colors=colortools.COLORMAPS[colormap_name][::-1],raster=maze.generate_raster(show_distances=True,columnated=False,wall_air_ratio=ratio)))
                 image.show()
-            case "imgsol": # Generate image of current maze with solution and open in external program
+            case 'imgsol': # Generate image of current maze with solution and open in external program
                 benchmark("solving", lambda:
                     maze.compute_solution())
                 image = benchmark("generating image", lambda:
-                    maze.generate_solutionimage(raster=maze.generate_raster(show_solution=True,wall_air_ratio=wall_air_ratio)))
+                    maze.generate_solutionimage(raster=maze.generate_raster(show_solution=True,wall_air_ratio=ratio)))
                 image.show()
-            case "join": # Make current maze unicursal
-                benchmark("making unicursal", lambda:
-                    maze.make_unicursal())
+            case 'join': # Make current maze unicursal
+                benchmark("making unicursal", lambda: maze.make_unicursal())
                 preview(maze)
-            case "load": # Let user load maze from a copied `repr` of a maze
-                user_input = input("Enter `repr` string of a maze > ").strip()
-                if user_input:
-                    try:
-                        data = eval(user_input)
-                        maze = benchmark("loading maze", lambda:
-                            Maze.from_repr(data))
-                        preview(maze)
-                    except Exception as e:
-                        print(f"[could not load maze: {e}]")
-                else:
-                    print(CANCEL_TEXT,end='')
-            case "maxim":
+            case 'load': # Let user load maze from a copied `repr` of a maze
+                new_maze = maybe_load_new_maze()
+                if new_maze is not None:
+                    maze = new_maze
+            case 'maxim':
                 len_longest_path = benchmark("computing longest path", lambda:
                     maze.compute_longest_path())
-                print(f"Longest path of length {len_longest_path} (of {maze.width*maze.height} total cells) found!")
-            case "print": # Print currently stored maze in all available styles
-                cellcount = maze.width*maze.height
-                if cellcount < CELL_LIMIT or input(f"Maze contains a lot of cells ({cellcount}), proceed anyway ('Y')? >")=='Y':
-                    printers = {x.__name__:x for x in [
-                        Maze.str_raster,
-                        Maze.str_block_double,
-                        Maze.str_block,
-                        Maze.str_block_half,
-                        Maze.str_block_quarter,
-                        Maze.str_pipes,
-                        Maze.str_frame,
-                        Maze.str_frame_ascii,
-                        Maze.str_frame_ascii_small,
-                        repr
-                    ]}
-                    for name,printer in printers.items():
-                        print(f"{name}:\n{printer(maze)}")
-                else:
-                    print(CANCEL_TEXT,end='')
-            case "ratio":
-                user_input = input(f"Enter wall:air ratio (default = 1 1, currently = {wall_air_ratio[0]} {wall_air_ratio[1]}) > ").strip()
-                if user_input:
-                    try:
-                        nums = [int(s) for s in user_input.split()]
-                        if len(nums) == 2:
-                            wall_air_ratio = (nums[0], nums[1])
-                        else:
-                            raise ValueError("invalid number of arguments")
-                    except ValueError as e:
-                        print(f"[error: {e}]")
-                else:
-                    print(CANCEL_TEXT,end='')
-            case "save": # Generate image of current maze and save as file
+                print(f"Longest path of length {len_longest_path} (of {maze.width*maze.height} total cells) found.")
+            case 'print': # Print currently stored maze in all available styles
+                maybe_print_maze(maze)
+            case 'ratio':
+                new_ratio = maybe_get_new_ratio(ratio)
+                if new_ratio is not None:
+                    ratio = new_ratio
+            case 'save': # Generate image of current maze and save as file
                 if image is None:
-                    print("No image type has been tried yet, please choose one first (see `help`)")
+                    print("Please generate at least one image first (-> `help`)")
                 else:
                     benchmark(f"saving {image.filename}",lambda:
                         image.save(image.filename))
-            case "stats":
-                stats_text = benchmark("total maze analysis execution", lambda:
-                    analysis(maze))
-                print(stats_text)
-            case "txtsol":
-                benchmark("solving",lambda:
-                    maze.compute_solution())
-                cellcount = maze.width*maze.height
-                if cellcount < CELL_LIMIT or input(f"Maze contains a lot of cells ({cellcount}), proceed anyway ('Y')? >")=='Y':
-                    printers = {
-                        'str_frame_ascii':
-                            lambda m:Maze.str_frame_ascii(maze, show_solution=True),
-                        'str_frame_ascii_small':
-                            lambda m:Maze.str_frame_ascii_small(maze, show_solution=True),
-                    }
-                    for name,printer in printers.items():
-                        print(f"{name}:\n{printer(maze)}")
-                else:
-                    print(CANCEL_TEXT,end='')
-            case "view":
+            case 'stats':
+                try:
+                    stats_text = benchmark("complete maze analysis", lambda: analysis(maze))
+                    print(stats_text)
+                except ValueError as e:
+                    print(f"<error: {e}>")
+            case 'txtsol':
+                maybe_print_solution(maze)
+            case 'view':
                 if image is None:
-                    print("No image type has been tried yet, please choose one first (see `help`)")
+                    print("Please generate at least one image first (-> `help`)")
                 else:
                     benchmark(f"opening {image.filename} in external editor",lambda:
                         image.show())
             case _: # Non-empty, unrecognized command
                 print("Unrecognized command")
         # Get user input and possibly exit loop
-        user_input = input(command_prompt).strip()
+        user_input = input(commands_selection_text).strip()
         if not user_input:
             print("goodbye")
             break
         # We autocomplete unambiguous user input so the playground program could be used more quickly
-        command = autocomplete(user_input.strip(), commands)
+        command = autocomplete(user_input, commands)
         # Show to the user what command he autocompleted to
         if command != user_input:
             print(f"-> {command}")
@@ -459,5 +636,3 @@ def main():
 if __name__=="__main__": main()
 
 # MAIN END
-
-#(['2023.07.24-00h41m38', 'tree', 'dfs'], (0, 0), (31, 31), [[1, 13, 5, 12, 9, 5, 5, 5, 5, 12, 1, 13, 5, 12, 8, 9, 5, 5, 5, 13, 13, 5, 5, 5, 5, 5, 12, 9, 5, 5, 12, 8], [9, 6, 1, 7, 6, 8, 9, 5, 12, 3, 5, 6, 9, 6, 11, 7, 4, 9, 12, 2, 3, 12, 9, 5, 5, 4, 10, 11, 12, 8, 10, 10], [10, 9, 12, 9, 4, 11, 6, 9, 14, 9, 13, 12, 10, 1, 7, 12, 9, 6, 3, 5, 5, 6, 3, 12, 9, 5, 6, 2, 10, 10, 3, 14], [11, 6, 10, 3, 5, 6, 9, 6, 10, 10, 10, 2, 3, 5, 12, 10, 10, 9, 13, 5, 12, 9, 13, 6, 10, 1, 13, 5, 6, 10, 9, 6], [10, 8, 3, 12, 9, 5, 6, 1, 6, 10, 10, 9, 5, 5, 6, 2, 10, 2, 3, 12, 2, 10, 10, 9, 6, 9, 6, 1, 13, 14, 3, 12], [10, 3, 12, 10, 10, 9, 12, 9, 5, 6, 10, 10, 9, 12, 9, 12, 3, 13, 12, 11, 5, 6, 3, 6, 9, 6, 9, 13, 6, 2, 9, 6], [10, 9, 14, 10, 11, 6, 3, 14, 1, 12, 3, 6, 10, 3, 6, 3, 12, 2, 10, 3, 12, 1, 13, 5, 6, 9, 14, 2, 9, 12, 10, 8], [3, 6, 10, 10, 2, 9, 12, 3, 5, 7, 12, 9, 7, 12, 1, 12, 10, 9, 6, 8, 10, 9, 6, 9, 5, 6, 3, 5, 6, 3, 7, 14], [9, 4, 10, 3, 5, 6, 3, 5, 12, 8, 10, 3, 12, 10, 9, 6, 3, 6, 9, 7, 6, 10, 8, 3, 12, 1, 13, 5, 12, 9, 12, 10], [11, 5, 6, 9, 13, 12, 9, 5, 6, 10, 10, 1, 6, 10, 10, 9, 5, 5, 6, 9, 5, 14, 11, 5, 7, 5, 6, 1, 6, 10, 10, 10], [3, 12, 1, 6, 10, 2, 3, 12, 9, 14, 3, 5, 5, 6, 10, 10, 9, 4, 9, 6, 9, 14, 2, 9, 5, 5, 5, 5, 5, 14, 10, 2], [8, 10, 9, 12, 3, 12, 9, 6, 10, 3, 12, 1, 5, 12, 11, 6, 11, 12, 11, 4, 10, 10, 9, 6, 9, 5, 12, 9, 12, 2, 3, 12], [10, 3, 6, 11, 5, 6, 11, 12, 11, 12, 11, 5, 5, 6, 10, 1, 6, 3, 6, 9, 6, 10, 10, 8, 10, 1, 7, 6, 3, 5, 5, 14], [11, 5, 4, 10, 9, 12, 10, 10, 2, 10, 2, 9, 5, 12, 3, 5, 5, 13, 5, 6, 1, 6, 10, 10, 10, 9, 5, 12, 9, 12, 9, 6], [11, 5, 5, 6, 10, 10, 2, 10, 9, 6, 9, 6, 9, 14, 9, 12, 9, 6, 9, 5, 5, 5, 6, 10, 3, 6, 9, 6, 10, 2, 3, 12], [3, 5, 12, 9, 6, 3, 5, 6, 10, 9, 6, 8, 10, 2, 10, 3, 6, 9, 6, 9, 5, 5, 5, 7, 12, 9, 6, 8, 11, 12, 9, 6], [8, 9, 6, 3, 5, 5, 5, 12, 3, 7, 5, 6, 3, 5, 6, 9, 5, 6, 1, 7, 5, 4, 9, 5, 14, 10, 1, 7, 14, 3, 6, 8], [10, 10, 1, 13, 5, 12, 9, 6, 9, 5, 12, 9, 5, 5, 5, 6, 8, 9, 13, 5, 5, 5, 6, 8, 10, 3, 5, 12, 3, 5, 12, 10], [10, 3, 5, 6, 9, 6, 3, 12, 3, 12, 10, 3, 12, 9, 5, 5, 7, 6, 3, 12, 9, 5, 12, 10, 10, 9, 12, 10, 9, 4, 10, 10], [11, 5, 5, 4, 10, 9, 12, 3, 5, 6, 10, 9, 6, 3, 5, 5, 5, 12, 9, 6, 10, 9, 6, 3, 7, 6, 10, 10, 10, 9, 6, 10], [11, 5, 5, 12, 10, 10, 3, 5, 5, 12, 10, 3, 5, 5, 12, 9, 4, 10, 3, 12, 10, 3, 5, 12, 1, 12, 10, 10, 3, 7, 5, 14], [3, 13, 4, 3, 6, 3, 5, 12, 8, 11, 7, 5, 5, 12, 10, 11, 12, 10, 8, 10, 3, 12, 8, 3, 12, 10, 10, 10, 9, 5, 12, 2], [8, 10, 9, 5, 5, 5, 12, 10, 3, 6, 9, 5, 12, 2, 10, 2, 3, 7, 6, 3, 13, 6, 3, 12, 10, 11, 6, 10, 11, 4, 3, 12], [11, 6, 3, 5, 5, 12, 3, 6, 9, 12, 10, 8, 3, 12, 10, 9, 5, 5, 5, 12, 3, 5, 12, 10, 10, 3, 12, 3, 6, 9, 12, 10], [10, 9, 5, 5, 4, 10, 9, 5, 6, 3, 6, 3, 12, 10, 10, 10, 9, 5, 4, 3, 5, 12, 3, 14, 3, 12, 11, 4, 9, 6, 10, 10], [10, 3, 12, 9, 13, 6, 3, 5, 5, 12, 1, 13, 6, 10, 3, 6, 10, 9, 5, 13, 12, 10, 9, 7, 4, 10, 2, 9, 6, 8, 3, 14], [10, 9, 6, 10, 2, 9, 5, 5, 5, 6, 9, 6, 9, 6, 9, 5, 7, 6, 9, 6, 2, 10, 2, 9, 12, 10, 9, 6, 9, 7, 5, 6], [10, 11, 12, 3, 12, 10, 9, 4, 9, 5, 7, 12, 3, 12, 3, 5, 5, 12, 3, 5, 12, 3, 5, 14, 3, 6, 10, 1, 14, 9, 12, 8], [10, 10, 3, 12, 10, 10, 3, 5, 7, 12, 8, 11, 12, 11, 12, 9, 4, 3, 12, 9, 14, 9, 5, 6, 9, 5, 6, 8, 11, 6, 3, 14], [10, 10, 9, 6, 10, 3, 5, 5, 12, 3, 14, 10, 2, 10, 3, 6, 9, 5, 6, 10, 2, 10, 9, 4, 10, 9, 5, 6, 2, 9, 12, 10], [10, 2, 3, 12, 3, 13, 5, 4, 3, 12, 2, 3, 12, 3, 5, 5, 6, 1, 12, 3, 5, 6, 3, 12, 10, 3, 5, 5, 5, 6, 10, 10], [3, 5, 5, 7, 4, 3, 5, 5, 5, 7, 5, 5, 7, 5, 5, 5, 5, 5, 7, 5, 5, 5, 5, 6, 3, 5, 5, 5, 5, 5, 6, 2]])

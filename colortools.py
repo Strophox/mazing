@@ -12,6 +12,53 @@ import random
 
 # CONSTANTS BEGIN
 
+RGB_RED    = (255,   0,   0) # '#ff0000'
+RGB_YELLOW = (255, 255,   0) # '#ffff00'
+RGB_GREEN  = (  0, 255,   0) # '#00ff00'
+RGB_CYAN   = (  0, 255, 255) # '#00ffff'
+RGB_BLUE   = (  0,   0, 255) # '#0000ff'
+RGB_MAGENTA= (255,   0, 255) # '#ff00ff'
+
+BLACK      = (  0,   0,   0) # '#000000'
+GRAY  =GREY= (255, 255, 255) # '#7f7f7f'
+WHITE      = (255, 255, 255) # '#ffffff'
+
+CRIMSON    = (170,  34,  68) # '#aa2244'
+RED        = (255,  51,  68) # '#ff3344'
+SALMON     = (255, 170, 153) # '#ffaa99'
+
+ORANGE     = (255, 153,   0) # '#ff9900'
+
+GOLDENROD  = (204, 153,   0) # '#cc9900'
+YELLOW     = (255, 238,   0) # '#FFEE00'
+VANILLA    = (255, 255, 221) # '#ffffdd'
+
+LIME       = (187, 238,   0) # '#bbee00'
+
+MOSS       = (  0, 153,  68) # '#009944'
+GREEN      = ( 51, 221,  51) # '#33dd33'
+MINT       = (187, 255, 187) # '#bbffbb'
+
+TURQUOISE  = (  0, 238, 170) # '#00eeaa'
+
+TEAL       = (  0, 153, 170) # '#0099aa'
+CYAN       = ( 17, 238, 238) # '#11eeee'
+CERULEAN   = (187, 255, 255) # '#bbffff'
+
+AZURE      = ( 68, 187, 255) # '#44bbff'
+
+NAVY       = ( 17,  17, 153) # '#111199'
+BLUE       = ( 68, 102, 255) # '#4466ff'
+PERIWINKLE = (187, 204, 255) # '#bbccff'
+
+VIOLET     = (204,  51, 255) # '#cc33ff'
+
+PURPLE     = (119,   0, 136) # '#770088'
+MAGENTA    = (255, 102, 238) # '#ff55ee'
+PINK       = (255, 170, 221) # '#ffaadd'
+
+ROSE       = (255,  85, 170) # '#ff55aa'
+
 COLORS = {
     'symbiogenesis':
         (116, 127, 141), # '#747f8d'
@@ -47,11 +94,11 @@ COLORS = {
         (157, 248,  86), # '#9df856'
     '_green':
         ( 47, 229,  80), # '#2fe550'
-    'turquoise':
+    'phosphophyllite':
         ( 53, 215, 187), # '#35d7bb'
     'crystal':
         ( 59, 205, 249), # '#3bcdf9'
-    'purple':
+    'royalpurple':
         (131,  56, 249), # '#8338f9'
     'tomato':
         (245,  68,  79), # '#f5444f'
@@ -70,6 +117,10 @@ COLORS = {
 }
 
 COLORMAPS = {
+    'kanagawa': (
+        (  0,  63, 127), # '#003F7F'
+        (255, 255, 255), # '#FFFFFF'
+    ),
     'viridis': (
         ( 68,   1,  84), # '#440154'
         ( 72,  23, 105), # '#481769'
@@ -488,12 +539,6 @@ COLORMAPS = {
         (248, 230,  33), # '#f8e621'
         (251, 231,  35), # '#fbe723'
         (253, 231,  37), # '#fde725'
-    ),
-    'legacy': (
-        #(127,   0,  63), # '#7F003F'
-        #(255, 255, 127), # '#FFFF7F'
-        (  0,  63, 127), # '#003F7F'
-        (255, 255, 255), # '#FFFFFF'
     ),
 }
 
