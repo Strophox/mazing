@@ -6,9 +6,6 @@ This file contains all important maze-relation implementations to store, create 
 
 ### Ideas/Work in Progress:
 - General
-    * `inside` necessary?
-    * Rename algorithms to verbs
-    * Change Maze.name() generation (add helper to find distribution?)
     * a l l   d o c s t r i n g s   m u s t   b e   c h e c k e d   ( p a i n )
     * (Is generate_raster rly bug-free??)
     * Learn numpy to optimize stuf
@@ -77,9 +74,6 @@ class Node:
     @property
     def mark(self):
         return self._mark
-
-    def inside(self, x0, y0, x1, y1):
-        return x0<= self._coordinates[0] <=x1 and y0<= self._coordinates[1] <=y1
 
     def has_wall(self, direction):
         """Check whether there is a wall in a certain direction from the node."""
@@ -535,7 +529,7 @@ class Maze:
 
     @staticmethod
     def _raster_to_image(raster, value_to_color):
-        colors = [value_to_color(value) for value in itertools.chain(*raster)]
+        colors = [value_to_color(value) for row in raster for value in row]
         image = Image.new('RGB', (len(raster[0]),len(raster)))
         image.putdata(colors)
         return image
@@ -587,12 +581,39 @@ class Maze:
         if gradient_colors is None:
             gradient_colors = colortools.COLORMAPS['viridis'][::-1]
         air_color = lambda value: colortools.interpolate(gradient_colors, param=value/peak)
-        peak = max(itertools.chain(*raster)) or 1
+        peak = max(val for row in raster for val in row) or 1
         value_to_color = lambda value: wall_color if value==(-1) else unreachable_color if value==(-2) else air_color(value)
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
         image.filename = f"{self.name()}_dist_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.png"
         return image
+
+    @staticmethod
+    def save_animation(width, height, builder, image_generator=None, take_nth_frame=1, frame_ms=30):
+        if image_generator is None:
+            image_generator = lambda maze:maze.compute_distances() and()or maze.generate_colorimage(raster=maze.generate_raster(show_distances=True,wall_air_ratio=(1,3)))
+            #image_generator = lambda maze:maze.generate_image(raster=maze.generate_raster())
+        maze = Maze(width,height)
+        global counter
+        counter = int()
+        frames = list()
+        def frame_generator(maze):
+            global counter
+            counter += 1
+            if counter % take_nth_frame == 0:
+                frame = image_generator(maze)
+                frames.append(frame)
+        builder(maze, frame_generator)
+        mainframe = frames[0] # lol
+        mainframe.save(
+            f"{maze.name()}_anim_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.gif",
+            save_all=True,
+            append_images=frames[1:],
+            optimize=False,
+            duration=frame_ms,
+            #loop=0,
+        )
+        return maze
 
     @staticmethod
     def _raster_to_string(raster, value_to_chars):
@@ -820,7 +841,7 @@ class Maze:
                 self.connect(node0,node1)
         return
 
-    def grow_tree(self, area=None, start_coord=None, name_index_choice=None, fast_pop=False):
+    def grow_tree(self, area=None, start_coord=None, name_index_choice=None, fast_pop=False, take_snapshot=(lambda maze:None)):
         """Build a random maze using the '(random) growing tree' algorithm.
 
         Args:
@@ -845,27 +866,27 @@ class Maze:
         if start_coord is None:
             start_coord = (random.randint(x0,x1),random.randint(y0,y1))
         start = self.node_at(*start_coord)
+        start.flag = True
         start._mark = mark
-        bucket = [start]
-        #### IMAGES = []
-        while bucket:
-            n = index_choice(len(bucket)-1)
-            node = bucket[n]
-            neighbors = [nb for nb in self.adjacent_to(node, area) if not nb._mark]
-            if neighbors:
+        active_set = [start]
+        take_snapshot(self)
+        while active_set:
+            idx = index_choice(len(active_set)-1)
+            node = active_set[idx]
+            if (neighbors:=[nbr for nbr in self.adjacent_to(node, area) if not nbr.flag]):
                 neighbor = random.choice(neighbors)
                 self.connect(node, neighbor)
+                neighbor.flag = True
                 neighbor._mark = mark
-                bucket.append(neighbor)
-                #### IMAGES.append(maze.generate_image(raster=maze.generate_raster(corridorwidth=3)))
+                active_set.append(neighbor)
+                take_snapshot(self)
             else:
                 if fast_pop:
-                    if len(bucket) > 1 and n != -1:
-                        bucket[n],bucket[-1] = bucket[-1],bucket[n]
-                    bucket.pop()
+                    if len(active_set) > 1 and idx != -1:
+                        active_set[idx],active_set[-1] = active_set[-1],active_set[idx]
+                    active_set.pop()
                 else:
-                    bucket.pop(n)
-        #### IMAGES[0].save('test.gif', save_all=True, append_images=IMAGES[1:], optimize=True, duration=30, loop=0)
+                    active_set.pop(idx)
         return
 
     def run_prim(self, area=None, start_coord=None):

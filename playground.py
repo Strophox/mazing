@@ -262,6 +262,7 @@ def main():
  :  ratio  - set ratio of wall:air size
  :  view   - view latest image
  :  save   - save latest image
+ :  anim   - animation editor
  (Commands are autocompleted if possible)
  Enter blank command to quit
 ~:--------------------------------------:~
@@ -271,6 +272,8 @@ def main():
     command = "help"
     while True:
         match command:
+            case "anim":
+                maze = Maze.save_animation(16,16, lambda maze,take_snapshot:Maze.grow_tree(maze,start_coord=(0,0),take_snapshot=take_snapshot))
             case "build": # Allow user to choose method and build new maze
                 builders = Maze.ALGORITHMS
                 user_input = input(f"Choose algorithm\n| {' | '.join(builders)} > ").strip()
