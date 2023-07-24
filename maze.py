@@ -219,10 +219,11 @@ class Maze:
         """Produce iterator over the edges of the maze."""
         edge_iterators = []
         rows = self._grid
-        rows_below = iter(rows) ; next(rows_below)
-        for row,row_below in zip(rows,rows_below):
+        for row in rows:
             row_shifted_right = iter(row) ; next(row_shifted_right)
             edge_iterators.append(zip(row,row_shifted_right))
+        rows_below = iter(rows) ; next(rows_below)
+        for row,row_below in zip(rows,rows_below):
             edge_iterators.append(zip(row,row_below))
         return itertools.chain(*edge_iterators)
 
@@ -873,11 +874,11 @@ class Maze:
         random.shuffle(edges)
         members = {}
         for (node0,node1) in edges:
-            if not node0.flag:
-                node0.flag, members[node0] = node0, [node0]
-            if not node1.flag:
-                node1.flag, members[node1] = node1, [node1]
-            if node0.flag != node1.flag:
+            if not all([node0.flag,node1.flag]) or node0.flag != node1.flag:
+                if not node0.flag:
+                    node0.flag, members[node0] = node0, [node0]
+                if not node1.flag:
+                    node1.flag, members[node1] = node1, [node1]
                 maze.connect(node0,node1)
                 if len(members[node0.flag]) < len(members[node1.flag]):
                     smaller,bigger = node0,node1
@@ -965,13 +966,13 @@ class Maze:
             if cut_horizontally:
                 yP = pivot_choice(y0,y1-1)
                 x = random.randint(x0,x1)
-                maze.connect(maze.node_at(x,yP),maze.node_at(x,yP+1))
+                maze.connect((x,yP),(x,yP+1))
                 divide((x0,y0), (x1,yP), True)
                 divide((x0,yP+1), (x1,y1), True)
             else:
                 xP = pivot_choice(x0,x1-1)
                 y = random.randint(y0,y1)
-                maze.connect(maze.node_at(xP,y),maze.node_at(xP+1,y))
+                maze.connect((xP,y),(xP+1,y))
                 divide((x0,y0), (xP,y1), False)
                 divide((xP+1,y0), (x1,y1), False)
         divide((0,0), (maze.width-1,maze.height-1), maze.width)
