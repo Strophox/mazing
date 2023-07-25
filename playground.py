@@ -81,6 +81,8 @@ def maybe_get_new_from_string_options(options, prompt_text):
     if option not in options:
         print(f"[unrecognized option '{builder_name}']")
         return
+    if option != user_input:
+        print(f"-> {option}")
     return option
 
 def maybe_get_new_dimensions(old_dimensions):
@@ -182,7 +184,7 @@ def maybe_print_solution(maze):
     return
 
 def maybe_get_new_only(old_only):
-    user_input = input(f"Enter number `n` such that only every `n`th frame is recorded during building process (e.g. '3' saves only third the frames) (previously = {old_only}) > ").strip()
+    user_input = input(f"Enter number `n` such that only every `n`th frame is recorded during building process (e.g. '3' saves only third the frames) (default = 1, previously = {old_only}) > ").strip()
     if not user_input:
         print(CANCEL_TEXT,end='')
         return
@@ -193,7 +195,7 @@ def maybe_get_new_only(old_only):
         print(f"[error: {e}]")
 
 def maybe_get_new_ms(old_ms):
-    user_input = input(f"Enter number of milliseconds per animation frame (e.g. '17' ~ 60fps) (previously = {old_ms}) > ").strip()
+    user_input = input(f"Enter number of milliseconds per animation frame (e.g. '17' ~ 60fps) (default = 30, previously = {old_ms}) > ").strip()
     if not user_input:
         print(CANCEL_TEXT,end='')
         return
@@ -206,8 +208,26 @@ def maybe_get_new_ms(old_ms):
 def animation_helper(dimensions, ratio, colormap_name):
     new_maze = None
     maze_runners = {
-        'backtracker': (lambda maze, record_frame:
+        'random_edges': (lambda maze, record_frame:
+            Maze.randomize_edges(maze,record_frame=record_frame)
+        ),
+        'growing_tree': (lambda maze, record_frame:
             Maze.grow_tree(maze,record_frame=record_frame)
+        ),
+        'backtracker': (lambda maze, record_frame:
+            Maze.run_backtrack(maze,record_frame=record_frame)
+        ),
+        'prim': (lambda maze, record_frame:
+            Maze.run_prim(maze,record_frame=record_frame)
+        ),
+        'kruskal': (lambda maze, record_frame:
+            Maze.run_kruskal(maze,record_frame=record_frame)
+        ),
+        'wilson': (lambda maze, record_frame:
+            Maze.run_wilson(maze,record_frame=record_frame)
+        ),
+        'division': (lambda maze, record_frame:
+            Maze.run_division(maze,record_frame=record_frame)
         ),
     }
     runner_name = 'backtracker'
@@ -220,7 +240,7 @@ def animation_helper(dimensions, ratio, colormap_name):
                 )
             )
         ),
-        'imgbrc': (lambda maze:
+        'imgcol': (lambda maze:
             maze.compute_distances()
             and()or maze.generate_colorimage(
                 gradient_colors=colortools.COLORMAPS[colormap_name][::-1],
@@ -231,7 +251,7 @@ def animation_helper(dimensions, ratio, colormap_name):
                 )
             )
         ),
-        'imgcol': (lambda maze:
+        'imgbrc': (lambda maze:
             maze.compute_branchdistances()
             and()or maze.generate_colorimage(
                 gradient_colors=colortools.COLORMAPS[colormap_name][::-1],
@@ -285,7 +305,7 @@ Animation Helper
                 if new_image_generator_name is not None:
                     image_generator_name = new_image_generator_name
             case 'color':
-                new_colormap_name = maybe_get_new_from_string_options(colortools.COLORMAPS, f"Choose colormap (previously = {old_colormap_name})")
+                new_colormap_name = maybe_get_new_from_string_options(colortools.COLORMAPS, f"Choose colormap (previously = {colormap_name})")
                 if new_colormap_name is not None:
                     colormap_name = new_colormap_name
             case 'dim':

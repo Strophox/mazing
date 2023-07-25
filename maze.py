@@ -611,8 +611,8 @@ class Maze:
             if counter % frame_only == 0:
                 frame = image_generator(maze)
                 frames.append(frame)
-            if alert_progress_steps and counter % n_progress_milestone == 0:
-                print(f"{counter/frame_total:%} done")
+                if alert_progress_steps and counter//frame_only % n_progress_milestone == 0:
+                    print(f"{counter} visits made ({frame_total} nodes available)")
         maze = Maze(width,height)
         maze_runner(maze, record_frame)
         filename = f"{maze.name()}_anim_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.gif"
@@ -846,13 +846,15 @@ class Maze:
         Args:
             width, height (int): Positive integer dimensions of desired maze
         """
+        mark = 'random_edges'
         if record_frame is None:
             record_frame = lambda maze:None
-        mark = 'random_edges'
+        record_frame(self)
         for (node0,node1) in self.edges(area):
             node0._mark = node1._mark = mark
             if random.random() < edge_probability:
                 self.connect(node0,node1)
+                record_frame(self)
         return
 
     def grow_tree(self, area=None, start_coord=None, name_index_choice=None, fast_pop=False, record_frame=None):
@@ -864,6 +866,12 @@ class Maze:
             index_choice (callable(int) -> int): Function to pick an index between 0 and a given max_index, used to determine behaviour of the algorithm (default is lambda max_index: -1 if random.random()<0.95 else random.randint(0,max_index))
             fast_pop (bool): Whether to switch chosen element with last element when removing from active set. This is to speed up generation of large, random mazes (default is False)
         """
+        if area is None:
+            (x0,y0,x1,y1) = (0,0,self.width-1,self.height-1)
+        else:
+            (x0,y0,x1,y1) = area
+        if start_coord is None:
+            start_coord = (random.randint(x0,x1),random.randint(y0,y1))
         if name_index_choice is None:
             name = 'growing_tree'
             index_choice = lambda max_index: -1 if random.random()<0.75 else random.randint(0,max_index)
@@ -872,15 +880,9 @@ class Maze:
             #algorithm_variant = (lambda self,area=None,start_coord=None,fast_pop=False:
                 #Maze.grow_tree(self,area=area,start_coord=start_coord,name_index_choice=name_index_choice,fast_pop=fast_pop))
             #Maze.algorithms[name] = algorithm_variant
-        if area is None:
-            (x0,y0,x1,y1) = (0,0,self.width-1,self.height-1)
-        else:
-            (x0,y0,x1,y1) = area
-        if start_coord is None:
-            start_coord = (random.randint(x0,x1),random.randint(y0,y1))
+        mark = name
         if record_frame is None:
             record_frame = lambda maze:None
-        mark = name
         start = self.node_at(*start_coord)
         start.flag = True
         start._mark = mark
@@ -912,8 +914,15 @@ class Maze:
             width, height (int): Positive integer dimensions of desired maze
             start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
-        name_index_choice = ('prim', lambda max_index: random.randint(0,max_index))
-        self.grow_tree(area, start_coord, name_index_choice, record_frame)
+        name_index_choice = ('prim',
+            lambda max_index: random.randint(0,max_index))
+        self.grow_tree(
+            area=area,
+            start_coord=start_coord,
+            name_index_choice=name_index_choice,
+            fast_pop=False,
+            record_frame=record_frame
+        )
         return
 
     def run_backtrack(self, area=None, start_coord=None, record_frame=None):
@@ -923,8 +932,15 @@ class Maze:
             width, height (int): Positive integer dimensions of desired maze
             start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
-        name_index_choice = ('backtracker', lambda max_index: -1)
-        self.grow_tree(area, start_coord, name_index_choice, record_frame)
+        name_index_choice = ('backtracker',
+            lambda max_index: -1)
+        self.grow_tree(
+            area=area,
+            start_coord=start_coord,
+            name_index_choice=name_index_choice,
+            fast_pop=False,
+            record_frame=record_frame
+        )
         return
 
     def run_kruskal(self, area=None, record_frame=None):
@@ -933,16 +949,17 @@ class Maze:
         Args:
             width, height (int): Positive integer dimensions of desired maze
         """
+        mark = 'kruskal'
         if area is None:
             nodecount = self.width * self.height
         else:
             nodecount = (area[2]-area[0]) * (area[3]-area[1])
         if record_frame is None:
             record_frame = lambda maze:None
-        mark = 'kruskal'
         edges = list(self.edges(area))
         random.shuffle(edges)
         members = dict()
+        record_frame(self)
         for (node0,node1) in edges:
             node0._mark = node1._mark = mark
             if not all([node0.flag,node1.flag]) or node0.flag != node1.flag:
@@ -951,6 +968,7 @@ class Maze:
                 if not node1.flag:
                     node1.flag, members[node1] = node1, [node1]
                 self.connect(node0, node1)
+                record_frame(self)
                 if len(members[node0.flag]) < len(members[node1.flag]):
                     smaller,bigger = node0,node1
                 else:
@@ -969,13 +987,13 @@ class Maze:
             width, height (int): Positive integer dimensions of desired maze
             start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
+        mark = 'wilson'
         if area is None:
             (x0,y0,x1,y1) = (0,0,self.width-1,self.height-1)
         else:
             (x0,y0,x1,y1) = area
         if record_frame is None:
             record_frame = lambda maze:None
-        mark = 'wilson'
         def backtrack_path(tail_node, origin):
             while tail_node != origin:
                 prev_node = next(self.connected_to(tail_node, area))
@@ -990,6 +1008,7 @@ class Maze:
         generation = 1
         start.flag = generation
         random.shuffle(nodes)
+        record_frame(self)
         for node in nodes:
             node._mark = mark
             if not node.flag:
@@ -1001,12 +1020,15 @@ class Maze:
                     if not next_node.flag:
                         next_node.flag = generation
                         self.connect(curr_node, next_node)
+                        record_frame(self)
                         curr_node = next_node
                     elif next_node.flag == generation:
                         backtrack_path(curr_node,next_node)
+                        record_frame(self)
                         curr_node = next_node
                     elif next_node.flag < generation:
                         self.connect(curr_node,next_node)
+                        record_frame(self)
                         break
         return
 
@@ -1038,20 +1060,32 @@ class Maze:
             if ewidth < 1 or eheight < 1 or roomlength and ewidth < roomlength and eheight < roomlength and random.random() < 1/((ewidth+1)*(eheight+1)):
                 for x in range(x0,x1+1):
                     for y in range(y0,y1+1):
-                        if x < x1: self.connect((x,y),(x+1,y))
-                        if y < y1: self.connect((x,y),(x,y+1))
+                        self.node_at(x,y)._mark = mark
+                        if x < x1:
+                            self.node_at(x+1,y)._mark = mark
+                            self.connect((x,y),(x+1,y))
+                        if y < y1:
+                            self.node_at(x,y+1)._mark = mark
+                            self.connect((x,y),(x,y+1))
+                        record_frame(self)
                 return
             cut_horizontally = slice_direction_choice(ewidth, eheight, prev_dir)
             if cut_horizontally:
                 yP = pivot_choice(y0,y1-1)
                 x = random.randint(x0,x1)
+                self.node_at(x,yP)._mark = mark
+                self.node_at(x,yP+1)._mark = mark
                 self.connect((x,yP),(x,yP+1))
+                record_frame(self)
                 divide((x0,y0,x1,yP), True)
                 divide((x0,yP+1,x1,y1), True)
             else:
                 xP = pivot_choice(x0,x1-1)
                 y = random.randint(y0,y1)
+                self.node_at(xP,y)._mark = mark
+                self.node_at(xP+1,y)._mark = mark
                 self.connect((xP,y),(xP+1,y))
+                record_frame(self)
                 divide((x0,y0,xP,y1), False)
                 divide((xP+1,y0,x1,y1), False)
         zeroth_cut = self.width < self.height
