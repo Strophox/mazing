@@ -62,6 +62,18 @@ PINK       = (255, 170, 221) # '#ffaadd'
 ROSE       = (255,  85, 170) # '#ff55aa'
 
 COLORS = {
+    'viper':
+        (157, 248,  86), # '#9df856'
+    'greener':
+        ( 47, 229,  80), # '#2fe550'
+    'phosphophyllite':
+        ( 53, 215, 187), # '#35d7bb'
+    'crystal':
+        ( 59, 205, 249), # '#3bcdf9'
+    'royalpurple':
+        (131,  56, 249), # '#8338f9'
+    'tomato':
+        (245,  68,  79), # '#f5444f'
     'symbiogenesis':
         (116, 127, 141), # '#747f8d'
     'geodesic':
@@ -78,52 +90,73 @@ COLORS = {
         (216, 133, 165), # '#d885a5'
     'wastes':
         (157, 200, 110), # '#9dc86e'
-    'grainsofgravel':
-        ( 92, 116, 156), # '#5c749c'
     'industrialcomplex':
         (154, 203, 184), # '#9acbb8'
-    'rayzngray':
-        ( 88,  94, 108), # '#585e6c'
-    'rayznblack':
-        ( 26,  28,  32), # '#1a1c20'
+    'grainsofgravel':
+        ( 92, 116, 156), # '#5c749c'
     'lightgold':
         (255, 192, 107), # '#ffc06b'
     'rosey':
         (243, 102, 144), # '#f36690'
-    'clardigfug':
-        (112, 113,  84), # '#707154'
-    '_olive':
-        (157, 248,  86), # '#9df856'
-    '_green':
-        ( 47, 229,  80), # '#2fe550'
-    'phosphophyllite':
-        ( 53, 215, 187), # '#35d7bb'
-    'crystal':
-        ( 59, 205, 249), # '#3bcdf9'
-    'royalpurple':
-        (131,  56, 249), # '#8338f9'
-    'tomato':
-        (245,  68,  79), # '#f5444f'
-    'classicblurple':
-        (114, 137, 218), # '#7289da'
-    'discordgray':
-        (117, 126, 138), # '#757e8a'
-    'blurple':
-        ( 88, 101, 242), # '#5865F2'
-    'discordred':
-        (237,  66,  69), # '#ED4245'
     'pergament':
         (239, 226, 207), # '#EFE2CF'
     'sepia':
         ( 50,  45,  35), # '#322D23'
+    'rayzngray':
+        ( 88,  94, 108), # '#585e6c'
+    'rayznblack':
+        ( 26,  28,  32), # '#1a1c20'
+    'error':
+        (176,   0,  32), # '#b00020'
+    'classicblurple':
+        (114, 137, 218), # '#7289da'
+    'discordblurple':
+        ( 88, 101, 242), # '#5865F2'
+    'discordred':
+        (237,  66,  69), # '#ED4245'
+    'discordgray':
+        (117, 126, 138), # '#757e8a'
+    'clardigfug':
+        (112, 113,  84), # '#707154'
+}
+
+PALETTES = {
+    'discord': {
+    'black':
+        ( 30,  31,  34), # '#1e1f22'
+    'low':
+        ( 43,  45,  49), # '#2b2d31'
+    'mid':
+        ( 49,  51,  56), # '#313338'
+    'high':
+        ( 63,  66,  72), # '#3f4248'
+    'detail':
+        (148, 155, 164), # '#949ba4'
+    'white':
+        (219, 222, 225), # '#dbdee1'
+    },
+    'element': {
+    'black':
+        ( 44,  43,  42), # '#2c2b2a'
+    'low':
+        ( 68,  65,  59), # '#44413b'
+    'mid':
+        ( 82,  78,  71), # '#524e47'
+    'high':
+        (116, 112, 103), # '#747067'
+    'detail':
+        (158, 155, 149), # '#9e9b95'
+    },
+    'white':
+        (255, 255, 255), # '#ffffff'
 }
 
 COLORMAPS = {
-    'kanagawa': (
+    'kanagawa': ( # 2 values
         (  0,  63, 127), # '#003F7F'
         (255, 255, 255), # '#FFFFFF'
     ),
-    'viridis': (
+    'viridis': ( # 18 values
         ( 68,   1,  84), # '#440154'
         ( 72,  23, 105), # '#481769'
         ( 71,  42, 122), # '#472a7a'
@@ -143,7 +176,7 @@ COLORMAPS = {
         (216, 226,  25), # '#d8e219'
         (253, 231,  37), # '#fde725'
     ),
-    'magma': (
+    'magma': ( # 16 values
         (  0,   0,   5), # '#000005'
         ( 11,   8,  28), # '#0B081C'
         ( 23,  11,  57), # '#170B39'
@@ -161,7 +194,7 @@ COLORMAPS = {
         (252, 213, 141), # '#FCD58D'
         (251, 255, 178), # '#FBFFB2'
     ),
-    'blues': (
+    'brewerBlue': ( # 9 values
         (  8,  48, 107), # '#08306B'
         (  8,  81, 156), # '#08519C'
         ( 33, 113, 181), # '#2171B5'
@@ -172,7 +205,7 @@ COLORMAPS = {
         (222, 235, 247), # '#DEEBF7'
         (247, 251, 255), # '#F7FBFF'
     ),
-    'colorbrewerGreen': (
+    'brewerGreen': ( # 9 values
         (  0,  69,  41), # '#004529'
         (  0, 104,  55), # '#006837'
         ( 35, 132,  67), # '#238443'
@@ -183,7 +216,7 @@ COLORMAPS = {
         (247, 252, 185), # '#f7fcb9'
         (255, 255, 229), # '#ffffe5'
     ),
-    'colorbrewerRed': (
+    'brewerRed': ( # 9 values
         ( 73,   0, 106), # '#49006a'
         (122,   1, 119), # '#7a0177'
         (174,   1, 126), # '#ae017e'
@@ -194,7 +227,7 @@ COLORMAPS = {
         (253, 224, 221), # '#fde0dd'
         (255, 247, 243), # '#fff7f3'
     ),
-    'chromajsBlue': (
+    'chromaBlue': ( # 11 values
         (  0,  66, 157), # '#00429d'
         ( 40,  84, 166), # '#2854a6'
         ( 62, 103, 174), # '#3e67ae'
@@ -207,7 +240,7 @@ COLORMAPS = {
         (205, 241, 224), # '#cdf1e0'
         (255, 255, 224), # '#ffffe0'
     ),
-    'bamako': (
+    'bamako': ( # 10 values
         (  0,  64,  77), # '#00404D'
         ( 19,  75,  66), # '#134B42'
         ( 38,  87,  55), # '#265737'
@@ -219,7 +252,7 @@ COLORMAPS = {
         (230, 204, 104), # '#E6CC68'
         (254, 228, 152), # '#FEE498'
     ),
-    'acton': (
+    'acton': ( # 10 values
         ( 46,  33,  77), # '#2E214D'
         ( 75,  59, 102), # '#4B3B66'
         (110,  84, 128), # '#6E5480'
@@ -231,7 +264,7 @@ COLORMAPS = {
         (218, 200, 219), # '#DAC8DB'
         (229, 229, 239), # '#E5E5EF'
     ),
-    'cubehelixClassic': (
+    'helixClassic': ( # 16 values
         (  0,   0,   1), # '#000001'
         ( 22,  10,  34), # '#160A22'
         ( 24,  32,  68), # '#182044'
@@ -249,7 +282,7 @@ COLORMAPS = {
         (220, 246, 239), # '#DCF6EF'
         (255, 255, 255), # '#FFFFFF'
     ),
-    'cubehelix2': (
+    'helix2': ( # 16 values
         (  0,   1,   0), # '#000100'
         (  0,  28,  14), # '#001C0E'
         (  0,  28,  14), # '#001C0E'
@@ -267,7 +300,7 @@ COLORMAPS = {
         (226, 247, 219), # '#E2F7DB'
         (255, 255, 255), # '#FFFFFF'
     ),
-    'redyellowblue': (
+    'redyellowblue': ( # 15 values
         ( 16,  25,  77), # '#10194D'
         ( 22,  55, 113), # '#163771'
         ( 28,  87, 150), # '#1C5796'
@@ -284,7 +317,7 @@ COLORMAPS = {
         (117,  18,  50), # '#751232'
         ( 74,   0,  30), # '#4A001E'
     ),
-    'HQviridis': (
+    'HQviridis': ( # 256 values
         ( 68,   1,  84), # '#440154'
         ( 68,   2,  86), # '#440256'
         ( 69,   4,  87), # '#450457'
@@ -555,6 +588,12 @@ COLORMAPS = {
 # FUNCTIONS BEGIN
 
 def from_hexcode(string):
+    """Convert hex color code into rgb tuple.
+    Args:
+        string (str): hex code with or without '#'
+    Returns:
+        tuple(int,int,int): parsed color
+    """
     hex_color = int(code.removeprefix('#'), base=16)
     R = (0xFF0000 & hex_color) >> 16
     G = (0x00FF00 & hex_color) >>  8
@@ -563,6 +602,12 @@ def from_hexcode(string):
     return tuple_color
 
 def to_hexcode(tuple_color):
+    """Convert rgb tuple into hex color code.
+    Args:
+        tuple_color (tuple(int,int,int)): input color
+    Returns:
+        str: hex code string (without '#')
+    """
     (R,G,B) = tuple_color
     hex_color = (R << 16) | (G << 8) | (B << 0)
     string = f"{hex_color:06x}"
@@ -588,14 +633,14 @@ def invert(color):
     return color_inverted
 
 def mix(color0, color1, param=0.5):
-    color_mixed = tuple(int((1 - param)*ch0 + param*ch1) for (ch0,ch1) in zip(color0,color1))
+    color_mixed = tuple(round((1-param) * ch0 + param * ch1) for ch0,ch1 in zip(color0,color1))
     return color_mixed
 
 def interpolate(colors, param):
     if param == 1.0: return colors[-1]
     sectors = len(colors) - 1
-    segmentlength = 1/sectors
-    sector = int(param//segmentlength)
+    segmentlength = 1 / sectors
+    sector = int(param // segmentlength)
     offset = param % segmentlength
     sectorparam = offset / segmentlength
     color_interpolated = mix(colors[sector], colors[sector+1], sectorparam)
@@ -608,10 +653,10 @@ def average(*colors):
     for color in colors:
         add(color_sum, color)
         count += 1
-    color_average = tuple(int(color_sum/count) for ch in color_sum)
+    color_average = tuple(round(color_sum/count) for ch in color_sum)
     return color_average
 
-def convert(color, src, dst):
+def convert(input_color, src, dst):
     """
     Converts between tuples of a color in one of the following representations:
         Hue-Value-Saturation : 'HSV', <[0,360],[0.,1.],[0.,1.]>
@@ -619,67 +664,73 @@ def convert(color, src, dst):
         Red-Green-Blue : 'RGB', <[0,255],[0,255],[0,255]>
         <==>
         CIELAB color model : 'LAB', <[0,100],[-128,127],[-128,127]>
+
+        https://en.wikipedia.org/wiki/CIELAB_color_space
     """
     [SRC,DST,RGB,HSV,LAB] = [s.casefold() for s in [src,dst,'RGB','HSV','LAB']]
     if SRC == RGB:
+        rgb_color = input_color
         if DST == HSV:
-            R,G,B = color
-            M = max(R,G,B)
-            m = min(R,G,B)
+            (R,G,B) = rgb_color
+            R1,G1,B1 = R/255, G/255, B/255
+            M = max(R1, G1, B1)
+            m = min(R1, G1, B1)
             C = M - m
-            H1 =           0  if C==0 else \
-                (G-B)/C % 6  if M==R else \
-                (B-R)/C + 2  if M==G else \
-                (R-G)/C + 4  if M==B else None
-            H = int(H1 * 60)
+            H1 =            0  if C == 0  else \
+                (G1-B1) / C % 6  if M == R1 else \
+                (B1-R1) / C + 2  if M == G1 else \
+                (R1-G1) / C + 4  if M == B1 else None
+            H = round(H1 * 60)
             V = M
-            S = C/V if V!=0 else 0
+            S = 0 if V==0 else (C / V)
             hsv_color = (H,S,V)
             return hsv_color
         if DST == LAB:
-            R,G,B = color
+            (R,G,B) = rgb_color
             X = R*0.49    + G*0.31    + B*0.20
             Y = R*0.17697 + G*0.81240 + B*0.01063
             Z = R*0.00    + G*0.01    + B*0.99
-            X1,Y1,Z1 = 95.0489, 100, 108.8840 # Standard Illuminant D65
+            (X1,Y1,Z1) = (95.0489, 100, 108.8840) # Standard Illuminant D65
             delta = 6/29
-            f = lambda t: t**(1/3) if t>delta**3 else t/(3*delta**2)+4/29
-            L = 116*f(Y/Y1) - 16
-            A = 500*(f(X/X1) - f(Y/Y1))
-            B = 200*(f(Y/Y1) - f(Z/Z1))
+            f = lambda t: t**(1/3) if t > delta**3 else (t / (3*delta**2) + 4/29)
+            L = 116 * f(Y/Y1)  - 16
+            A = 500 * (f(X/X1) - f(Y/Y1))
+            B = 200 * (f(Y/Y1) - f(Z/Z1))
             lab_color = (L,A,B)
             return lab_color
     if SRC == HSV:
+        hsv_color = input_color
         if DST == RGB:
-            (H,S,V) = color
+            (H,S,V) = hsv_color
             def f(n):
                 k = (n + H%360 / 60) % 6
-                return V - V * S * max(0, min(k, 4-k, 1))
-            R = int(255 * f(5))
-            G = int(255 * f(3))
-            B = int(255 * f(1))
+                return V - V * S * max(0, min(k,4-k, 1))
+            R = round(255 * f(5))
+            G = round(255 * f(3))
+            B = round(255 * f(1))
             rgb_color = (R,G,B)
             return rgb_color
         if DST == LAB:
-            rgb_color = convert(color, 'HSV','RGB')
+            rgb_color = convert(hsv_color, 'HSV','RGB')
             lab_color = convert(rgb_color, 'RGB','LAB')
             return lab_color
     if SRC == LAB:
+        lab_color = input_color
         if DST == RGB:
-            (L,A,B) = color
-            X1,Y1,Z1 = 95.0489, 100, 108.8840 # Standard Illuminant D65
+            (L,A,B) = lab_color
+            (X1,Y1,Z1) = (95.0489, 100, 108.8840) # Standard Illuminant D65
             delta = 6/29
-            f_inv = lambda t: t**3 if t>delta else (t-4/29)(3*delta**2)
-            X = X1*f_inv((L+16)/116 + A/500)
-            Y = Y1*f_inv((L+16)/116)
-            Z = Z1*f_inv((L+16)/116 - B/200)
+            f_inv = lambda t: t**3 if t > delta else (3 * delta**2 * (t - 4/29))
+            X = X1 * f_inv((L + 16)/116 + A/500)
+            Y = Y1 * f_inv((L + 16)/116)
+            Z = Z1 * f_inv((L + 16)/116 - B/200)
             R =  X*2.36461385 - Y*0.89654057 - Z*0.46807328
             G = -X*0.51516621 + Y*1.4264081  + Z*0.0887581
             B =  X*0.0052037  - Y*0.01440816 + Z*1.00920446
             rgb_color = (R,G,B)
             return rgb_color
         if DST == HSV:
-            rgb_color = convert(color,'LAB','RGB')
+            rgb_color = convert(lab_color,'LAB','RGB')
             hsv_color = convert(rgb_color,'RGB','HSV')
             return hsv_color
 
@@ -689,7 +740,7 @@ def convert(color, src, dst):
 # MAIN BEGIN
 
 def main():
-    viridis_data = [
+    HQviridis_data = [
         [0.267004, 0.004874, 0.329415],
         [0.268510, 0.009605, 0.335427],
         [0.269944, 0.014625, 0.341379],
@@ -947,7 +998,7 @@ def main():
         [0.983868, 0.904867, 0.136897],
         [0.993248, 0.906157, 0.143936],
     ]
-    for [r,g,b] in viridis_data:
+    for [r,g,b] in HQviridis_data:
         R,G,B = round(255*r),round(255*g),round(255*b)
         print(f"({R: 3}, {G: 3}, {B: 3}), # '#{_tuple_to_hex((R,G,B)):06x}'")
 

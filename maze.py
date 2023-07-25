@@ -12,8 +12,6 @@ This file contains all important maze-relation implementations to store, create 
 - Printers
     * Allow choosing of start node for animation
     * (? str_frame solution)
-- Builders
-    * (? compose algorithms)
 - Solvers
     * A* pathfinder
 - ETC Dreams
@@ -27,7 +25,6 @@ This file contains all important maze-relation implementations to store, create 
 
 import random
 import time # strftime
-import itertools # chain
 import collections # deque
 from PIL import Image
 import colortools
