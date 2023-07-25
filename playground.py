@@ -79,7 +79,7 @@ def maybe_get_new_from_string_options(options, prompt_text):
         return
     option = autocomplete(user_input,options)
     if option not in options:
-        print(f"[unrecognized option '{builder_name}']")
+        print(f"[unrecognized option '{option}']")
         return
     if option != user_input:
         print(f"-> {option}")
@@ -209,25 +209,28 @@ def animation_helper(dimensions, ratio, colormap_name):
     new_maze = None
     maze_runners = {
         'random_edges': (lambda maze, record_frame:
-            Maze.randomize_edges(maze,record_frame=record_frame)
+            Maze.ALGORITHMS['random_edges'](maze,area=(4,4,-4,-4),record_frame=record_frame)
         ),
         'growing_tree': (lambda maze, record_frame:
-            Maze.grow_tree(maze,record_frame=record_frame)
+            Maze.ALGORITHMS['growing_tree'](maze,record_frame=record_frame)
         ),
         'backtracker': (lambda maze, record_frame:
-            Maze.run_backtrack(maze,record_frame=record_frame)
+            Maze.ALGORITHMS['backtracker'](maze,record_frame=record_frame)
         ),
         'prim': (lambda maze, record_frame:
-            Maze.run_prim(maze,record_frame=record_frame)
+            Maze.ALGORITHMS['prim'](maze,record_frame=record_frame)
         ),
         'kruskal': (lambda maze, record_frame:
-            Maze.run_kruskal(maze,record_frame=record_frame)
+            Maze.ALGORITHMS['kruskal'](maze,record_frame=record_frame)
         ),
         'wilson': (lambda maze, record_frame:
-            Maze.run_wilson(maze,record_frame=record_frame)
+            Maze.ALGORITHMS['wilson'](maze,record_frame=record_frame)
         ),
         'division': (lambda maze, record_frame:
-            Maze.run_division(maze,record_frame=record_frame)
+            Maze.ALGORITHMS['division'](maze,record_frame=record_frame)
+        ),
+        'xdivision': (lambda maze, record_frame:
+            Maze.ALGORITHMS['xdivision'](maze,record_frame=record_frame)
         ),
     }
     runner_name = 'backtracker'
@@ -236,6 +239,15 @@ def animation_helper(dimensions, ratio, colormap_name):
         'img': (lambda maze:
             maze.generate_image(
                 raster=maze.generate_raster(
+                    wall_air_ratio=ratio
+                )
+            )
+        ),
+        'imgsol': (lambda maze:
+            maze.compute_solution()
+            and()or maze.generate_solutionimage(
+                raster=maze.generate_raster(
+                    show_solution=True,
                     wall_air_ratio=ratio
                 )
             )
@@ -258,6 +270,14 @@ def animation_helper(dimensions, ratio, colormap_name):
                 raster=maze.generate_raster(
                     show_distances=True,
                     columnated=False,
+                    wall_air_ratio=ratio
+                )
+            )
+        ),
+        'imgalg': (lambda maze:
+            maze.generate_algorithmimage(
+                raster=maze.generate_raster(
+                    show_algorithms=True,
                     wall_air_ratio=ratio
                 )
             )
@@ -345,7 +365,7 @@ Animation Helper
         if not user_input:
             print("Exiting Animation Helper")
             break
-        option = autocomplete(user_input, options)
+        option = autocomplete(user_input.lower(), options)
         if option != user_input:
             print(f"-> {option}")
     return new_maze
@@ -538,6 +558,7 @@ def main():
  ;  imgsol - png solution image
  :  imgcol - png distance map
  :  imgbrc - branch dist. of spann. tree
+ :  imgalg - alg's used (for 'xdivision')
  :  color  - set colormap -> `imgcol`
  :  ratio  - set ratio of wall:air size
  :  view   - view latest image
@@ -564,7 +585,7 @@ def main():
                         Maze.ALGORITHMS[new_builder_name](maze))
                     preview(maze)
             case 'color':
-                new_colormap_name = maybe_get_new_from_string_options(colortools.COLORMAPS, f"Choose colormap (previously = {old_colormap_name})")
+                new_colormap_name = maybe_get_new_from_string_options(colortools.COLORMAPS, f"Choose colormap (previously = {colormap_name})")
                 if new_colormap_name is not None:
                     colormap_name = new_colormap_name
             case 'dim': # Allow user to save new maze size
@@ -584,8 +605,12 @@ def main():
                 image = benchmark("generating image", lambda:
                     maze.generate_image(raster=maze.generate_raster(wall_air_ratio=ratio)))
                 image.show()
+            case 'imgalg':
+                image = benchmark("generating image", lambda:
+                    maze.generate_algorithmimage())
+                image.show()
             case 'imgbrc':
-                benchmark("computing distances", lambda:
+                benchmark("computing branch distances", lambda:
                     maze.compute_branchdistances())
                 image = benchmark("generating image", lambda:
                     maze.generate_colorimage(gradient_colors=colortools.COLORMAPS[colormap_name][::-1],raster=maze.generate_raster(show_distances=True,columnated=False,wall_air_ratio=ratio)))
@@ -647,7 +672,7 @@ def main():
             print("goodbye")
             break
         # We autocomplete unambiguous user input so the playground program could be used more quickly
-        command = autocomplete(user_input, commands)
+        command = autocomplete(user_input.lower(), commands)
         # Show to the user what command he autocompleted to
         if command != user_input:
             print(f"-> {command}")

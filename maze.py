@@ -13,7 +13,6 @@ This file contains all important maze-relation implementations to store, create 
     * Allow choosing of start node for animation
     * (? str_frame solution)
 - Builders
-    * TODO Implement record_frame forall
     * (? compose algorithms)
 - Solvers
     * A* pathfinder
@@ -58,7 +57,7 @@ class Node:
         self.flag = None
         self._coordinates = (x, y)
         self._distance = float('inf')
-        self._mark = None
+        self._mark = 'unidentified'
         self._edges = 0b0000
 
     def __repr__(self):
@@ -477,7 +476,7 @@ class Maze:
                     offshoots_avglengths.append(avglength)
         return (tiles_counts, branch_distances, offshoots_maxlengths, offshoots_avglengths)
 
-    def generate_raster(self, wall_air_ratio=(1,1), columnated=True, show_solution=False, show_distances=False): # TODO wall_air_ratio
+    def generate_raster(self, wall_air_ratio=(1,1), columnated=True, show_solution=False, show_distances=False, show_algorithms=False): # TODO wall_air_ratio
         """
         normal:
             wall = +1  air = 0
@@ -501,16 +500,16 @@ class Maze:
             column_wall = lambda x,y: True
         else:
             column_wall = lambda x,y: x==self.width-1 or y==self.height-1 or wall(x,y,RIGHT) or wall(x,y,DOWN) or wall(x+1,y+1,LEFT) or wall(x+1,y+1,UP)
-        if show_solution and not show_distances:
+        if show_solution:
             if self._solution_nodes is None:
                 raise RuntimeError("cannot show solution path before computing it")
             mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self._solution_nodes and nx<self.width and ny<self.height and self.node_at(nx,ny) in self._solution_nodes else 0
-        elif show_distances and not show_solution:
+        elif show_distances:
             mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else (-2) if self.node_at(x,y).distance==float('inf') else self.node_at(x,y).distance
-        elif not show_solution and not show_distances:
-            mkval = lambda is_wall, x,y, nx,ny: (+1) if is_wall else 0
+        elif show_algorithms:
+            mkval = lambda is_wall, x,y, nx,ny: 'wall' if is_wall else self.node_at(x,y).mark
         else:
-            raise RuntimeError("cannot show solution path and distance map at the same time")
+            mkval = lambda is_wall, x,y, nx,ny: (+1) if is_wall else 0
         raster = []
         # Top-left corner
         row1 = [mkval(True, 0,0, 0,0)] * wallM
@@ -584,7 +583,7 @@ class Maze:
             raster = self.generate_raster(show_distances=True)
         # color conversion
         wall_color = colortools.BLACK
-        unreachable_color = colortools.GRAY
+        unreachable_color = colortools.DARK_GRAY
         if gradient_colors is None:
             gradient_colors = colortools.COLORMAPS['viridis'][::-1]
         air_color = lambda value: colortools.interpolate(gradient_colors, param=value/peak)
@@ -595,6 +594,26 @@ class Maze:
         image.filename = f"{self.name()}_dist_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.png"
         return image
 
+    def generate_algorithmimage(self, raster=None):
+        if raster is None:
+            raster = self.generate_raster(show_algorithms=True)
+        coloring = {
+            'wall': colortools.BLACK,
+            'unidentified': colortools.DARK_GRAY,
+            'random_edges': colortools.WHITE,
+            'growing_tree': colortools.MOSS,
+            'backtracker':  colortools.BLUE,
+            'prim':         colortools.CRIMSON,
+            'kruskal':      colortools.GOLDENROD,
+            'wilson':       colortools.mix(colortools.VIOLET,colortools.PURPLE),
+            'division':     colortools.LIGHT_GRAY,
+        }
+        value_to_color = lambda value: coloring[value]
+        # Convert to image
+        image = Maze._raster_to_image(raster, value_to_color)
+        image.filename = f"{self.name()}_algo_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.png"
+        return image
+
     @staticmethod
     def save_animation(width, height, maze_runner, image_generator=None, frame_only=1, frame_ms=30, alert_progress_steps=0):
         if image_generator is None:
@@ -603,7 +622,7 @@ class Maze:
         global counter, frames, n_progress_milestone
         counter = int()
         frames = list()
-        frame_total = width * height // frame_only
+        frame_total = (width * height) // frame_only
         n_progress_milestone = frame_total//alert_progress_steps if alert_progress_steps > 0 else None
         def record_frame(maze):
             global counter, frames
@@ -612,9 +631,10 @@ class Maze:
                 frame = image_generator(maze)
                 frames.append(frame)
                 if alert_progress_steps and counter//frame_only % n_progress_milestone == 0:
-                    print(f"{counter} visits made ({frame_total} nodes available)")
+                    print(f"{counter} visits made (expect > {frame_total})")
         maze = Maze(width,height)
         maze_runner(maze, record_frame)
+        frames.append(image_generator(maze))
         filename = f"{maze.name()}_anim_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.gif"
         mainframe = frames[0] # lol
         mainframe.save(
@@ -953,7 +973,7 @@ class Maze:
         if area is None:
             nodecount = self.width * self.height
         else:
-            nodecount = (area[2]-area[0]) * (area[3]-area[1])
+            nodecount = (area[2]-area[0]+1) * (area[3]-area[1]+1)
         if record_frame is None:
             record_frame = lambda maze:None
         edges = list(self.edges(area))
@@ -1032,7 +1052,7 @@ class Maze:
                         break
         return
 
-    def run_division(self, area=None, slice_direction_choice=None, pivot_choice=None, roomlength=0, record_frame=None):
+    def run_division(self, area=None, slice_direction_choice=None, pivot_choice=None, roomlength=0, nest_algorithms=[], record_frame=None):
         """Build a random maze using randomized divide-and-conquer.
 
         Args:
@@ -1044,8 +1064,8 @@ class Maze:
         if area is None:
             area = (0,0,self.width-1,self.height-1)
         if pivot_choice is None:
-            pivot_choice = lambda l,r: (l+r)//2
-            #pivot_choice = lambda l,r: min(max(l,int(random.gauss((l+r)/2,(l+r)/2**5))),r)
+            #pivot_choice = lambda l,r: (l+r)//2
+            pivot_choice = lambda l,r: min(max(l,int(random.gauss((l+r)/2,(l+r)/2**7))),r)
             #pivot_choice = lambda l,r: random.triangular(l,r)
             #pivot_choice = lambda l,r: random.randint(l,r)
         if slice_direction_choice is None:
@@ -1057,17 +1077,20 @@ class Maze:
         def divide(area, prev_dir):
             (x0,y0,x1,y1) = area
             ewidth, eheight = (x1-x0), (y1-y0)
-            if ewidth < 1 or eheight < 1 or roomlength and ewidth < roomlength and eheight < roomlength and random.random() < 1/((ewidth+1)*(eheight+1)):
-                for x in range(x0,x1+1):
-                    for y in range(y0,y1+1):
-                        self.node_at(x,y)._mark = mark
-                        if x < x1:
-                            self.node_at(x+1,y)._mark = mark
-                            self.connect((x,y),(x+1,y))
-                        if y < y1:
-                            self.node_at(x,y+1)._mark = mark
-                            self.connect((x,y),(x,y+1))
-                        record_frame(self)
+            if ewidth < 1 or eheight < 1 or roomlength and ewidth < roomlength and eheight < roomlength and random.random() < 1/((ewidth+1)*(eheight+1))**.5:
+                if ewidth < 1 or eheight < 1 or not nest_algorithms:
+                    for x in range(x0,x1+1):
+                        for y in range(y0,y1+1):
+                            self.node_at(x,y)._mark = mark
+                            if x < x1:
+                                self.node_at(x+1,y)._mark = mark
+                                self.connect((x,y),(x+1,y))
+                            if y < y1:
+                                self.node_at(x,y+1)._mark = mark
+                                self.connect((x,y),(x,y+1))
+                            record_frame(self)
+                else:
+                    random.choice(nest_algorithms)(self, area=area, record_frame=record_frame)
                 return
             cut_horizontally = slice_direction_choice(ewidth, eheight, prev_dir)
             if cut_horizontally:
@@ -1107,6 +1130,8 @@ class Maze:
             run_wilson,
         'division':
             run_division,
+        'xdivision':
+            (lambda maze, area=None, record_frame=None: Maze.run_division(maze,roomlength=float('inf'),nest_algorithms=list(alg for name,alg in Maze.ALGORITHMS.items() if name not in {'random_edges','xdivision'}),area=area,record_frame=record_frame))
     }
 
 # CLASSES END

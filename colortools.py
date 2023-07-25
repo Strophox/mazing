@@ -20,7 +20,9 @@ RGB_BLUE   = (  0,   0, 255) # '#0000ff'
 RGB_MAGENTA= (255,   0, 255) # '#ff00ff'
 
 BLACK      = (  0,   0,   0) # '#000000'
-GRAY  =GREY= (255, 255, 255) # '#7f7f7f'
+DARK_GRAY  = ( 63,  63,  63) # '#3f3f3f'
+GRAY       = (127, 127, 127) # '#7f7f7f'
+LIGHT_GRAY = (191, 191, 191) # '#bfbfbf'
 WHITE      = (255, 255, 255) # '#ffffff'
 
 CRIMSON    = (170,  34,  68) # '#aa2244'
@@ -552,21 +554,19 @@ COLORMAPS = {
 
 # FUNCTIONS BEGIN
 
-def parse_hex(code):
-    def int_to_tuple(hex_color):
-        R = (0xFF0000 & hex_color) >> 16
-        G = (0x00FF00 & hex_color) >>  8
-        B = (0x0000FF & hex_color) >>  0
-        tuple_color = (R,G,B)
-        return tuple_color
-    int_color = int(code.removeprefix('#'), base=16)
-    tuple_color = int_to_tuple(int_color)
+def from_hexcode(string):
+    hex_color = int(code.removeprefix('#'), base=16)
+    R = (0xFF0000 & hex_color) >> 16
+    G = (0x00FF00 & hex_color) >>  8
+    B = (0x0000FF & hex_color) >>  0
+    tuple_color = (R,G,B)
     return tuple_color
 
-def _tuple_to_hex(tuple_color):
+def to_hexcode(tuple_color):
     (R,G,B) = tuple_color
     hex_color = (R << 16) | (G << 8) | (B << 0)
-    return hex_color
+    string = f"{hex_color:06x}"
+    return string
 
 def randrgb():
     """Generates an RGB tuple representing a random color."""
