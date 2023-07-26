@@ -1,23 +1,23 @@
-# OUTLINE BEGIN
+# BEGIN OUTLINE
 """
 A small benchmark script that tests and times some methods from `state.py`.
 
 Note to self: do `python3 -m scalene small_benchmark.py`
 """
-# OUTLINE END
+# END   OUTLINE
 
 
-# IMPORTS BEGIN
+# BEGIN IMPORTS
 
 import time
 import random
 from maze import Maze
 from playground import analysis
 
-# IMPORTS END
+# END   IMPORTS
 
 
-# CONSTANTS BEGIN
+# BEGIN CONSTANTS
 
 __ = lambda n: (2**n, 2**n)
 
@@ -432,15 +432,15 @@ SEQ_05 = [ # Run and save short analyses of growing tree with different randomne
 
 CHOSEN_SEQUENCE = SEQ_05
 
-# CONSTANTS END
+# END   CONSTANTS
 
 
-# CLASSES BEGIN
+# BEGIN CLASSES
 # No classes
-# CLASSES END
+# END   CLASSES
 
 
-# FUNCTIONS BEGIN
+# BEGIN FUNCTIONS
 
 def run_on(sequence):
     """Runs and benchmarks a sequence of 'actions'.
@@ -448,28 +448,30 @@ def run_on(sequence):
     Args:
         sequence (list(str, callable(Maze) -> Maze)): A list of 'actions' where an 'action' has a name and does computation on a Maze and returns a Maze
     """
-    benchmark_start = time.perf_counter()
+    begin_benchmark_time = time.perf_counter()
     state = None
-    for no, (title,action) in enumerate(sequence):
+    for seqno, (name, transform) in enumerate(sequence):
         begin_time = time.perf_counter()
-        state  = action(state)
+        state      = transform(state)
         end_time   = time.perf_counter()
-        print(f"|{no:02}| +{end_time-begin_time:.03f}s | {title}")
-    print(f"Benchmark finished after {time.perf_counter()-benchmark_start:.03f}s.")
+        time_taken = begin_time - end_time
+        print(f"|{seqno}| +{time_taken:.03f}s | {name}")
+    end_benchmark_time = time.perf_counter()
+    benchmark_time_taken = end_benchmark_time - begin_benchmark_time
+    print(f"Benchmark finished after {benchmark_time_taken:.03f}s.")
     return
 
-# FUNCTIONS END
+# END   FUNCTIONS
 
 
-# MAIN BEGIN
+# BEGIN MAIN
 
 def main():
-    raise RuntimeError("FIXME: this entire module will have to be redone")
+    # {{{ BEGIN END }}} ALERT ATTENTION DANGER HACK SECURITY BUG FIXME DEPRECATED TASK TODO TBD WARNING CAUTION NOLINT ### NOTE NOTICE TEST TESTING
+    raise NotImplementedError("rework this module pls")
     run_on(CHOSEN_SEQUENCE)
     return
 
 if __name__=="__main__": main()
 
-# MAIN END
-
-# {{{ BEGIN END }}} ALERT ATTENTION DANGER HACK SECURITY BUG FIXME DEPRECATED TASK TODO TBD WARNING CAUTION NOLINT ### NOTE NOTICE TEST TESTING
+# END   MAIN

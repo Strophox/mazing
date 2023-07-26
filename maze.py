@@ -1,4 +1,4 @@
-# OUTLINE BEGIN
+# BEGIN OUTLINE
 """
 Contains the main `Maze` class,
 
@@ -18,10 +18,10 @@ This file contains all important maze-relation implementations to store, create 
     * curses maze navigator
     * CHALLENGE doom; "░▒▓█.,-~:;=!*#$@"
 """
-# OUTLINE END
+# END   OUTLINE
 
 
-# IMPORTS BEGIN
+# BEGIN IMPORTS
 
 import random
 import time # strftime
@@ -29,10 +29,10 @@ import collections # deque
 from PIL import Image
 import colortools
 
-# IMPORTS END
+# END   IMPORTS
 
 
-# CONSTANTS BEGIN
+# BEGIN CONSTANTS
 
 # Directions
 RIGHT = 0b0001
@@ -40,10 +40,10 @@ UP    = 0b0010
 LEFT  = 0b0100
 DOWN  = 0b1000
 
-# CONSTANTS END
+# END   CONSTANTS
 
 
-# CLASSES BEGIN
+# BEGIN CLASSES
 
 class Node:
     """
@@ -563,7 +563,9 @@ class Maze:
             peak = self.exit.distance or 1
             wall_color = colortools.BLACK
             air_color = colortools.WHITE
-            marker_color = lambda value: colortools.convert((360*value/peak, 1, 1),'HSV','RGB')
+            (L,C,H) = colortools.change_space(colortools.VIOLET,'RGB','OKLCH')
+            marker_color = lambda value: colortools.change_space((L, C, H-2*3.141592653589793*value/peak),'OKLCH','RGB')
+            #marker_color = lambda value: colortools.change_space((360*value/peak, 1, 1),'HSV','RGB')
             #marker_color = colortools.BLUE
         else:
             wall_color = wall_air_marker_colors[0]
@@ -596,14 +598,14 @@ class Maze:
             raster = self.generate_raster(show_algorithms=True)
         coloring = {
             'wall': colortools.BLACK,
-            'unidentified': colortools.DARK_GRAY,
-            'random_edges': colortools.WHITE,
+            'unidentified': colortools.GRAY,
+            'random_edges': colortools.LIGHT_GRAY,
             'growing_tree': colortools.MOSS,
             'backtracker':  colortools.BLUE,
             'prim':         colortools.CRIMSON,
             'kruskal':      colortools.GOLDENROD,
             'wilson':       colortools.mix(colortools.VIOLET,colortools.PURPLE),
-            'division':     colortools.LIGHT_GRAY,
+            'division':     colortools.WHITE,
         }
         value_to_color = lambda value: coloring[value]
         # Convert to image
@@ -1131,9 +1133,9 @@ class Maze:
             (lambda maze, area=None, record_frame=None: Maze.run_division(maze,roomlength=float('inf'),nest_algorithms=list(alg for name,alg in Maze.ALGORITHMS.items() if name not in {'random_edges','xdivision'}),area=area,record_frame=record_frame))
     }
 
-# CLASSES END
+# END   CLASSES
 
 
-# MAIN BEGIN
+# BEGIN MAIN
 # No main
-# MAIN END
+# END   MAIN

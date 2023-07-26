@@ -1,13 +1,13 @@
-# OUTLINE BEGIN
+# BEGIN OUTLINE
 """
 A script to try out things from `maze.py` interactively.
 
 Run as main and use console to build, view ... mazes.
 """
-# OUTLINE END
+# END   OUTLINE
 
 
-# IMPORTS BEGIN
+# BEGIN IMPORTS
 
 import random
 import time
@@ -15,25 +15,25 @@ import shutil
 from maze import Maze
 import colortools
 
-# IMPORTS END
+# END   IMPORTS
 
 
-# CONSTANTS BEGIN
+# BEGIN CONSTANTS
 
 CANCEL_TEXT = "*canceled\n"
 CELL_PRINT_LIMIT = 10_000
 CW = lambda: shutil.get_terminal_size()[0]
 CH = lambda: shutil.get_terminal_size()[1]
 
-# CONSTANTS END
+# END   CONSTANTS
 
 
-# CLASSES BEGIN
+# BEGIN CLASSES
 # No classes
-# CLASSES END
+# END   CLASSES
 
 
-# FUNCTIONS BEGIN
+# BEGIN FUNCTIONS
 
 def autocomplete(input_word, full_words):
     """Autocomplete word (only) if there's a unique word completion from list.
@@ -522,16 +522,17 @@ def analysis(maze):
     return stats_all
 # }}}
 
-# FUNCTIONS END
+# END   FUNCTIONS
 
 
-# MAIN BEGIN
+# BEGIN MAIN
 
 def main():
-    dimensions = (16,16)
+    dimensions = (100,100)
     ratio = (1, 1)
     maze = Maze(*dimensions)
-    random.choice(list(Maze.ALGORITHMS.values()))(maze)
+    maze.run_backtrack()
+    #random.choice(list(Maze.ALGORITHMS.values()))(maze)
     colormap_name = 'viridis'
     image = None
     #import textwrap # remove source code multiline string indents
@@ -680,4 +681,4 @@ def main():
 
 if __name__=="__main__": main()
 
-# MAIN END
+# END   MAIN

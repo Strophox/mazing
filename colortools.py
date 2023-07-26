@@ -1,16 +1,52 @@
-# OUTLINE BEGIN
+# BEGIN OUTLINE
 """
-A small module to do handle colors.
+A handrolled color utilities module.
+
+This module attempts to provide useful color definitions and utility functions to allow more further (basic) handling of colors.
+Some color constant names are inspired by Jan Misali (www.seximal.net/colors).
+    - Greyscale colors
+        * `BLACK` `DARK_GRAY` `GRAY` `LIGHT_GRAY` `WHITE`
+    - Pure RGB colors
+        * `RGB_RED` `RGB_YELLOW` `RGB_GREEN` `RGB_CYAN` `RGB_BLUE` `RGB_MAGENTA`
+    - Primary colors
+        * `RED`     `YELLOW`     `GREEN`     `CYAN`     `BLUE`     `MAGENTA`
+    - Secondary colors
+        * `ORANGE`  `LIME`       `TURQUOISE` `AZURE`    `VIOLET`   `ROSE`
+    - Dark primary colors
+        * `CRIMSON` `GOLDENROD`  `MOSS`      `TEAL`     `NAVY`     `PURPLE`
+    - Light primary colors
+        * `SALMON`  `VANILLA`    `MINT`      `CERULEAN` `PERIWINKLE`PINK`
+    - Miscellaneous colors dictionary
+        * `COLORS`
+    - Color palettes dictionary
+        * `PALETTES`
+    - Color gradients dictionary
+        * COLORMAPS`
+    - Color conversion functions
+        * from_hexcode, to_hexcode, convert_format
+    - Random color generation functions
+        * randrgb, randhue
+    - Color utility functions
+        * invert, mix, interpolate, average
 """
-# OUTLINE END
+# END   OUTLINE
 
 
-# IMPORTS BEGIN
+# BEGIN IMPORTS
+
+import math
 import random
-# IMPORTS END
+
+# END   IMPORTS
 
 
-# CONSTANTS BEGIN
+# BEGIN CONSTANTS
+
+BLACK      = (  0,   0,   0) # '#000000'
+DARK_GRAY  = ( 63,  63,  63) # '#3f3f3f'
+GRAY       = (127, 127, 127) # '#7f7f7f'
+LIGHT_GRAY = (191, 191, 191) # '#bfbfbf'
+WHITE      = (255, 255, 255) # '#ffffff'
 
 RGB_RED    = (255,   0,   0) # '#ff0000'
 RGB_YELLOW = (255, 255,   0) # '#ffff00'
@@ -19,47 +55,32 @@ RGB_CYAN   = (  0, 255, 255) # '#00ffff'
 RGB_BLUE   = (  0,   0, 255) # '#0000ff'
 RGB_MAGENTA= (255,   0, 255) # '#ff00ff'
 
-BLACK      = (  0,   0,   0) # '#000000'
-DARK_GRAY  = ( 63,  63,  63) # '#3f3f3f'
-GRAY       = (127, 127, 127) # '#7f7f7f'
-LIGHT_GRAY = (191, 191, 191) # '#bfbfbf'
-WHITE      = (255, 255, 255) # '#ffffff'
+RED        = (255,  51,  68) # '#ff3344'
+ORANGE     = (255, 153,   0) # '#ff9900'
+YELLOW     = (255, 238,   0) # '#FFEE00'
+LIME       = (187, 238,   0) # '#bbee00'
+GREEN      = ( 51, 221,  51) # '#33dd33'
+TURQUOISE  = (  0, 238, 170) # '#00eeaa'
+CYAN       = ( 17, 238, 238) # '#11eeee'
+AZURE      = ( 68, 187, 255) # '#44bbff'
+BLUE       = ( 68, 102, 255) # '#4466ff'
+VIOLET     = (204,  51, 255) # '#cc33ff'
+MAGENTA    = (255, 102, 238) # '#ff55ee'
+ROSE       = (255,  85, 170) # '#ff55aa'
 
 CRIMSON    = (170,  34,  68) # '#aa2244'
-RED        = (255,  51,  68) # '#ff3344'
-SALMON     = (255, 170, 153) # '#ffaa99'
-
-ORANGE     = (255, 153,   0) # '#ff9900'
-
 GOLDENROD  = (204, 153,   0) # '#cc9900'
-YELLOW     = (255, 238,   0) # '#FFEE00'
-VANILLA    = (255, 255, 221) # '#ffffdd'
-
-LIME       = (187, 238,   0) # '#bbee00'
-
 MOSS       = (  0, 153,  68) # '#009944'
-GREEN      = ( 51, 221,  51) # '#33dd33'
-MINT       = (187, 255, 187) # '#bbffbb'
-
-TURQUOISE  = (  0, 238, 170) # '#00eeaa'
-
 TEAL       = (  0, 153, 170) # '#0099aa'
-CYAN       = ( 17, 238, 238) # '#11eeee'
-CERULEAN   = (187, 255, 255) # '#bbffff'
-
-AZURE      = ( 68, 187, 255) # '#44bbff'
-
 NAVY       = ( 17,  17, 153) # '#111199'
-BLUE       = ( 68, 102, 255) # '#4466ff'
-PERIWINKLE = (187, 204, 255) # '#bbccff'
-
-VIOLET     = (204,  51, 255) # '#cc33ff'
-
 PURPLE     = (119,   0, 136) # '#770088'
-MAGENTA    = (255, 102, 238) # '#ff55ee'
-PINK       = (255, 170, 221) # '#ffaadd'
 
-ROSE       = (255,  85, 170) # '#ff55aa'
+SALMON     = (255, 170, 153) # '#ffaa99'
+VANILLA    = (255, 255, 221) # '#ffffdd'
+MINT       = (187, 255, 187) # '#bbffbb'
+SKY        = (187, 255, 255) # '#bbffff'
+PERIWINKLE = (187, 204, 255) # '#bbccff'
+PINK       = (255, 170, 221) # '#ffaadd'
 
 COLORS = {
     'viper':
@@ -153,8 +174,8 @@ PALETTES = {
 
 COLORMAPS = {
     'kanagawa': ( # 2 values
-        (  0,  63, 127), # '#003F7F'
-        (255, 255, 255), # '#FFFFFF'
+        (  0,  63, 127), # '#003f7f'
+        (239, 227, 207), # '#efe3cf'
     ),
     'viridis': ( # 18 values
         ( 68,   1,  84), # '#440154'
@@ -577,15 +598,15 @@ COLORMAPS = {
     ),
 }
 
-# CONSTANTS END
+# END   CONSTANTS
 
 
-# CLASSES BEGIN
+# BEGIN CLASSES
 # No classes
-# CLASSES END
+# END   CLASSES
 
 
-# FUNCTIONS BEGIN
+# BEGIN FUNCTIONS
 
 def from_hexcode(string):
     """Convert hex color code into rgb tuple.
@@ -612,6 +633,171 @@ def to_hexcode(tuple_color):
     hex_color = (R << 16) | (G << 8) | (B << 0)
     string = f"{hex_color:06x}"
     return string
+
+def change_space(input_color, from_space, to_space):
+    """
+    Converts between tuples of a color in one of the following spaces:
+    - 'RGB': ([0,255], [0,255], [0,255])
+        * Red, Green, Blue
+    - 'LINRGB': ([0,1], [0,1], [0,1])
+        * Red, Green, Blue
+        * https://bottosson.github.io/posts/colorwrong/#what-can-we-do%3F
+    - 'HSV': ([0,360], [0,1], [0,1])
+        * Hue, Value, Saturation
+        * Hue = Red-Green-Blue-Red
+        * https://en.wikipedia.org/wiki/HSL_and_HSV
+    - 'XYZ': ([?], [?], [?])
+        * https://en.wikipedia.org/wiki/SRGB
+    - 'CIELAB': ([0,100], [-128,127], [-128,127])
+        * Lightness, Green-Magenta, Blue-Yellow
+        * https://en.wikipedia.org/wiki/CIELAB_color_space
+    - 'LCH_AB': ([0,100], [?], [?])
+        * Lightness, Chroma, Hue
+        * Hue = Red-Yellow-Green-Blue-Red
+        * https://en.wikipedia.org/wiki/CIELAB_color_space
+    - 'OKLAB': ([0,1], [?], [?])
+        * Lightness, Green-Red, Blue-Yellow
+        * https://bottosson.github.io/posts/oklab/
+    - 'OKLCH': ([0,1], [-2,2], [-2,2])
+        * Lightness, Green-Red, Blue-Yellow
+        * https://bottosson.github.io/posts/oklab/
+    """
+    to_normalized = lambda *c: tuple(k/255 for k in c)
+    from_normalized = lambda *c: tuple(max(0, min(round(255*x), 255)) for x in c)
+    cartesian_to_polar = lambda x,y: (math.sqrt(x**2 + y**2), math.atan2(y,x))
+    polar_to_cartesian = lambda r,a: (r * math.cos(a), r * math.sin(a))
+    colorspaces = (
+    ['RGB','LINRGB','HSV','XYZ','CIELAB','LCH_AB','OKLAB','OKLCH'])
+    [ RGB,  LINRGB,  HSV,  XYZ,  CIELAB,  LCH_AB,  OKLAB,  OKLCH ] = [s.casefold() for s in colorspaces]
+    change = (from_space.casefold(), to_space.casefold())
+    if from_space not in colorspaces or to_space not in colorspaces:
+        raise RuntimeError("unrecognized colorspace name for conversion")
+    if change == (RGB, RGB):
+        output_color = input_color
+    elif change == (RGB, LINRGB):
+        (R,G,B) = input_color
+        (R1,G1,B1) = to_normalized(R,G,B)
+        def lin(x): # linear-light values
+            if x > 0.04045: return ((x + 0.055) / 1.055)**2.4
+            else:           return x / 12.92
+        (Rl,Gl,Bl) = lin(R1), lin(G1), lin(B1)
+        output_color = (Rl,Gl,Bl)
+    elif change == (LINRGB, RGB):
+        (Rl,Gl,Bl) = input_color
+        def lin_inv(x):
+            if x > 0.0031308: return 1.055 * x**(1/2.4) - 0.055
+            else:             return 12.92 * x
+        (R1,G1,B1) = lin_inv(Rl), lin_inv(Gl), lin_inv(Bl)
+        (R,G,B) = from_normalized(R1,G1,B1)
+        output_color = (R,G,B)
+    elif change == (RGB, HSV):
+        (R,G,B) = input_color
+        (R1,G1,B1) = to_normalized(R,G,B)
+        M = max(R1, G1, B1)
+        m = min(R1, G1, B1)
+        C = M - m
+        H1 =            0  if C == 0  else \
+            (G1-B1) / C % 6  if M == R1 else \
+            (B1-R1) / C + 2  if M == G1 else \
+            (R1-G1) / C + 4  if M == B1 else None
+        H = round(H1 * 60)
+        V = M
+        S = 0 if V==0 else (C / V)
+        output_color = (H,S,V)
+    elif change == (HSV, RGB):
+        (H,S,V) = input_color
+        def f(n):
+            k = (n + H%360 / 60) % 6
+            return V - V * S * max(0, min(k,4-k, 1))
+        R1,G1,B1 = f(5), f(3), f(1)
+        (R,G,B) = from_normalized(R1,G1,B1)
+        output_color = (R,G,B)
+    elif change == (RGB, XYZ):
+        (R,G,B) = input_color
+        (Rl,Gl,Bl) = change_space((R,G,B),'RGB','LINRGB')
+        X = 0.4124*Rl + 0.3576*Gl + 0.1805*Bl
+        Y = 0.2126*Rl + 0.7152*Gl + 0.0722*Bl
+        Z = 0.0193*Rl + 0.1193*Gl + 0.9505*Bl
+        output_color = (X,Y,Z)
+    elif change == (XYZ, RGB):
+        (X,Y,Z) = input_color
+        Rl =  3.2405*X - 1.5372*Y - 0.4986*Z
+        Gl = -0.9689*X + 1.8758*Y + 0.0415*Z
+        Bl =  0.0557*X - 0.2040*Y + 1.0570*Z
+        (R,G,B) = change_space((Rl,Gl,Bl),'LINRGB','RGB')
+        output_color = (R,G,B)
+    elif change == (RGB, CIELAB):
+        (R,G,B) = input_color
+        (X,Y,Z) = change_space((R,G,B),'RGB','XYZ')
+        (X100,Y100,Z100) = X*100, Y*100, Z*100
+        def f(x):
+            delta = 6/29
+            if x > delta**3: return x**(1/3)
+            else:            return x / (3*delta**2) + 4/29
+        (XD65,YD65,ZD65) = (95.0489, 100, 108.8840) # Standard illuminant
+        L = 116 * f(Y100 / YD65)  - 16
+        A = 500 * (f(X100 / XD65) - f(Y100 / YD65))
+        B = 200 * (f(Y100 / YD65) - f(Z100 / ZD65))
+        output_color = (L,A,B)
+    elif change == (CIELAB, RGB):
+        (L,A,B) = input_color
+        def f_inv(x):
+            delta = 6/29
+            if x > delta: return x**3
+            else:         return (x - 4/29) * 3*delta**2
+        (XD65,YD65,ZD65) = (95.0489, 100, 108.8840) # Standard illuminant
+        X100 = XD65 * f_inv((L + 16)/116 + A/500)
+        Y100 = YD65 * f_inv((L + 16)/116)
+        Z100 = ZD65 * f_inv((L + 16)/116 - B/200)
+        (X,Y,Z) = X100/100, Y100/100, Z100/100
+        (R,G,B) = change_space((X,Y,Z),'XYZ','RGB')
+        output_color = (R,G,B)
+    elif change == (RGB, LCH_AB):
+        (R,G,B) = input_color
+        (L,A,B) = change_space((R,G,B),'RGB','CIELAB')
+        (C,H) = cartesian_to_polar(A,B)
+        output_color = (L,C,H)
+    elif change == (LCH_AB, RGB):
+        (L,C,H) = input_color
+        (A,B) = polar_to_cartesian(C,H)
+        (R,G,B) = change_space((L,A,B),'CIELAB','RGB')
+        output_color = (R,G,B)
+    elif change == (RGB, OKLAB):
+        (R,G,B) = input_color
+        (Rl,Gl,Bl) = change_space((R,G,B),'RGB','LINRGB')
+        l = 0.4122214708*Rl + 0.5363325363*Gl + 0.0514459929*Bl
+        m = 0.2119034982*Rl + 0.6806995451*Gl + 0.1073969566*Bl
+        s = 0.0883024619*Rl + 0.2817188376*Gl + 0.6299787005*Bl
+        (lp,mp,sp) = l**(1/3), m**(1/3), s**(1/3)
+        L = 0.2104542553*lp + 0.7936177850*mp - 0.0040720468*sp
+        A = 1.9779984951*lp - 2.4285922050*mp + 0.4505937099*sp
+        B = 0.0259040371*lp + 0.7827717662*mp - 0.8086757660*sp
+        output_color = (L,A,B)
+    elif change == (OKLAB, RGB):
+        (L,A,B) = input_color
+        lp = L + 0.3963377774*A + 0.2158037573*B
+        mp = L - 0.1055613458*A - 0.0638541728*B
+        sp = L - 0.0894841775*A - 1.2914855480*B
+        (l,m,s) = lp**3, mp**3, sp**3
+        Rl =  4.0767416621*l - 3.3077115913*m + 0.2309699292*s
+        Gl = -1.2684380046*l + 2.6097574011*m - 0.3413193965*s
+        Bl = -0.0041960863*l - 0.7034186147*m + 1.7076147010*s
+        (R,G,B) = change_space((Rl,Gl,Bl),'LINRGB','RGB')
+        output_color = (R,G,B)
+    elif change == (RGB, OKLCH):
+        (R,G,B) = input_color
+        (L,A,B) = change_space((R,G,B),'RGB','OKLAB')
+        (C,H) = cartesian_to_polar(A,B)
+        output_color = (L,C,H)
+    elif change == (OKLCH, RGB):
+        (L,C,H) = input_color
+        (A,B) = polar_to_cartesian(C,H)
+        (R,G,B) = change_space((L,A,B),'OKLAB','RGB')
+        output_color = (R,G,B)
+    else:
+        output_color = change_space(
+            change_space(input_color, from_space, 'RGB'),'RGB', to_space)
+    return output_color
 
 def randrgb():
     """Generates an RGB tuple representing a random color."""
@@ -656,88 +842,10 @@ def average(*colors):
     color_average = tuple(round(color_sum/count) for ch in color_sum)
     return color_average
 
-def convert(input_color, src, dst):
-    """
-    Converts between tuples of a color in one of the following representations:
-        Hue-Value-Saturation : 'HSV', <[0,360],[0.,1.],[0.,1.]>
-        <==>
-        Red-Green-Blue : 'RGB', <[0,255],[0,255],[0,255]>
-        <==>
-        CIELAB color model : 'LAB', <[0,100],[-128,127],[-128,127]>
-
-        https://en.wikipedia.org/wiki/CIELAB_color_space
-    """
-    [SRC,DST,RGB,HSV,LAB] = [s.casefold() for s in [src,dst,'RGB','HSV','LAB']]
-    if SRC == RGB:
-        rgb_color = input_color
-        if DST == HSV:
-            (R,G,B) = rgb_color
-            R1,G1,B1 = R/255, G/255, B/255
-            M = max(R1, G1, B1)
-            m = min(R1, G1, B1)
-            C = M - m
-            H1 =            0  if C == 0  else \
-                (G1-B1) / C % 6  if M == R1 else \
-                (B1-R1) / C + 2  if M == G1 else \
-                (R1-G1) / C + 4  if M == B1 else None
-            H = round(H1 * 60)
-            V = M
-            S = 0 if V==0 else (C / V)
-            hsv_color = (H,S,V)
-            return hsv_color
-        if DST == LAB:
-            (R,G,B) = rgb_color
-            X = R*0.49    + G*0.31    + B*0.20
-            Y = R*0.17697 + G*0.81240 + B*0.01063
-            Z = R*0.00    + G*0.01    + B*0.99
-            (X1,Y1,Z1) = (95.0489, 100, 108.8840) # Standard Illuminant D65
-            delta = 6/29
-            f = lambda t: t**(1/3) if t > delta**3 else (t / (3*delta**2) + 4/29)
-            L = 116 * f(Y/Y1)  - 16
-            A = 500 * (f(X/X1) - f(Y/Y1))
-            B = 200 * (f(Y/Y1) - f(Z/Z1))
-            lab_color = (L,A,B)
-            return lab_color
-    if SRC == HSV:
-        hsv_color = input_color
-        if DST == RGB:
-            (H,S,V) = hsv_color
-            def f(n):
-                k = (n + H%360 / 60) % 6
-                return V - V * S * max(0, min(k,4-k, 1))
-            R = round(255 * f(5))
-            G = round(255 * f(3))
-            B = round(255 * f(1))
-            rgb_color = (R,G,B)
-            return rgb_color
-        if DST == LAB:
-            rgb_color = convert(hsv_color, 'HSV','RGB')
-            lab_color = convert(rgb_color, 'RGB','LAB')
-            return lab_color
-    if SRC == LAB:
-        lab_color = input_color
-        if DST == RGB:
-            (L,A,B) = lab_color
-            (X1,Y1,Z1) = (95.0489, 100, 108.8840) # Standard Illuminant D65
-            delta = 6/29
-            f_inv = lambda t: t**3 if t > delta else (3 * delta**2 * (t - 4/29))
-            X = X1 * f_inv((L + 16)/116 + A/500)
-            Y = Y1 * f_inv((L + 16)/116)
-            Z = Z1 * f_inv((L + 16)/116 - B/200)
-            R =  X*2.36461385 - Y*0.89654057 - Z*0.46807328
-            G = -X*0.51516621 + Y*1.4264081  + Z*0.0887581
-            B =  X*0.0052037  - Y*0.01440816 + Z*1.00920446
-            rgb_color = (R,G,B)
-            return rgb_color
-        if DST == HSV:
-            rgb_color = convert(lab_color,'LAB','RGB')
-            hsv_color = convert(rgb_color,'RGB','HSV')
-            return hsv_color
-
-# FUNCTIONS END
+# END   FUNCTIONS
 
 
-# MAIN BEGIN
+# BEGIN MAIN
 
 def main():
     HQviridis_data = [
@@ -1002,6 +1110,6 @@ def main():
         R,G,B = round(255*r),round(255*g),round(255*b)
         print(f"({R: 3}, {G: 3}, {B: 3}), # '#{_tuple_to_hex((R,G,B)):06x}'")
 
-if __name__=="__main__": main()
+#if __name__=="__main__": main() # No main
 
-# MAIN END
+# END   MAIN
