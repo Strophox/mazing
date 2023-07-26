@@ -9,10 +9,10 @@ Note to self: do `python3 -m scalene small_benchmark.py`
 
 # BEGIN IMPORTS
 
-import os # makedirs
-import time # perf_counter
+from os import makedirs
 import random
 from maze import Maze
+from benchtools import timed, timed_titled
 
 # END   IMPORTS
 
@@ -33,23 +33,6 @@ def schedule(f):
     global FUNCTIONS_TO_RUN
     FUNCTIONS_TO_RUN.append(f)
     return f
-
-def timed_with_name(name, f, show_args=True, show_kwargs=False):
-    def timed_f(*args, **kwargs):
-        begin_time = time.perf_counter()
-        result     = f(*args, **kwargs)
-        end_time   = time.perf_counter()
-        time_taken = end_time - begin_time
-        str1 = f"| +{time_taken:.03f}s "
-        str2 = f"| {name}"
-        str3 = f"\n{len(str1)*' '}|{args}" if show_args and args else ''
-        str3 = f"\n{len(str1)*' '}|{kwargs}" if show_kwargs and kwargs else ''
-        print(f"{str1}{str2}{str3}")
-        return result
-    return timed_f
-
-def timed(f):
-    return timed_with_name(f.__name__, f)
 
 # END   DECORATORS
 
@@ -163,7 +146,8 @@ def test_kanagawa():
 # BEGIN MAIN
 
 def main():
-    os.makedirs(OUTPUT_DIRECTORY, exist_ok=True)
+    # Run all FUNCTIONS_TO_RUN
+    makedirs(OUTPUT_DIRECTORY, exist_ok=True)
     for f in FUNCTIONS_TO_RUN:
         print(f"BEGIN {f.__name__.upper()}")
         timed(f)()

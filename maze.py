@@ -50,7 +50,7 @@ DOWN  = 0b1000
 
 # BEGIN CLASSES
 
-class Node:
+class _Node:
     """
     A class representing a maze grid cell/node.
     """
@@ -134,7 +134,7 @@ class Maze:
             raise ValueError("Maze must have positive width and height")
         self._width  = width
         self._height = height
-        self._grid = [[Node(x,y) for x in range(width)] for y in range(height)]
+        self._grid = [[_Node(x,y) for x in range(width)] for y in range(height)]
         self._solution_nodes = None
         self.entrance = self.node_at(0,0)
         self.exit = self.node_at(-1,-1)
@@ -200,6 +200,10 @@ class Maze:
         size = f"{self.width}x{self.height}"
         string = f"maze{size}_{main_algorithm}"
         return string
+
+    def _stamp(self):
+        # return f"{random.getrandbits(32):032b}"
+        return time.strftime('%Y.%m.%d-%Hh%Mm%S')
 
     def nodes(self, area=None):
         """Produce iterator over the nodes of the maze."""
@@ -280,12 +284,12 @@ class Maze:
         Args:
             node0, node1 (Node): Two nodes in the maze that lie adjacent
         """
-        if isinstance(item0, Node):
-            node0, node1 = item0, item1
-            (x0,y0), (x1,y1) = item0.coordinates, item1.coordinates
-        else:
+        if type(item0) == tuple:
             node0, node1 = self.node_at(*item0), self.node_at(*item1)
             (x0,y0), (x1,y1) = item0, item1
+        else: # Node
+            node0, node1 = item0, item1
+            (x0,y0), (x1,y1) = item0.coordinates, item1.coordinates
         dx, dy = x1-x0, y1-y0
         if abs(dx) + abs(dy) != 1:
             raise ValueError("nodes to connect must be neighbors")
@@ -555,7 +559,7 @@ class Maze:
         value_to_color = lambda value: wall_color if value else air_color
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
-        image.filename = f"{self.name()}_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.png"
+        image.filename = f"{self.name()}_{self._stamp}.png"
         return image
 
     def generate_solutionimage(self, wall_air_marker_colors=None, raster=None):
@@ -568,7 +572,7 @@ class Maze:
             peak = self.exit.distance or 1
             wall_color = colortools.BLACK
             air_color = colortools.WHITE
-            marker_color = lambda value: colortools.rainbow(value/peak, colortools.VIOLET, 'lch_ab')
+            marker_color = lambda value: colortools.rainbow(-value/peak, colortools.VIOLET, 'OKLCH')
             #marker_color = lambda value: colortools.change_space((360*value/peak, 1, 1),'HSV','RGB')
             #marker_color = colortools.BLUE
         else:
@@ -578,7 +582,7 @@ class Maze:
         value_to_color = lambda value: wall_color if value==(-1) else air_color if value==0 else marker_color(value)
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
-        image.filename = f"{self.name()}_sol_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.png"
+        image.filename = f"{self.name()}_sol_{self._stamp()}.png"
         return image
 
     def generate_colorimage(self, gradient_colors=None, raster=None):
@@ -594,7 +598,7 @@ class Maze:
         value_to_color = lambda value: wall_color if value==(-1) else unreachable_color if value==(-2) else air_color(value)
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
-        image.filename = f"{self.name()}_dist_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.png"
+        image.filename = f"{self.name()}_dist_{self._stamp()f}.png"
         return image
 
     def generate_algorithmimage(self, raster=None):
@@ -614,7 +618,7 @@ class Maze:
         value_to_color = lambda value: coloring[value]
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
-        image.filename = f"{self.name()}_algo_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.png"
+        image.filename = f"{self.name()}_algo_{self._stamp()}.png"
         return image
 
     @staticmethod
@@ -638,7 +642,7 @@ class Maze:
         maze = Maze(width,height)
         maze_runner(maze, record_frame)
         frames.append(image_generator(maze))
-        filename = f"{maze.name()}_anim_{time.strftime('%Y.%m.%d-%Hh%Mm%S')}.gif"
+        filename = f"{maze.name()}_anim_{self._stamp()}.gif"
         mainframe = frames[0] # lol
         mainframe.save(
             filename,

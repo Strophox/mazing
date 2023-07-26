@@ -1,29 +1,63 @@
 # BEGIN OUTLINE
 """
-A script to try out things from `maze.py` interactively.
+A script to interactively play with functionality from `maze.py`.
 
-Run as main and use console to build, view ... mazes.
+Intended to be run as main.
+
+Help menu shown upon execution:
+~:--------------------------------------:~
+ A Mazing Playground
+~:--------------------------------------:~
+ Enter a command to achieve its effect:
+ ;  help   - show this menu
+ Maze Generation
+ ;  build  - make new maze
+ :  dim    - set dimensions for next build
+ :  load   - load maze from temp.txt
+ :  store  - store maze to  temp.txt
+ Modification
+ :  maxim  - find & set longest path
+ :  goal   - manually set entrance & exit
+ :  join   - remove dead ends
+ Console Viewing
+ ;  print  - text art of maze
+ :  txtsol - text art, solutions
+ :  stats  - ~statistics of maze
+ Imaging
+ ;  img    - png image
+ ;  imgsol - png solution image
+ :  imgcol - png distance map
+ :  imgbrc - branch dist. of spann. tree
+ :  imgalg - alg's used (for 'xdivision')
+ :  color  - set colormap -> `imgcol`
+ :  ratio  - set ratio of wall:air size
+ :  view   - view latest image
+ :  save   - save latest image
+ Animation
+ :  anim!  - open animation helper
+ (Commands are autocompleted if possible)
+ Enter blank command to quit
+~:--------------------------------------:~
 """
 # END   OUTLINE
 
 
 # BEGIN IMPORTS
 
-import random
-import time
-import shutil
-from maze import Maze
+from shutil import get_terminal_size
+from benchtools import timed, timed_titled
 import colortools
+from maze import Maze
 
 # END   IMPORTS
 
 
 # BEGIN CONSTANTS
 
-CANCEL_TEXT = "*canceled\n"
-CELL_PRINT_LIMIT = 10_000
-CW = lambda: shutil.get_terminal_size()[0]
-CH = lambda: shutil.get_terminal_size()[1]
+CANCEL_TEXT = "*canceled\n" # When cancling out of a menu
+CELL_PRINT_LIMIT = 10_000 # Max cell count before maze gets stopped from printing
+CW = lambda: get_terminal_size()[0] # Console Width
+CH = lambda: get_terminal_size()[1] # Console Height
 
 # END   CONSTANTS
 
@@ -41,14 +75,14 @@ CH = lambda: shutil.get_terminal_size()[1]
 # BEGIN FUNCTIONS
 
 def autocomplete(input_word, full_words):
-    """Autocomplete word (only) if there's a unique word completion from list.
+    """Autocomplete word iff there's a unique word completion from list.
 
     Args:
-        input_word (str): Word to be completed
-        full_words (list(str)): Available words to be completed to
+        input_word (str): String to be completed.
+        full_words (list(str)): Available strings to possibly be completed to.
 
     Returns:
-        str: A unique match from full_words, otherwise input_word
+        str: A unique match from full_words, otherwise input_word.
     """
     candidates = [w for w in full_words if w.startswith(input_word)]
     if len(candidates) == 1:
@@ -57,25 +91,18 @@ def autocomplete(input_word, full_words):
         return input_word
 
 def preview(maze, printer=Maze.str_frame):
-    """Print maze to the console iff within given size limit."""
-    cellcount = maze.width*maze.height
-    if maze.width*maze.height < CELL_PRINT_LIMIT:
-        string = printer(maze)
-        stringwidth = string.find('\n') + 1
-        stringheight = string.count('\n') + 1
-        if stringwidth <= CW() and stringheight <= CH():
-            print(printer(maze))
-            return
-    print(f"[maze too large for console preview ({cellcount} cells), consider an image option]")
-    return
+    """Print maze to the console if it is within given global print limit.
 
-def benchmark(title, function):
-    begin_time = time.perf_counter()
-    result     = function()
-    end_time   = time.perf_counter()
-    time_taken = end_time - begin_time
-    print(f"['{title}' completed in {time_taken:.03f}s]")
-    return result
+    Args:
+        maze (Maze): Maze to be printed to console.
+        printer (callable(Maze)): Function to print maze with.
+    """
+    cellcount = maze.width*maze.height
+    if maze.width*maze.height >= CELL_PRINT_LIMIT:
+        print(f"[for console preview too large ({cellcount} cells), consider image options]")
+        return
+    print(printer(maze))
+    return
 
 def maybe_get_new_from_string_options(options, prompt_text):
     user_input = input(f"| {' | '.join(options)}\n{prompt_text} > ").strip()
@@ -127,7 +154,7 @@ def maybe_load_new_maze():
         return
     try:
         data = eval(user_input)
-        new_maze = benchmark("loading maze", lambda: Maze.from_repr(data))
+        new_maze = timed_titled("loading maze", Maze.from_repr)(data)
         preview(new_maze)
         return new_maze
     except Exception as e:
@@ -149,7 +176,6 @@ def maybe_print_maze(maze):
         Maze.str_frame,
         Maze.str_frame_ascii,
         Maze.str_frame_ascii_small,
-        repr
     ]}
     for name,printer in printers.items():
         print(f"{name}:\n{printer(maze)}")
@@ -172,8 +198,7 @@ def maybe_get_new_ratio(old_ratio):
     return
 
 def maybe_print_solution(maze):
-    benchmark("solving",lambda:
-        maze.compute_solution())
+    timed(maze.compute_solution)()
     cellcount = maze.width * maze.height
     if cellcount >= CELL_PRINT_LIMIT and not input(f"Maze contains a lot of cells ({cellcount}), proceed anyway ('Y')? >")=='Y':
         print(CANCEL_TEXT,end='')
@@ -352,15 +377,13 @@ Animation Helper
             case 'help':
                 pass
             case 'start':
-                (filename, new_maze) = benchmark("animation process", lambda:
-                    Maze.save_animation(
-                        *dimensions,
-                        maze_runner=maze_runners[runner_name],
-                        image_generator=image_generators[image_generator_name],
-                        frame_only=only,
-                        frame_ms=ms,
-                        alert_progress_steps=10,
-                    )
+                (filename, new_maze) = timed(Maze.save_animation)(
+                    *dimensions,
+                    maze_runner=maze_runners[runner_name],
+                    image_generator=image_generators[image_generator_name],
+                    frame_only=only,
+                    frame_ms=ms,
+                    alert_progress_steps=10,
                 )
                 print(f"Animation was saved under {filename}")
             case _:
@@ -456,15 +479,11 @@ def analysis(maze):
     """.strip()
     # Solution stuff
     if maze.solution is None:
-        benchmark("solving maze", lambda:
-            maze.compute_solution())
+        timed(maze.compute_solution)()
     len_solution = len(maze.solution)
-    (tiles_counts,branch_distances,offshoots_maxlengths,offshoots_avglengths) = benchmark("computing other stats", lambda:
-        maze.generate_stats())
-    offshoots_maxlengths_distribution = benchmark("distr. chart 2",lambda:
-        sample_to_distribution_chart(offshoots_maxlengths))
-    offshoots_avglengths_distribution = benchmark("distr. chart 3",lambda:
-        sample_to_distribution_chart(offshoots_avglengths))
+    (tiles_counts,branch_distances,offshoots_maxlengths,offshoots_avglengths) = timed_titled("computing other stats", maze.generate_stats)()
+    offshoots_maxlengths_distribution = timed_titled("distr. chart 2", sample_to_distribution_chart)(offshoots_maxlengths)
+    offshoots_avglengths_distribution = timed_titled("distr. chart 3", sample_to_distribution_chart)(offshoots_avglengths)
     stats_solution = f"""
  Solution Path Statistics.
  :  Start  coordinates  {maze.entrance.coordinates}
@@ -498,10 +517,9 @@ def analysis(maze):
 {fmt_barchart(nodetypes)}
     """.strip()
     # Distance stuff
-    len_longest_path = benchmark("finding longest path", lambda:
-        maze.compute_longest_path())
+    len_longest_path = timed(maze.compute_longest_path)()
     sum_branch_distances = sum(branch_distances)
-    branch_distance_distribution_chart = benchmark("distr. chart 1",lambda:sample_to_distribution_chart(branch_distances))
+    branch_distance_distribution_chart = timed_titled("distr. chart 1", sample_to_distribution_chart)(branch_distances)
     stats_distance = f"""
  Distance Statistics.
  :  Longest possible path
@@ -535,10 +553,10 @@ def analysis(maze):
 # BEGIN MAIN
 
 def main():
-    dimensions = (100,100)
+    dimensions = (16,16)
     ratio = (1, 1)
     maze = Maze(*dimensions)
-    random.choice(list(Maze.ALGORITHMS.values()))(maze)
+    maze.run_backtrack()
     colormap_name = 'viridis'
     image = None
     maze_storage_file = 'temp.txt'
@@ -590,8 +608,7 @@ def main():
                 new_builder_name = maybe_get_new_from_string_options(Maze.ALGORITHMS, "Choose algorithm to build maze")
                 if new_builder_name is not None:
                     maze = Maze(*dimensions)
-                    benchmark(new_builder_name, lambda:
-                        Maze.ALGORITHMS[new_builder_name](maze))
+                    timed(Maze.ALGORITHMS[new_builder_name])(maze)
                     preview(maze)
             case 'color':
                 new_colormap_name = maybe_get_new_from_string_options(colortools.COLORMAPS, f"Choose colormap (previously = {colormap_name})")
@@ -611,50 +628,64 @@ def main():
                 try: exec('\n'.join(injection))
                 except Exception as e: print(f"<error: {e}>")
             case 'img': # Generate image of current maze and open in external program
-                image = benchmark("generating image", lambda:
-                    maze.generate_image(raster=maze.generate_raster(wall_air_ratio=ratio)))
+                image = timed(maze.generate_image)(
+                    raster=maze.generate_raster(
+                        wall_air_ratio=ratio
+                    )
+                )
                 image.show()
             case 'imgalg':
-                image = benchmark("generating image", lambda:
-                    maze.generate_algorithmimage())
+                image = timed(maze.generate_algorithmimage)()
                 image.show()
             case 'imgbrc':
-                benchmark("computing branch distances", lambda:
-                    maze.compute_branchdistances())
-                image = benchmark("generating image", lambda:
-                    maze.generate_colorimage(gradient_colors=colortools.COLORMAPS[colormap_name][::-1],raster=maze.generate_raster(show_distances=True,columnated=False,wall_air_ratio=ratio)))
+                timed(maze.compute_branchdistances)()
+                image = timed(maze.generate_colorimage)(
+                    gradient_colors=colortools.COLORMAPS[colormap_name][::-1],
+                    raster=maze.generate_raster(
+                        show_distances=True,
+                        columnated=False,
+                        wall_air_ratio=ratio
+                    )
+                )
                 image.show()
             case 'imgcol':
-                benchmark("computing distances", lambda:
-                    maze.compute_distances())
-                image = benchmark("generating image", lambda:
-                    maze.generate_colorimage(gradient_colors=colortools.COLORMAPS[colormap_name][::-1],raster=maze.generate_raster(show_distances=True,columnated=False,wall_air_ratio=ratio)))
+                timed(maze.compute_distances)()
+                image = timed(maze.generate_colorimage)(
+                    gradient_colors=colortools.COLORMAPS[colormap_name][::-1],
+                    raster=maze.generate_raster(
+                        show_distances=True,
+                        columnated=False,
+                        wall_air_ratio=ratio
+                    )
+                )
                 image.show()
             case 'imgsol': # Generate image of current maze with solution and open in external program
-                benchmark("solving", lambda:
-                    maze.compute_solution())
-                image = benchmark("generating image", lambda:
-                    maze.generate_solutionimage(raster=maze.generate_raster(show_solution=True,wall_air_ratio=ratio)))
+                timed(maze.compute_solution)()
+                image = timed(maze.generate_solutionimage)(
+                    raster=maze.generate_raster(
+                        show_solution=True,
+                        wall_air_ratio=ratio
+                    )
+                )
                 image.show()
             case 'input':
                 new_maze = maybe_load_new_maze()
                 if new_maze is not None:
                     maze = new_maze
             case 'join': # Make current maze unicursal
-                benchmark("making unicursal", lambda: maze.make_unicursal())
+                timed(maze.make_unicursal)()
                 preview(maze)
             case 'load':
                 with open(maze_storage_file,'r') as file:
-                    string = benchmark("reading file", lambda: file.read())
+                    string = timed_titled("reading file", file.read)()
                 try:
-                    data = benchmark("evaluating string", lambda: eval(string))
-                    maze = benchmark("loading maze", lambda: Maze.from_repr(data))
+                    data = timed_titled("evaluating string", eval)(string)
+                    maze = timed_titled("loading maze", Maze.from_repr)(data)
                     preview(maze)
                 except Exception as e:
                     print(f"[could not load maze: {e}]")
             case 'maxim':
-                len_longest_path = benchmark("computing longest path", lambda:
-                    maze.compute_longest_path())
+                len_longest_path = timed(maze.compute_longest_path)()
                 print(f"Longest path of length {len_longest_path} (of {maze.width*maze.height} total cells) found.")
             case 'print': # Print currently stored maze in all available styles
                 maybe_print_maze(maze)
@@ -666,26 +697,24 @@ def main():
                 if image is None:
                     print("Please generate at least one image first (-> `help`)")
                 else:
-                    benchmark(f"saving {image.filename}",lambda:
-                        image.save(image.filename))
+                    timed_titled(f"saving {image.filename}", image.save)(image.filename)
             case 'stats':
                 try:
-                    stats_text = benchmark("complete maze analysis", lambda: analysis(maze))
+                    stats_text = timed_titled("complete maze analysis", analysis)(maze)
                     print(stats_text)
                 except ValueError as e:
                     print(f"<error: {e}>")
             case 'store':
                 with open(maze_storage_file,'w') as file:
-                    data = benchmark("generating string", lambda: repr(maze))
-                    benchmark("storing file", lambda: file.write(data))
+                    data = timed_titled("generating string", repr)(maze)
+                    timed_titled("storing file", file.write)(data)
             case 'txtsol':
                 maybe_print_solution(maze)
             case 'view':
                 if image is None:
                     print("Please generate at least one image first (-> `help`)")
                 else:
-                    benchmark(f"opening {image.filename} in external editor",lambda:
-                        image.show())
+                    timed_titled(f"opening {image.filename} in external editor", image.show)()
             case _: # Non-empty, unrecognized command
                 print("Unrecognized command")
         # Get user input and possibly exit loop
