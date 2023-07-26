@@ -2,8 +2,9 @@
 """
 A handrolled color utilities module.
 
-This module attempts to provide useful color definitions and utility functions to allow more further (basic) handling of colors.
-Some color constant names are inspired by Jan Misali (www.seximal.net/colors).
+This module attempts to provide useful color definitions and utility functions
+to allow for further (basic) handling of colors. Some color names were inspired
+by Jan Misali (www.seximal.net/colors).
     - Greyscale colors
         * `BLACK` `DARK_GRAY` `GRAY` `LIGHT_GRAY` `WHITE`
     - Pure RGB colors
@@ -27,7 +28,7 @@ Some color constant names are inspired by Jan Misali (www.seximal.net/colors).
     - Random color generation functions
         * randrgb, randhue
     - Color utility functions
-        * invert, mix, interpolate, average
+        * mix, interpolate, average, rainbow
 """
 # END   OUTLINE
 
@@ -42,12 +43,14 @@ import random
 
 # BEGIN CONSTANTS
 
+# Greyscales
 BLACK      = (  0,   0,   0) # '#000000'
 DARK_GRAY  = ( 63,  63,  63) # '#3f3f3f'
 GRAY       = (127, 127, 127) # '#7f7f7f'
 LIGHT_GRAY = (191, 191, 191) # '#bfbfbf'
 WHITE      = (255, 255, 255) # '#ffffff'
 
+# Pure RGB
 RGB_RED    = (255,   0,   0) # '#ff0000'
 RGB_YELLOW = (255, 255,   0) # '#ffff00'
 RGB_GREEN  = (  0, 255,   0) # '#00ff00'
@@ -55,6 +58,7 @@ RGB_CYAN   = (  0, 255, 255) # '#00ffff'
 RGB_BLUE   = (  0,   0, 255) # '#0000ff'
 RGB_MAGENTA= (255,   0, 255) # '#ff00ff'
 
+# Primary and secondary colors
 RED        = (255,  51,  68) # '#ff3344'
 ORANGE     = (255, 153,   0) # '#ff9900'
 YELLOW     = (255, 238,   0) # '#FFEE00'
@@ -68,6 +72,7 @@ VIOLET     = (204,  51, 255) # '#cc33ff'
 MAGENTA    = (255, 102, 238) # '#ff55ee'
 ROSE       = (255,  85, 170) # '#ff55aa'
 
+# Primary shades
 CRIMSON    = (170,  34,  68) # '#aa2244'
 GOLDENROD  = (204, 153,   0) # '#cc9900'
 MOSS       = (  0, 153,  68) # '#009944'
@@ -75,6 +80,7 @@ TEAL       = (  0, 153, 170) # '#0099aa'
 NAVY       = ( 17,  17, 153) # '#111199'
 PURPLE     = (119,   0, 136) # '#770088'
 
+# Primary tints
 SALMON     = (255, 170, 153) # '#ffaa99'
 VANILLA    = (255, 255, 221) # '#ffffdd'
 MINT       = (187, 255, 187) # '#bbffbb'
@@ -140,6 +146,7 @@ COLORS = {
     'clardigfug':
         (112, 113,  84), # '#707154'
 }
+"""list(tuple(int,int,int)): Miscellaneous colors."""
 
 PALETTES = {
     'discord': {
@@ -171,13 +178,31 @@ PALETTES = {
     'white':
         (255, 255, 255), # '#ffffff'
 }
+"""dict(str, dict(str, tuple(int,int,int)): Color palettes."""
 
 COLORMAPS = {
-    'kanagawa': ( # 2 values
+    'kanagawa': [ # 2 values
         (  0,  63, 127), # '#003f7f'
         (247, 241, 231), # '#f7f1e7'
-    ),
-    'viridis': ( # 18 values
+    ],
+    'redyellowblue': [ # 15 values
+        ( 16,  25,  77), # '#10194D'
+        ( 22,  55, 113), # '#163771'
+        ( 28,  87, 150), # '#1C5796'
+        ( 57, 122, 168), # '#397AA8'
+        ( 87, 158, 185), # '#579EB9'
+        (137, 192, 196), # '#89C0C4'
+        (188, 226, 207), # '#BCE2CF'
+        (255, 255, 224), # '#FFFFE0'
+        (250, 212, 172), # '#FAD4AC'
+        (240, 168, 130), # '#F0A882'
+        (228, 121,  97), # '#E47961'
+        (198,  81,  84), # '#C65154'
+        (165,  39,  71), # '#A52747'
+        (117,  18,  50), # '#751232'
+        ( 74,   0,  30), # '#4A001E'
+    ],
+    'viridis': [ # 18 values
         ( 68,   1,  84), # '#440154'
         ( 72,  23, 105), # '#481769'
         ( 71,  42, 122), # '#472a7a'
@@ -196,8 +221,8 @@ COLORMAPS = {
         (176, 221,  47), # '#b0dd2f'
         (216, 226,  25), # '#d8e219'
         (253, 231,  37), # '#fde725'
-    ),
-    'magma': ( # 16 values
+    ],
+    'magma': [ # 16 values
         (  0,   0,   5), # '#000005'
         ( 11,   8,  28), # '#0B081C'
         ( 23,  11,  57), # '#170B39'
@@ -214,8 +239,8 @@ COLORMAPS = {
         (252, 179, 114), # '#FCB372'
         (252, 213, 141), # '#FCD58D'
         (251, 255, 178), # '#FBFFB2'
-    ),
-    'brewerBlue': ( # 9 values
+    ],
+    'brewerBlue': [ # 9 values
         (  8,  48, 107), # '#08306B'
         (  8,  81, 156), # '#08519C'
         ( 33, 113, 181), # '#2171B5'
@@ -225,8 +250,8 @@ COLORMAPS = {
         (198, 219, 239), # '#C6DBEF'
         (222, 235, 247), # '#DEEBF7'
         (247, 251, 255), # '#F7FBFF'
-    ),
-    'brewerGreen': ( # 9 values
+    ],
+    'brewerGreen': [ # 9 values
         (  0,  69,  41), # '#004529'
         (  0, 104,  55), # '#006837'
         ( 35, 132,  67), # '#238443'
@@ -236,8 +261,8 @@ COLORMAPS = {
         (217, 240, 163), # '#d9f0a3'
         (247, 252, 185), # '#f7fcb9'
         (255, 255, 229), # '#ffffe5'
-    ),
-    'brewerRed': ( # 9 values
+    ],
+    'brewerRed': [ # 9 values
         ( 73,   0, 106), # '#49006a'
         (122,   1, 119), # '#7a0177'
         (174,   1, 126), # '#ae017e'
@@ -247,8 +272,8 @@ COLORMAPS = {
         (252, 197, 192), # '#fcc5c0'
         (253, 224, 221), # '#fde0dd'
         (255, 247, 243), # '#fff7f3'
-    ),
-    'chromaBlue': ( # 11 values
+    ],
+    'chromaBlue': [ # 11 values
         (  0,  66, 157), # '#00429d'
         ( 40,  84, 166), # '#2854a6'
         ( 62, 103, 174), # '#3e67ae'
@@ -260,8 +285,8 @@ COLORMAPS = {
         (177, 223, 219), # '#b1dfdb'
         (205, 241, 224), # '#cdf1e0'
         (255, 255, 224), # '#ffffe0'
-    ),
-    'bamako': ( # 10 values
+    ],
+    'bamako': [ # 10 values
         (  0,  64,  77), # '#00404D'
         ( 19,  75,  66), # '#134B42'
         ( 38,  87,  55), # '#265737'
@@ -272,8 +297,8 @@ COLORMAPS = {
         (196, 173,  50), # '#C4AD32'
         (230, 204, 104), # '#E6CC68'
         (254, 228, 152), # '#FEE498'
-    ),
-    'acton': ( # 10 values
+    ],
+    'acton': [ # 10 values
         ( 46,  33,  77), # '#2E214D'
         ( 75,  59, 102), # '#4B3B66'
         (110,  84, 128), # '#6E5480'
@@ -284,8 +309,8 @@ COLORMAPS = {
         (211, 172, 200), # '#D3ACC8'
         (218, 200, 219), # '#DAC8DB'
         (229, 229, 239), # '#E5E5EF'
-    ),
-    'helixClassic': ( # 16 values
+    ],
+    'helixClassic': [ # 16 values
         (  0,   0,   1), # '#000001'
         ( 22,  10,  34), # '#160A22'
         ( 24,  32,  68), # '#182044'
@@ -302,8 +327,8 @@ COLORMAPS = {
         (195, 229, 244), # '#C3E5F4'
         (220, 246, 239), # '#DCF6EF'
         (255, 255, 255), # '#FFFFFF'
-    ),
-    'helix2': ( # 16 values
+    ],
+    'helix2': [ # 16 values
         (  0,   1,   0), # '#000100'
         (  0,  28,  14), # '#001C0E'
         (  0,  28,  14), # '#001C0E'
@@ -320,25 +345,8 @@ COLORMAPS = {
         (216, 231, 178), # '#D8E7B2'
         (226, 247, 219), # '#E2F7DB'
         (255, 255, 255), # '#FFFFFF'
-    ),
-    'redyellowblue': ( # 15 values
-        ( 16,  25,  77), # '#10194D'
-        ( 22,  55, 113), # '#163771'
-        ( 28,  87, 150), # '#1C5796'
-        ( 57, 122, 168), # '#397AA8'
-        ( 87, 158, 185), # '#579EB9'
-        (137, 192, 196), # '#89C0C4'
-        (188, 226, 207), # '#BCE2CF'
-        (255, 255, 224), # '#FFFFE0'
-        (250, 212, 172), # '#FAD4AC'
-        (240, 168, 130), # '#F0A882'
-        (228, 121,  97), # '#E47961'
-        (198,  81,  84), # '#C65154'
-        (165,  39,  71), # '#A52747'
-        (117,  18,  50), # '#751232'
-        ( 74,   0,  30), # '#4A001E'
-    ),
-    'HQviridis': ( # 256 values
+    ],
+    'HQviridis': [ # 256 values
         ( 68,   1,  84), # '#440154'
         ( 68,   2,  86), # '#440256'
         ( 69,   4,  87), # '#450457'
@@ -595,15 +603,17 @@ COLORMAPS = {
         (248, 230,  33), # '#f8e621'
         (251, 231,  35), # '#fbe723'
         (253, 231,  37), # '#fde725'
-    ),
+    ],
 }
+"""dict(str, list(tuple(int,int,int)): Color gradients."""
 
 COLORSPACES = [
-     RGB,  LINRGB,  HSV,  XYZ,  CIELAB,  LCH_AB,  OKLAB,  OKLCH
+     RGB,  LINRGB,  HSV,  XYZ,  CIELAB,  LCH_AB,  CIELUV,  LCH_UV,  OKLAB,  OKLCH
 ] = [s.casefold() for s in [
-    'RGB','LINRGB','HSV','XYZ','CIELAB','LCH_AB','OKLAB','OKLCH'
+    'RGB','LINRGB','HSV','XYZ','CIELAB','LCH_AB','CIELUV','LCH_UV','OKLAB','OKLCH'
     ]
 ]
+"""list(str): Available color spaces."""
 
 # END   CONSTANTS
 
@@ -622,6 +632,7 @@ COLORSPACES = [
 
 def from_hexcode(string):
     """Convert hex color code into rgb tuple.
+
     Args:
         string (str): hex code with or without '#'
     Returns:
@@ -636,6 +647,7 @@ def from_hexcode(string):
 
 def to_hexcode(tuple_color):
     """Convert rgb tuple into hex color code.
+
     Args:
         tuple_color (tuple(int,int,int)): input color
     Returns:
@@ -648,7 +660,11 @@ def to_hexcode(tuple_color):
 
 def change_space(input_color, from_space, to_space):
     """
-    Converts between tuples of a color in one of the following spaces:
+    Convert a color tuple between one of the available spaces.
+
+    Note that currently for implementation simplicity all available spaces
+    conversions are bridged over RGB (i.e. worst case it is;
+    CIELAB -> LCH_AB == CIELAB -> XYZ -> RGB -> XYZ -> CIELAB -> LCH_AB):
     - 'RGB': ([0,255], [0,255], [0,255])
         * Red, Green, Blue
     - 'LINRGB': ([0,1], [0,1], [0,1])
@@ -659,6 +675,7 @@ def change_space(input_color, from_space, to_space):
         * Hue = Red-Green-Blue-Red
         * https://en.wikipedia.org/wiki/HSL_and_HSV
     - 'XYZ': ([?], [?], [?])
+        * ?, ?, ?
         * https://en.wikipedia.org/wiki/SRGB
     - 'CIELAB': ([0,100], [-128,127], [-128,127])
         * Lightness, Green-Magenta, Blue-Yellow
@@ -667,18 +684,35 @@ def change_space(input_color, from_space, to_space):
         * Lightness, Chroma, Hue
         * Hue = Red-Yellow-Green-Blue-Red
         * https://en.wikipedia.org/wiki/CIELAB_color_space
+    - 'CIELUV': ([0,100], [-1??,1??], [-1??,1??])
+        * Lightness, ?-?, ?-?
+        * https://en.wikipedia.org/wiki/CIELUV
+    - 'LCH_UV': ([0,100], [?], [0,2pi])
+        * Lightness, Chroma, Hue
+        * Hue = ?
+        * https://en.wikipedia.org/wiki/CIELUV
     - 'OKLAB': ([0,1], [?], [?])
         * Lightness, Green-Red, Blue-Yellow
         * https://bottosson.github.io/posts/oklab/
     - 'OKLCH': ([0,1], [?], [0,2pi])
         * Lightness, Chroma, Hue
+        * Hue = ?
         * https://bottosson.github.io/posts/oklab/
+
+    Args:
+        input_color (tupled(int,int,int)): Color tuple in valid space
+        from_space (str): A string standing for a valid source space
+        to_space (str): A string standing for a valid destination space
+
+    Returns:
+        tuple(float,float,float): Output color in valid space.
     """
     to_normalized = lambda *c: tuple(k/255 for k in c)
     from_normalized = lambda *c: tuple(max(0, min(round(255*x), 255)) for x in c)
     cartesian_to_polar = lambda x,y: (math.sqrt(x**2 + y**2), math.atan2(y,x))
     polar_to_cartesian = lambda r,a: (r * math.cos(a), r * math.sin(a))
 
+    # Casefold and make a case distinction on the conversion between spaces
     spaces = (from_space.casefold(), to_space.casefold())
     if any (space not in COLORSPACES for space in spaces):
         raise RuntimeError("unrecognized colorspace conversion '{spaces}'")
@@ -762,15 +796,27 @@ def change_space(input_color, from_space, to_space):
         (X,Y,Z) = X100/100, Y100/100, Z100/100
         (R,G,B) = change_space((X,Y,Z),'XYZ','RGB')
         output_color = (R,G,B)
-    elif spaces == (RGB, LCH_AB):
+    elif spaces == (RGB, CIELUV):
         (R,G,B) = input_color
-        (L,A,B) = change_space((R,G,B),'RGB','CIELAB')
-        (C,H) = cartesian_to_polar(A,B)
-        output_color = (L,C,H)
-    elif spaces == (LCH_AB, RGB):
-        (L,C,H) = input_color
-        (A,B) = polar_to_cartesian(C,H)
-        (R,G,B) = change_space((L,A,B),'CIELAB','RGB')
+        (X,Y,Z) = change_space((R,G,B),'RGB','XYZ')
+        (XD65,YD65,ZD65) = (95.0489, 100, 108.8840) # Standard illuminant
+        L = 116 * Y/YD65**(1/3) - 16 if Y/YD65 > (6/29)**3 else (29/3)**3 * Y/YD65
+        Up = (4*X) / (X + 15*Y + 3*Z)
+        Vp = (9*Y) / (X + 15*Y + 3*Z)
+        (UD65,VD65) = (0.2009, 0.4610) # Standard illuminant
+        U = 13 * L * (Up - UD65)
+        V = 13 * L * (Vp - VD65)
+        output_color = (L,U,V)
+    elif spaces == (CIELUV, RGB):
+        (L,U,V) = input_color
+        (UD65,VD65) = (0.2009, 0.4610) # Standard illuminant
+        Up = U / (13*L) + UD65
+        Vp = V / (13*L) + VD65
+        (XD65,YD65,ZD65) = (95.0489, 100, 108.8840) # Standard illuminant
+        Y = YD65 * ((L + 16) / 116)**3 if L > 8 else YD65 * L * (3/29)**3
+        X = Y * (9*Up) / (4*Vp)
+        Z = Y * (12 - 3*Up - 20*Vp) / (4*Vp)
+        (R,G,B) = change_space((X,Y,Z),'XYZ','RGB')
         output_color = (R,G,B)
     elif spaces == (RGB, OKLAB):
         (R,G,B) = input_color
@@ -794,6 +840,26 @@ def change_space(input_color, from_space, to_space):
         Bl = -0.0041960863*l - 0.7034186147*m + 1.7076147010*s
         (R,G,B) = change_space((Rl,Gl,Bl),'LINRGB','RGB')
         output_color = (R,G,B)
+    elif spaces == (RGB, LCH_AB):
+        (R,G,B) = input_color
+        (L,A,B) = change_space((R,G,B),'RGB','CIELAB')
+        (C,H) = cartesian_to_polar(A,B)
+        output_color = (L,C,H)
+    elif spaces == (LCH_AB, RGB):
+        (L,C,H) = input_color
+        (A,B) = polar_to_cartesian(C,H)
+        (R,G,B) = change_space((L,A,B),'CIELAB','RGB')
+        output_color = (R,G,B)
+    elif spaces == (RGB, LCH_UV):
+        (R,G,B) = input_color
+        (L,U,V) = change_space((R,G,B),'RGB','CIELUV')
+        (C,H) = cartesian_to_polar(U,V)
+        output_color = (L,C,H)
+    elif spaces == (LCH_UV, RGB):
+        (L,C,H) = input_color
+        (U,V) = polar_to_cartesian(C,H)
+        (R,G,B) = change_space((L,U,V),'CIELUV','RGB')
+        output_color = (R,G,B)
     elif spaces == (RGB, OKLCH):
         (R,G,B) = input_color
         (L,A,B) = change_space((R,G,B),'RGB','OKLAB')
@@ -810,39 +876,78 @@ def change_space(input_color, from_space, to_space):
     return output_color
 
 def randrgb():
-    """Generates an RGB tuple representing a random color."""
+    """Generates an random-valued RGB color tuple."""
     color_random = tuple(random.randrange(256) for _ in range(3))
     return color_random
 
 def randhue():
-	"""Generates an RGB tuple representing a random hue at full saturation."""
-	# Throw dice
-	p = random.randrange(6)
-	# Magic incantation
+	"""Generates an HSV-(random Hue)-(full Sat.)-(full Val.) RGB color tuple."""
+	p = random.randrange(6) #  Alea iacta est
 	val = lambda i:(1-(p%3-i)**2%3)*((1-p%2*2)*(random.randrange(255)-p%2*255))+((p%3-i)**2%3)*(255*(1-(i-2+(p-p%2)//2)**2%3))
-	# Return tuple
-	color_random = tuple(val(i) for i in range(3))
+	color_random = tuple(val(i) for i in range(3)) # Return tuple
 	return color_random
 
-def invert(color):
-    color_inverted = tuple(255-ch for ch in color)
-    return color_inverted
+def mix(color0, color1, param=0.5, rnd=False):
+    """Mix two color tuples evenly or with an optional weight parameter.
 
-def mix(color0, color1, param=0.5):
+    Args:
+        color0, color1 (tuple(float,float,float)): Color tuples in a same
+            (arbitrary) space.
+        param (float): A linear interpolation parameter 0 <= param <= 1
+            used for mixing (default is 0.5).
+        rnd (bool): Whether to round channel values, for RGB purposes
+            (default is False).
+
+    Returns:
+        tuple(float,float,float): Mixed color.
+    """
+    if not (0 <= param <= 1):
+        raise ValueError("interpolation parameter must be 0 <= param <= 1")
     color_mixed = tuple(round((1-param) * ch0 + param * ch1) for ch0,ch1 in zip(color0,color1))
+    if rnd:
+        color_mixed = tuple(round(ch) for ch in color_mixed)
     return color_mixed
 
-def interpolate(colors, param):
-    if param == 1.0: return colors[-1]
+def interpolate(colors, param, rnd=False):
+    """Interpolate a color within a color map using some parameter.
+
+    Args:
+        colors (list(tuple(float,float,float))): Color tuples in a same
+            (arbitrary) space.
+        param (float): A linear interpolation parameter 0 <= param <= 1
+            used for interpolation (default is 0.5).
+        rnd (bool): Whether to round channel values, for RGB purposes
+            (default is False).
+
+    Returns:
+        tuple(float,float,float): Interpolated color.
+    """
+    if not (0 <= param <= 1):
+        raise ValueError("interpolation parameter must be 0 <= param <= 1")
+    if param == 1.0:
+        return colors[-1]
+    # Find segment in the color map within which to actually interpolate
     sectors = len(colors) - 1
     segmentlength = 1 / sectors
     sector = int(param // segmentlength)
-    offset = param % segmentlength
-    sectorparam = offset / segmentlength
-    color_interpolated = mix(colors[sector], colors[sector+1], sectorparam)
+    # Interpolate between closest two colors
+    sectorparam = param % segmentlength / segmentlength
+    color_interpolated = mix(colors[sector], colors[sector+1], sectorparam, rnd)
     return color_interpolated
 
-def average(*colors):
+def average(*colors, rnd=False):
+    """Arithmetically average an iterable of color tuples.
+
+    Args:
+        *colors (tuple(tuple(float,float,float))): Color tuples in a same
+            (arbitrary) space.
+        rnd (bool): Whether to round channel values, for RGB purposes
+            (default is False).
+
+    Returns:
+        tuple(float,float,float): Average color.
+    """
+    # Sum up values per individual channel then make average
     add = lambda c1,c2: tuple(ch1+ch2 for ch1,ch2 in zip(c1,c2))
     color_sum = (0,0,0)
     count = 0
@@ -850,16 +955,30 @@ def average(*colors):
         add(color_sum, color)
         count += 1
     color_average = tuple(round(color_sum/count) for ch in color_sum)
+    if rnd:
+        color_mixed = tuple(round(ch) for ch in color_mixed)
     return color_average
 
 def rainbow(param, color0=RED, space='OKLCH'):
+    """Generate cycling RGB rainbow colors using a parameter.
+
+    Args:
+        param (float): Cycle parameter with circle period [0, 1].
+        color0 (tuple(int,int,int)): Optional initial RGB color
+            (default is RED).
+        space (str): Optional cylindrical color space model
+            {HSV ,LCH_AB, LCH_UV, OKLCH} (default is OKLCH)
+
+    Returns:
+        tuple(int,int,int): 'Rainbow' RGB color tuple.
+    """
     space = space.casefold()
-    cyclespaces = [HSV, LCH_AB, OKLCH]
+    cyclespaces = [HSV, LCH_AB, LCH_UV, OKLCH]
     if space not in cyclespaces:
         raise RuntimeError("unrecognized colorspace name for hue cycling")
     if space == HSV:
         (H0,S0,V0) = change_space(color0,'RGB','HSV')
-        H = (H0 + 360 * param) % 360
+        H = (H0 + 360 * param) % 360 # Reduce period
         S = S0
         V = V0
         (R,G,B) = change_space((H,S,V),'HSV','RGB')
@@ -867,10 +986,9 @@ def rainbow(param, color0=RED, space='OKLCH'):
         (L0,C0,H0) = change_space(color0,'RGB',space)
         L = L0
         C = C0
-        H = (H0 - math.tau * param) % math.tau
+        H = (H0 + math.tau * param) % math.tau # Reduce period
         (R,G,B) = change_space((L,C,H),space,'RGB')
     return (R,G,B)
-
 
 # END   FUNCTIONS
 
@@ -878,7 +996,7 @@ def rainbow(param, color0=RED, space='OKLCH'):
 # BEGIN MAIN
 
 def main():
-    HQviridis_data = [
+    HQviridis_data = [ # 256 normalized 'viridis'-colormpa RGB values
         [0.267004, 0.004874, 0.329415],
         [0.268510, 0.009605, 0.335427],
         [0.269944, 0.014625, 0.341379],
