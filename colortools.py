@@ -598,6 +598,13 @@ COLORMAPS = {
     ),
 }
 
+COLORSPACES = [
+     RGB,  LINRGB,  HSV,  XYZ,  CIELAB,  LCH_AB,  OKLAB,  OKLCH
+] = [s.casefold() for s in [
+    'RGB','LINRGB','HSV','XYZ','CIELAB','LCH_AB','OKLAB','OKLCH'
+    ]
+]
+
 # END   CONSTANTS
 
 
@@ -642,7 +649,7 @@ def change_space(input_color, from_space, to_space):
     - 'LINRGB': ([0,1], [0,1], [0,1])
         * Red, Green, Blue
         * https://bottosson.github.io/posts/colorwrong/#what-can-we-do%3F
-    - 'HSV': ([0,360], [0,1], [0,1])
+    - 'HSV': ([0,1], [0,1], [0,1])
         * Hue, Value, Saturation
         * Hue = Red-Green-Blue-Red
         * https://en.wikipedia.org/wiki/HSL_and_HSV
@@ -651,30 +658,28 @@ def change_space(input_color, from_space, to_space):
     - 'CIELAB': ([0,100], [-128,127], [-128,127])
         * Lightness, Green-Magenta, Blue-Yellow
         * https://en.wikipedia.org/wiki/CIELAB_color_space
-    - 'LCH_AB': ([0,100], [?], [?])
+    - 'LCH_AB': ([0,100], [?], [0,2pi])
         * Lightness, Chroma, Hue
         * Hue = Red-Yellow-Green-Blue-Red
         * https://en.wikipedia.org/wiki/CIELAB_color_space
     - 'OKLAB': ([0,1], [?], [?])
         * Lightness, Green-Red, Blue-Yellow
         * https://bottosson.github.io/posts/oklab/
-    - 'OKLCH': ([0,1], [-2,2], [-2,2])
-        * Lightness, Green-Red, Blue-Yellow
+    - 'OKLCH': ([0,1], [?], [0,2pi])
+        * Lightness, Chroma, Hue
         * https://bottosson.github.io/posts/oklab/
     """
     to_normalized = lambda *c: tuple(k/255 for k in c)
     from_normalized = lambda *c: tuple(max(0, min(round(255*x), 255)) for x in c)
     cartesian_to_polar = lambda x,y: (math.sqrt(x**2 + y**2), math.atan2(y,x))
     polar_to_cartesian = lambda r,a: (r * math.cos(a), r * math.sin(a))
-    colorspaces = (
-    ['RGB','LINRGB','HSV','XYZ','CIELAB','LCH_AB','OKLAB','OKLCH'])
-    [ RGB,  LINRGB,  HSV,  XYZ,  CIELAB,  LCH_AB,  OKLAB,  OKLCH ] = [s.casefold() for s in colorspaces]
-    change = (from_space.casefold(), to_space.casefold())
-    if from_space not in colorspaces or to_space not in colorspaces:
-        raise RuntimeError("unrecognized colorspace name for conversion")
-    if change == (RGB, RGB):
+
+    spaces = (from_space.casefold(), to_space.casefold())
+    if any (space not in COLORSPACES for space in spaces):
+        raise RuntimeError("unrecognized colorspace conversion '{spaces}'")
+    if spaces == (RGB, RGB):
         output_color = input_color
-    elif change == (RGB, LINRGB):
+    elif spaces == (RGB, LINRGB):
         (R,G,B) = input_color
         (R1,G1,B1) = to_normalized(R,G,B)
         def lin(x): # linear-light values
@@ -682,7 +687,7 @@ def change_space(input_color, from_space, to_space):
             else:           return x / 12.92
         (Rl,Gl,Bl) = lin(R1), lin(G1), lin(B1)
         output_color = (Rl,Gl,Bl)
-    elif change == (LINRGB, RGB):
+    elif spaces == (LINRGB, RGB):
         (Rl,Gl,Bl) = input_color
         def lin_inv(x):
             if x > 0.0031308: return 1.055 * x**(1/2.4) - 0.055
@@ -690,7 +695,7 @@ def change_space(input_color, from_space, to_space):
         (R1,G1,B1) = lin_inv(Rl), lin_inv(Gl), lin_inv(Bl)
         (R,G,B) = from_normalized(R1,G1,B1)
         output_color = (R,G,B)
-    elif change == (RGB, HSV):
+    elif spaces == (RGB, HSV):
         (R,G,B) = input_color
         (R1,G1,B1) = to_normalized(R,G,B)
         M = max(R1, G1, B1)
@@ -704,7 +709,7 @@ def change_space(input_color, from_space, to_space):
         V = M
         S = 0 if V==0 else (C / V)
         output_color = (H,S,V)
-    elif change == (HSV, RGB):
+    elif spaces == (HSV, RGB):
         (H,S,V) = input_color
         def f(n):
             k = (n + H%360 / 60) % 6
@@ -712,21 +717,21 @@ def change_space(input_color, from_space, to_space):
         R1,G1,B1 = f(5), f(3), f(1)
         (R,G,B) = from_normalized(R1,G1,B1)
         output_color = (R,G,B)
-    elif change == (RGB, XYZ):
+    elif spaces == (RGB, XYZ):
         (R,G,B) = input_color
         (Rl,Gl,Bl) = change_space((R,G,B),'RGB','LINRGB')
         X = 0.4124*Rl + 0.3576*Gl + 0.1805*Bl
         Y = 0.2126*Rl + 0.7152*Gl + 0.0722*Bl
         Z = 0.0193*Rl + 0.1193*Gl + 0.9505*Bl
         output_color = (X,Y,Z)
-    elif change == (XYZ, RGB):
+    elif spaces == (XYZ, RGB):
         (X,Y,Z) = input_color
         Rl =  3.2405*X - 1.5372*Y - 0.4986*Z
         Gl = -0.9689*X + 1.8758*Y + 0.0415*Z
         Bl =  0.0557*X - 0.2040*Y + 1.0570*Z
         (R,G,B) = change_space((Rl,Gl,Bl),'LINRGB','RGB')
         output_color = (R,G,B)
-    elif change == (RGB, CIELAB):
+    elif spaces == (RGB, CIELAB):
         (R,G,B) = input_color
         (X,Y,Z) = change_space((R,G,B),'RGB','XYZ')
         (X100,Y100,Z100) = X*100, Y*100, Z*100
@@ -739,7 +744,7 @@ def change_space(input_color, from_space, to_space):
         A = 500 * (f(X100 / XD65) - f(Y100 / YD65))
         B = 200 * (f(Y100 / YD65) - f(Z100 / ZD65))
         output_color = (L,A,B)
-    elif change == (CIELAB, RGB):
+    elif spaces == (CIELAB, RGB):
         (L,A,B) = input_color
         def f_inv(x):
             delta = 6/29
@@ -752,17 +757,17 @@ def change_space(input_color, from_space, to_space):
         (X,Y,Z) = X100/100, Y100/100, Z100/100
         (R,G,B) = change_space((X,Y,Z),'XYZ','RGB')
         output_color = (R,G,B)
-    elif change == (RGB, LCH_AB):
+    elif spaces == (RGB, LCH_AB):
         (R,G,B) = input_color
         (L,A,B) = change_space((R,G,B),'RGB','CIELAB')
         (C,H) = cartesian_to_polar(A,B)
         output_color = (L,C,H)
-    elif change == (LCH_AB, RGB):
+    elif spaces == (LCH_AB, RGB):
         (L,C,H) = input_color
         (A,B) = polar_to_cartesian(C,H)
         (R,G,B) = change_space((L,A,B),'CIELAB','RGB')
         output_color = (R,G,B)
-    elif change == (RGB, OKLAB):
+    elif spaces == (RGB, OKLAB):
         (R,G,B) = input_color
         (Rl,Gl,Bl) = change_space((R,G,B),'RGB','LINRGB')
         l = 0.4122214708*Rl + 0.5363325363*Gl + 0.0514459929*Bl
@@ -773,7 +778,7 @@ def change_space(input_color, from_space, to_space):
         A = 1.9779984951*lp - 2.4285922050*mp + 0.4505937099*sp
         B = 0.0259040371*lp + 0.7827717662*mp - 0.8086757660*sp
         output_color = (L,A,B)
-    elif change == (OKLAB, RGB):
+    elif spaces == (OKLAB, RGB):
         (L,A,B) = input_color
         lp = L + 0.3963377774*A + 0.2158037573*B
         mp = L - 0.1055613458*A - 0.0638541728*B
@@ -784,12 +789,12 @@ def change_space(input_color, from_space, to_space):
         Bl = -0.0041960863*l - 0.7034186147*m + 1.7076147010*s
         (R,G,B) = change_space((Rl,Gl,Bl),'LINRGB','RGB')
         output_color = (R,G,B)
-    elif change == (RGB, OKLCH):
+    elif spaces == (RGB, OKLCH):
         (R,G,B) = input_color
         (L,A,B) = change_space((R,G,B),'RGB','OKLAB')
         (C,H) = cartesian_to_polar(A,B)
         output_color = (L,C,H)
-    elif change == (OKLCH, RGB):
+    elif spaces == (OKLCH, RGB):
         (L,C,H) = input_color
         (A,B) = polar_to_cartesian(C,H)
         (R,G,B) = change_space((L,A,B),'OKLAB','RGB')
@@ -841,6 +846,26 @@ def average(*colors):
         count += 1
     color_average = tuple(round(color_sum/count) for ch in color_sum)
     return color_average
+
+def rainbow(param, color0=RED, space='OKLCH'):
+    space = space.casefold()
+    cyclespaces = [HSV, LCH_AB, OKLCH]
+    if space not in cyclespaces:
+        raise RuntimeError("unrecognized colorspace name for hue cycling")
+    if space == HSV:
+        (H0,S0,V0) = change_space(color0,'RGB','HSV')
+        H = (H0 + 360 * param) % 360
+        S = S0
+        V = V0
+        (R,G,B) = change_space((H,S,V),'HSV','RGB')
+    else:
+        (L0,C0,H0) = change_space(color0,'RGB',space)
+        L = L0
+        C = C0
+        H = (H0 - math.tau * param) % math.tau
+        (R,G,B) = change_space((L,C,H),space,'RGB')
+    return (R,G,B)
+
 
 # END   FUNCTIONS
 

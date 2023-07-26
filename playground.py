@@ -531,11 +531,10 @@ def main():
     dimensions = (100,100)
     ratio = (1, 1)
     maze = Maze(*dimensions)
-    maze.run_backtrack()
-    #random.choice(list(Maze.ALGORITHMS.values()))(maze)
+    random.choice(list(Maze.ALGORITHMS.values()))(maze)
     colormap_name = 'viridis'
     image = None
-    #import textwrap # remove source code multiline string indents
+    maze_storage_file = 'temp.txt'
     commands_information_text = lambda: f"""
 ~:--------------------------------------:~
  A Mazing Playground
@@ -545,7 +544,8 @@ def main():
  Maze Generation
  ;  build  - make new maze
  :  dim    - set dimensions for next build
- :  load   - load maze from input
+ :  load   - load maze from temp.txt
+ :  store  - store maze to  temp.txt
  Modification
  :  maxim  - find & set longest path
  :  goal   - manually set entrance & exit
@@ -554,7 +554,7 @@ def main():
  ;  print  - text art of maze
  :  txtsol - text art, solutions
  :  stats  - ~statistics of maze
- External Imaging
+ Imaging
  ;  img    - png image
  ;  imgsol - png solution image
  :  imgcol - png distance map
@@ -564,6 +564,7 @@ def main():
  :  ratio  - set ratio of wall:air size
  :  view   - view latest image
  :  save   - save latest image
+ Animation
  :  anim!  - open animation helper
  (Commands are autocompleted if possible)
  Enter blank command to quit
@@ -628,13 +629,22 @@ def main():
                 image = benchmark("generating image", lambda:
                     maze.generate_solutionimage(raster=maze.generate_raster(show_solution=True,wall_air_ratio=ratio)))
                 image.show()
-            case 'join': # Make current maze unicursal
-                benchmark("making unicursal", lambda: maze.make_unicursal())
-                preview(maze)
-            case 'load': # Let user load maze from a copied `repr` of a maze
+            case 'input':
                 new_maze = maybe_load_new_maze()
                 if new_maze is not None:
                     maze = new_maze
+            case 'join': # Make current maze unicursal
+                benchmark("making unicursal", lambda: maze.make_unicursal())
+                preview(maze)
+            case 'load':
+                with open(maze_storage_file,'r') as file:
+                    string = benchmark("reading file", lambda: file.read())
+                try:
+                    data = benchmark("evaluating string", lambda: eval(string))
+                    maze = benchmark("loading maze", lambda: Maze.from_repr(data))
+                    preview(maze)
+                except Exception as e:
+                    print(f"[could not load maze: {e}]")
             case 'maxim':
                 len_longest_path = benchmark("computing longest path", lambda:
                     maze.compute_longest_path())
@@ -657,6 +667,10 @@ def main():
                     print(stats_text)
                 except ValueError as e:
                     print(f"<error: {e}>")
+            case 'store':
+                with open(maze_storage_file,'w') as file:
+                    data = benchmark("generating string", lambda: repr(maze))
+                    benchmark("storing file", lambda: file.write(data))
             case 'txtsol':
                 maybe_print_solution(maze)
             case 'view':

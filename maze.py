@@ -563,8 +563,7 @@ class Maze:
             peak = self.exit.distance or 1
             wall_color = colortools.BLACK
             air_color = colortools.WHITE
-            (L,C,H) = colortools.change_space(colortools.VIOLET,'RGB','OKLCH')
-            marker_color = lambda value: colortools.change_space((L, C, H-2*3.141592653589793*value/peak),'OKLCH','RGB')
+            marker_color = lambda value: colortools.rainbow(value/peak, colortools.VIOLET, 'lch_ab')
             #marker_color = lambda value: colortools.change_space((360*value/peak, 1, 1),'HSV','RGB')
             #marker_color = colortools.BLUE
         else:
