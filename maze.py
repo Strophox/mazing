@@ -43,6 +43,11 @@ DOWN  = 0b1000
 # END   CONSTANTS
 
 
+# BEGIN DECORATORS
+# No decorators
+# END   DECORATORS
+
+
 # BEGIN CLASSES
 
 class Node:
@@ -892,7 +897,7 @@ class Maze:
             start_coord = (random.randint(x0,x1),random.randint(y0,y1))
         if name_index_choice is None:
             name = 'growing_tree'
-            index_choice = lambda max_index: -1 if random.random()<0.75 else random.randint(0,max_index)
+            index_choice = lambda max_index: -1 if random.random()<0.70 else random.randint(0,max_index)
         else:
             (name,index_choice) = name_index_choice
             #algorithm_variant = (lambda self,area=None,start_coord=None,fast_pop=False:

@@ -15,7 +15,7 @@ Some color constant names are inspired by Jan Misali (www.seximal.net/colors).
     - Dark primary colors
         * `CRIMSON` `GOLDENROD`  `MOSS`      `TEAL`     `NAVY`     `PURPLE`
     - Light primary colors
-        * `SALMON`  `VANILLA`    `MINT`      `CERULEAN` `PERIWINKLE`PINK`
+        * `SALMON`  `VANILLA`    `MINT`      `SKY`      `PERIWINKLE`PINK`
     - Miscellaneous colors dictionary
         * `COLORS`
     - Color palettes dictionary
@@ -175,7 +175,7 @@ PALETTES = {
 COLORMAPS = {
     'kanagawa': ( # 2 values
         (  0,  63, 127), # '#003f7f'
-        (239, 227, 207), # '#efe3cf'
+        (247, 241, 231), # '#f7f1e7'
     ),
     'viridis': ( # 18 values
         ( 68,   1,  84), # '#440154'
@@ -606,6 +606,11 @@ COLORSPACES = [
 ]
 
 # END   CONSTANTS
+
+
+# BEGIN DECORATORS
+# No decorators
+# END   DECORATORS
 
 
 # BEGIN CLASSES

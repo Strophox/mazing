@@ -28,6 +28,11 @@ CH = lambda: shutil.get_terminal_size()[1]
 # END   CONSTANTS
 
 
+# BEGIN DECORATORS
+# No decorators
+# END   DECORATORS
+
+
 # BEGIN CLASSES
 # No classes
 # END   CLASSES
@@ -65,10 +70,10 @@ def preview(maze, printer=Maze.str_frame):
     return
 
 def benchmark(title, function):
-    """Run a function, print execution time and return f's result."""
-    start_time = time.perf_counter()
-    result = function()
-    time_taken = time.perf_counter() - start_time
+    begin_time = time.perf_counter()
+    result     = function()
+    end_time   = time.perf_counter()
+    time_taken = end_time - begin_time
     print(f"['{title}' completed in {time_taken:.03f}s]")
     return result
 
@@ -462,6 +467,8 @@ def analysis(maze):
         sample_to_distribution_chart(offshoots_avglengths))
     stats_solution = f"""
  Solution Path Statistics.
+ :  Start  coordinates  {maze.entrance.coordinates}
+ :  Finish coordinates  {maze.exit.coordinates}
  :  Length of solution path
  :      {len_solution}  ({fmt_perc(len_solution/nodecount)} of area)
  :  Number of offshooting paths from solution
