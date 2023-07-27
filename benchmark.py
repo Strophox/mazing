@@ -9,10 +9,10 @@ Note to self: do `python3 -m scalene small_benchmark.py`
 
 # BEGIN IMPORTS
 
-from os import makedirs
 import random
-from maze import Maze
+from os         import makedirs
 from benchtools import timed, timed_titled
+from maze       import Maze, ALGORITHMS
 
 # END   IMPORTS
 
@@ -80,7 +80,7 @@ def test_sizes():
 
 #@schedule
 def test_builders():
-    for builder in Maze.ALGORITHMS.values():
+    for builder in ALGORITHMS.values():
         maze = grid(8)
         timed(builder)(maze)
     return
@@ -89,13 +89,19 @@ def test_builders():
 def test_tree_pop():
     N = 10
     maze = grid(N)
-    timed(maze.grow_tree)(
-        name_index_choice=("tree-random",lambda mxi:random.randint(0,mxi))
+    timed(maze.growing_tree)(
+        name_and_index_choice=(
+            "random tree",
+            (lambda mxi:random.randint(0,mxi)),
+        )
     )
     maze = grid(N)
-    timed(maze.grow_tree)(
-        name_index_choice=("tree-random-fast",lambda mxi:random.randint(0,mxi)),
-        fast_pop=True
+    timed(maze.growing_tree)(
+        name_index_choice=(
+            "random tree fast",
+            (lambda mxi:random.randint(0,mxi)),
+        ),
+        fast_pop=True,
     )
     return
 
@@ -108,8 +114,13 @@ def test_tree_probabilites():
         if i < 90 and i % 5 != 0:
             continue
         maze = grid(N)
-        timed_with_name(f"growing tree {i}/100", maze.grow_tree)(
-            name_index_choice=(f"tree-{i/100:.02f}", lambda mxi: -1 if random.random() < i/100 else random.randint(0,mxi))
+        timed_with_name(f"growing tree {i}/100", maze.growing_tree)(
+            name_index_choice=(
+                f"tree_{i/100:.02f}",
+                (lambda mxi:
+                     -1 if random.random() < i/100 else random.randint(0,mxi)
+                ),
+            ),
         )
         timed(maze.compute_longest_path)()
         stats = timed(maze.generate_stats)()
@@ -127,7 +138,7 @@ def test_kanagawa():
     for i in range(50):
         maze = timed(Maze)(128,128)
         maze.set_entrance(63,0)
-        timed(maze.run_backtrack)()
+        timed(maze.backtracker)()
         timed(maze.compute_distances)()
         image = timed(maze.generate_colorimage)(
             gradient_colors=colortools.COLORMAPS['kanagawa'][::-1],

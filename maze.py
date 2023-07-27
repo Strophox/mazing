@@ -25,14 +25,17 @@ This file contains all important maze-relation implementations to store, create 
 
 import random
 import time # strftime
-import collections # deque
-from PIL import Image
+import collections # deque, OrderedDict
 import colortools
+from PIL import Image
 
 # END   IMPORTS
 
 
 # BEGIN CONSTANTS
+
+# Public list of available maze algorithms
+ALGORITHMS = collections.OrderedDict()
 
 # Directions
 RIGHT = 0b0001
@@ -40,17 +43,24 @@ UP    = 0b0010
 LEFT  = 0b0100
 DOWN  = 0b1000
 
+# Infinity
+_INFINITY = float('inf')
+
 # END   CONSTANTS
 
 
 # BEGIN DECORATORS
-# No decorators
+
+def maze_algorithm(f):
+    ALGORITHMS[f.__name__] = f
+    return f
+
 # END   DECORATORS
 
 
 # BEGIN CLASSES
 
-class _Node:
+class Node:
     """
     A class representing a maze grid cell/node.
     """
@@ -58,8 +68,8 @@ class _Node:
         """Initialize a node by its grid coordinates."""
         self.flag = None
         self._coordinates = (x, y)
-        self._distance = float('inf')
-        self._mark = 'unidentified'
+        self._distance = _INFINITY
+        self._alg_id = 0
         self._edges = 0b0000
 
     def __repr__(self):
@@ -72,10 +82,6 @@ class _Node:
     @property
     def distance(self):
         return self._distance
-
-    @property
-    def mark(self):
-        return self._mark
 
     def has_wall(self, direction):
         """Check whether there is a wall in a certain direction from the node."""
@@ -134,7 +140,7 @@ class Maze:
             raise ValueError("Maze must have positive width and height")
         self._width  = width
         self._height = height
-        self._grid = [[_Node(x,y) for x in range(width)] for y in range(height)]
+        self._grid = [[Node(x,y) for x in range(width)] for y in range(height)]
         self._solution_nodes = None
         self.entrance = self.node_at(0,0)
         self.exit = self.node_at(-1,-1)
@@ -143,7 +149,11 @@ class Maze:
         string = (
             self.entrance.coordinates,
             self.exit.coordinates,
-            [[node._edges for node in row] for row in self._grid],
+            [
+                [
+                    node._edges for node in row
+                ] for row in self._grid
+            ],
         ).__repr__()
         return string
 
@@ -167,10 +177,13 @@ class Maze:
         assert (type(grid[0]) == list)
         assert (len(grid[0]) > 0)
         maze = Maze(len(grid[0]),len(grid))
-        for y in range(maze.height):    # `x` and `y` were swappe for these
-            for x in range(maze.width): # two loops for a long time - epic bug
+        for y in range(maze.height):    # `x` and `y` were swapped for these
+            for x in range(maze.width): #   two loops for a long time - epic bug
                 assert (type(grid[y][x]) == int)
-                maze.node_at(x,y).set_edges(grid[y][x])
+                raw = grid[y][x]
+                node = maze.node_at(x,y)
+                node._edges  = raw % 0b10000
+                node._alg_id = raw // 0b10000
         assert (type(entrance_coordinates) == tuple)
         assert (type(entrance_coordinates[0]) == int)
         assert (type(entrance_coordinates[1]) == int)
@@ -196,7 +209,7 @@ class Maze:
     def name(self):
         """Generate human-readable name for the maze."""
         candidates = self.generate_algorithm_shares()
-        main_algorithm = max(candidates,key=candidates.get)
+        main_algorithm = f"{max(candidates,key=candidates.get)}".replace(' ','-')
         size = f"{self.width}x{self.height}"
         string = f"maze{size}_{main_algorithm}"
         return string
@@ -340,7 +353,7 @@ class Maze:
             if y < y1 and node.has_edge(DOWN):  yield self.node_at(x,y+1)
 
     def _breadth_first_search(self, start, scanr=lambda _:None):
-        if start.distance != float('inf'):
+        if start.distance < _INFINITY:
             return
         queue = collections.deque(maxlen=3*max(self.width,self.height))
         queue.append(start)
@@ -349,7 +362,7 @@ class Maze:
             current = queue.popleft()
             neighbors = list(self.connected_to(current))
             for neighbor in neighbors:
-                if neighbor.distance == float('inf'):
+                if neighbor.distance == _INFINITY:
                     queue.append(neighbor)
                     neighbor._distance = current.distance + 1 ; scanr(neighbor)
         return
@@ -365,15 +378,15 @@ class Maze:
         else:
             start = self.node_at(*start_coord)
         for node in self.nodes():
-            node._distance = float('inf')
+            node._distance = _INFINITY
         self._breadth_first_search(start)
         return
 
     def compute_branchdistances(self):
         for node in self.nodes():
-            node._distance = float('inf')
+            node._distance = _INFINITY
         for node in self.nodes(): # TODO optimize
-            if node.distance == float('inf'):
+            if node.distance == _INFINITY:
                 previous = None
                 current = node
                 if node._edges in [1,2,4,8]: node._distance = 0 # ugly hack
@@ -390,7 +403,7 @@ class Maze:
         if recompute_distances:
             self.compute_distances()
         self._solution_nodes = set()
-        if self.exit.distance == float('inf'):
+        if self.exit.distance == _INFINITY:
             return
         current = self.exit
         self._solution_nodes.add(self.exit)
@@ -401,7 +414,7 @@ class Maze:
 
     def compute_longest_path(self):
         for node in self.nodes():
-            node._distance = float('inf')
+            node._distance = _INFINITY
         global counter
         counter = 0
         def increment_counter(n):
@@ -411,13 +424,13 @@ class Maze:
             if counter == self.width*self.height:
                 break
             self._breadth_first_search(node, scanr=increment_counter)
-        finite_nodes = [n for n in self.nodes() if n.distance<float('inf')]
+        finite_nodes = [n for n in self.nodes() if n.distance < _INFINITY]
         farthest = max(finite_nodes, key=lambda n:n.distance)
         self.entrance = farthest
         for node in self.nodes():
-            node._distance = float('inf')
+            node._distance = _INFINITY
         self._breadth_first_search(self.entrance)
-        finite_nodes = [n for n in self.nodes() if n.distance<float('inf')]
+        finite_nodes = [n for n in self.nodes() if n.distance < _INFINITY]
         farthest = max(finite_nodes, key=lambda n:n.distance)
         self.exit = farthest
         return self.exit.distance
@@ -432,13 +445,11 @@ class Maze:
 
     def generate_algorithm_shares(self):
         null_cat = 'unidentified'
-        algorithm_shares = {name:0 for name in Maze.ALGORITHMS}
-        algorithm_shares[null_cat] = 0
+        algorithm_amounts = [0] * len(ALGORITHMS)
         for node in self.nodes():
-            if node.mark in algorithm_shares:
-                algorithm_shares[node.mark] += 1
-            else:
-                algorithm_shares[null_cat] += 1
+            if 0 <= node._alg_id < len(algorithm_amounts):
+                algorithm_amounts[node._alg_id] += 1
+        algorithm_shares = dict(zip(ALGORITHMS,algorithm_amounts))
         return algorithm_shares
 
     def generate_stats(self):
@@ -465,7 +476,7 @@ class Maze:
                 branch_distances.append(nearest_branch_distance(node))
             # Preparation for next part
             if node not in self._solution_nodes:
-                node._distance = float('inf')
+                node._distance = _INFINITY
         if tiles_counts[0b0001]+tiles_counts[0b0010]+tiles_counts[0b0100]+tiles_counts[0b1000] == 0:
             raise ValueError("maze has no dead ends, aborting analysis")
         offshoots_maxlengths = []
@@ -477,7 +488,7 @@ class Maze:
                     length_adder = lambda n: lengths.append(n.distance) if is_dead_end(n) else None
                     self._breadth_first_search(offshoot, scanr=length_adder)
                     maxlength = max(lengths, default=0)
-                    avglength = round(sum(lengths)/len(lengths))
+                    avglength = 0 if not lengths else round(sum(lengths)/len(lengths))
                     offshoots_maxlengths.append(maxlength)
                     offshoots_avglengths.append(avglength)
         return (tiles_counts, branch_distances, offshoots_maxlengths, offshoots_avglengths)
@@ -490,6 +501,8 @@ class Maze:
             wall = -1  air = 0  marker = [1,2..]
         show_distances:
             wall = -1  air = [0,1..]  unreachable = -2
+        show_algorithms:
+            wall = -1  air = [0,1..]
         """
         """Return a simple 2D raster representation of the maze.
 
@@ -511,11 +524,11 @@ class Maze:
                 raise RuntimeError("cannot show solution path before computing it")
             mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self._solution_nodes and nx<self.width and ny<self.height and self.node_at(nx,ny) in self._solution_nodes else 0
         elif show_distances:
-            mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else (-2) if self.node_at(x,y).distance==float('inf') else self.node_at(x,y).distance
+            mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else (-2) if self.node_at(x,y).distance==_INFINITY else self.node_at(x,y).distance
         elif show_algorithms:
-            mkval = lambda is_wall, x,y, nx,ny: 'wall' if is_wall else self.node_at(x,y).mark
+            mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else self.node_at(x,y)._alg_id
         else:
-            mkval = lambda is_wall, x,y, nx,ny: (+1) if is_wall else 0
+            mkval = lambda is_wall, x,y, nx,ny: 1 if is_wall else 0
         raster = []
         # Top-left corner
         row1 = [mkval(True, 0,0, 0,0)] * wallM
@@ -541,9 +554,8 @@ class Maze:
 
     @staticmethod
     def _raster_to_image(raster, value_to_color):
-        colors = [value_to_color(value) for row in raster for value in row]
         image = Image.new('RGB', (len(raster[0]),len(raster)))
-        image.putdata(colors)
+        image.putdata([value_to_color(value) for row in raster for value in row])
         return image
 
     def generate_image(self, wall_air_colors=(colortools.BLACK,colortools.WHITE), raster=None):
@@ -598,23 +610,23 @@ class Maze:
         value_to_color = lambda value: wall_color if value==(-1) else unreachable_color if value==(-2) else air_color(value)
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
-        image.filename = f"{self.name()}_dist_{self._stamp()f}.png"
+        image.filename = f"{self.name()}_dist_{self._stamp()}.png"
         return image
 
     def generate_algorithmimage(self, raster=None):
         if raster is None:
             raster = self.generate_raster(show_algorithms=True)
-        coloring = {
-            'wall': colortools.BLACK,
-            'unidentified': colortools.GRAY,
-            'random_edges': colortools.LIGHT_GRAY,
-            'growing_tree': colortools.MOSS,
-            'backtracker':  colortools.BLUE,
-            'prim':         colortools.CRIMSON,
-            'kruskal':      colortools.GOLDENROD,
-            'wilson':       colortools.mix(colortools.VIOLET,colortools.PURPLE),
-            'division':     colortools.WHITE,
-        }
+        coloring = [
+            colortools.GRAY,
+            colortools.LIGHT_GRAY,
+            colortools.MOSS,
+            colortools.BLUE,
+            colortools.CRIMSON,
+            colortools.GOLDENROD,
+            colortools.mix(colortools.VIOLET,colortools.PURPLE),
+            colortools.WHITE,
+            colortools.BLACK, # Wall
+        ]
         value_to_color = lambda value: coloring[value]
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
@@ -867,24 +879,38 @@ class Maze:
                 string.append(trsfm2(cornersegment(x,y)))
         return ''.join(string)
 
-    def randomize_edges(self, area=None, edge_probability=0.5, record_frame=None):
+    @maze_algorithm
+    def clear(self, area=None, record_frame=None):
+        if area is None:
+            area = (0,0,self.width-1,self.height-1)
+        alg_id = _algorithm_name_to_id('clear')
+        record_frame(self)
+        for (node0,node1) in self.edges(area):
+            self.connect(node0,node1)
+            record_frame(self)
+        self._solution_nodes = None
+
+    @maze_algorithm
+    def random_edges(self, area=None, record_frame=None, edge_probability=0.5):
         """Build a bogus maze by flipping a coin on every edge.
 
         Args:
             width, height (int): Positive integer dimensions of desired maze
         """
-        mark = 'random_edges'
+        alg_id = _algorithm_name_to_id('random_edges')
         if record_frame is None:
             record_frame = lambda maze:None
         record_frame(self)
         for (node0,node1) in self.edges(area):
-            node0._mark = node1._mark = mark
+            node0._alg_id = node1._alg_id = alg_id
             if random.random() < edge_probability:
                 self.connect(node0,node1)
                 record_frame(self)
         return
 
-    def grow_tree(self, area=None, start_coord=None, name_index_choice=None, fast_pop=False, record_frame=None):
+    @maze_algorithm
+    def growing_tree(self, area=None, record_frame=None,
+            start_coord=None, name_and_index_choice=None, fast_pop=False):
         """Build a random maze using the '(random) growing tree' algorithm.
 
         Args:
@@ -894,25 +920,34 @@ class Maze:
             fast_pop (bool): Whether to switch chosen element with last element when removing from active set. This is to speed up generation of large, random mazes (default is False)
         """
         if area is None:
-            (x0,y0,x1,y1) = (0,0,self.width-1,self.height-1)
-        else:
-            (x0,y0,x1,y1) = area
+            area = (0,0,self.width-1,self.height-1)
+        (x0,y0,x1,y1) = area
         if start_coord is None:
             start_coord = (random.randint(x0,x1),random.randint(y0,y1))
-        if name_index_choice is None:
-            name = 'growing_tree'
+        if name_and_index_choice is None:
+            alg_id = _algorithm_name_to_id('growing_tree')
             index_choice = lambda max_index: -1 if random.random()<0.70 else random.randint(0,max_index)
         else:
-            (name,index_choice) = name_index_choice
+            (name,index_choice) = name_and_index_choice
+            if name not in ALGORITHMS:
+                ALGORITHMS[name] = (
+                    lambda maze, area, record_frame:
+                        Maze.growing_tree(
+                            maze,
+                            area=area,
+                            name_and_index_choice=name_and_index_choice,
+                            record_frame=record_frame,
+                        )
+                )
+            alg_id = _algorithm_name_to_id(name)
             #algorithm_variant = (lambda self,area=None,start_coord=None,fast_pop=False:
                 #Maze.grow_tree(self,area=area,start_coord=start_coord,name_index_choice=name_index_choice,fast_pop=fast_pop))
             #Maze.algorithms[name] = algorithm_variant
-        mark = name
         if record_frame is None:
             record_frame = lambda maze:None
         start = self.node_at(*start_coord)
         start.flag = True
-        start._mark = mark
+        start._alg_id = alg_id
         active_set = [start]
         record_frame(self)
         while active_set:
@@ -922,61 +957,70 @@ class Maze:
                 neighbor = random.choice(neighbors)
                 self.connect(node, neighbor)
                 neighbor.flag = True
-                neighbor._mark = mark
+                neighbor._alg_id = alg_id
                 active_set.append(neighbor)
                 record_frame(self)
             else:
                 if fast_pop:
                     if len(active_set) > 1 and idx != -1:
-                        active_set[idx],active_set[-1] = active_set[-1],active_set[idx]
+                        (
+                            active_set[idx], active_set[-1]
+                        ) = (
+                            active_set[-1],  active_set[idx]
+                        )
                     active_set.pop()
                 else:
                     active_set.pop(idx)
         return
 
-    def run_prim(self, area=None, start_coord=None, record_frame=None):
-        """Build a random maze using randomized Prim's algorithm.
-
-        Args:
-            width, height (int): Positive integer dimensions of desired maze
-            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
-        """
-        name_index_choice = ('prim',
-            lambda max_index: random.randint(0,max_index))
-        self.grow_tree(
-            area=area,
-            start_coord=start_coord,
-            name_index_choice=name_index_choice,
-            fast_pop=False,
-            record_frame=record_frame
-        )
-        return
-
-    def run_backtrack(self, area=None, start_coord=None, record_frame=None):
+    @maze_algorithm
+    def backtracker(self, area=None, record_frame=None, start_coord=None):
         """Build a random maze using randomized depth first search.
 
         Args:
             width, height (int): Positive integer dimensions of desired maze
             start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
-        name_index_choice = ('backtracker',
-            lambda max_index: -1)
-        self.grow_tree(
+        self.growing_tree(
             area=area,
             start_coord=start_coord,
-            name_index_choice=name_index_choice,
+            name_and_index_choice=(
+                'backtracker',
+                (lambda max_index: -1),
+            ),
             fast_pop=False,
-            record_frame=record_frame
+            record_frame=record_frame,
         )
         return
 
-    def run_kruskal(self, area=None, record_frame=None):
+    @maze_algorithm
+    def prim(self, area=None, record_frame=None, start_coord=None):
+        """Build a random maze using randomized Prim's algorithm.
+
+        Args:
+            width, height (int): Positive integer dimensions of desired maze
+            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
+        """
+        self.growing_tree(
+            area=area,
+            start_coord=start_coord,
+            name_and_index_choice=(
+                'prim',
+                (lambda max_index: random.randint(0,max_index)),
+            ),
+            fast_pop=False,
+            record_frame=record_frame,
+        )
+        return
+
+    @maze_algorithm
+    def kruskal(self, area=None, record_frame=None):
         """Build a random maze using randomized Kruskal's algorithm.
 
         Args:
             width, height (int): Positive integer dimensions of desired maze
         """
-        mark = 'kruskal'
+        alg_id = _algorithm_name_to_id('kruskal')
         if area is None:
             nodecount = self.width * self.height
         else:
@@ -988,7 +1032,7 @@ class Maze:
         members = dict()
         record_frame(self)
         for (node0,node1) in edges:
-            node0._mark = node1._mark = mark
+            node0._alg_id = node1._alg_id = alg_id
             if not all([node0.flag,node1.flag]) or node0.flag != node1.flag:
                 if not node0.flag:
                     node0.flag, members[node0] = node0, [node0]
@@ -1007,18 +1051,18 @@ class Maze:
                     break
         return
 
-    def run_wilson(self, area=None, start_coord=None, record_frame=None):
+    @maze_algorithm
+    def wilson(self, area=None, record_frame=None, start_coord=None):
         """Build a random maze using Wilson's uniform spanning tree algorithm..
 
         Args:
             width, height (int): Positive integer dimensions of desired maze
             start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
-        mark = 'wilson'
+        alg_id = _algorithm_name_to_id('wilson')
         if area is None:
-            (x0,y0,x1,y1) = (0,0,self.width-1,self.height-1)
-        else:
-            (x0,y0,x1,y1) = area
+            area = (0,0,self.width-1,self.height-1)
+        (x0,y0,x1,y1) = area
         if record_frame is None:
             record_frame = lambda maze:None
         def backtrack_path(tail_node, origin):
@@ -1037,7 +1081,7 @@ class Maze:
         random.shuffle(nodes)
         record_frame(self)
         for node in nodes:
-            node._mark = mark
+            node._alg_id = alg_id
             if not node.flag:
                 generation += 1
                 node.flag = generation
@@ -1059,7 +1103,10 @@ class Maze:
                         break
         return
 
-    def run_division(self, area=None, slice_direction_choice=None, pivot_choice=None, roomlength=0, nest_algorithms=[], record_frame=None):
+    @maze_algorithm
+    def division(self, area=None, record_frame=None,
+            slice_direction_choice=None, pivot_choice=None,
+            roomlength=0, nest_algorithms=[]):
         """Build a random maze using randomized divide-and-conquer.
 
         Args:
@@ -1067,7 +1114,7 @@ class Maze:
             slice_bias (float): Probability (0<=slice_bias<=1) to do a reroll when dividing a quadrant along the same direction as parent call
             pivot_choice (callable(int,int) -> int): Function to choose a random index between given lower and upper index along which to make a cut
         """
-        mark = 'division'
+        alg_id = _algorithm_name_to_id('division')
         if area is None:
             area = (0,0,self.width-1,self.height-1)
         if pivot_choice is None:
@@ -1088,23 +1135,24 @@ class Maze:
                 if ewidth < 1 or eheight < 1 or not nest_algorithms:
                     for x in range(x0,x1+1):
                         for y in range(y0,y1+1):
-                            self.node_at(x,y)._mark = mark
+                            self.node_at(x,y)._alg_id = alg_id
                             if x < x1:
-                                self.node_at(x+1,y)._mark = mark
+                                self.node_at(x+1,y)._alg_id = alg_id
                                 self.connect((x,y),(x+1,y))
                             if y < y1:
-                                self.node_at(x,y+1)._mark = mark
+                                self.node_at(x,y+1)._alg_id = alg_id
                                 self.connect((x,y),(x,y+1))
                             record_frame(self)
                 else:
-                    random.choice(nest_algorithms)(self, area=area, record_frame=record_frame)
+                    random.choice(nest_algorithms)(self, area, record_frame)
                 return
             cut_horizontally = slice_direction_choice(ewidth, eheight, prev_dir)
             if cut_horizontally:
                 yP = pivot_choice(y0,y1-1)
                 x = random.randint(x0,x1)
-                self.node_at(x,yP)._mark = mark
-                self.node_at(x,yP+1)._mark = mark
+                if not nest_algorithms:
+                    self.node_at(x,yP)._alg_id = alg_id
+                    self.node_at(x,yP+1)._alg_id = alg_id
                 self.connect((x,yP),(x,yP+1))
                 record_frame(self)
                 divide((x0,y0,x1,yP), True)
@@ -1112,8 +1160,9 @@ class Maze:
             else:
                 xP = pivot_choice(x0,x1-1)
                 y = random.randint(y0,y1)
-                self.node_at(xP,y)._mark = mark
-                self.node_at(xP+1,y)._mark = mark
+                if not nest_algorithms:
+                    self.node_at(xP,y)._alg_id = alg_id
+                    self.node_at(xP+1,y)._alg_id = alg_id
                 self.connect((xP,y),(xP+1,y))
                 record_frame(self)
                 divide((x0,y0,xP,y1), False)
@@ -1122,26 +1171,29 @@ class Maze:
         divide(area, zeroth_cut)
         return
 
-    ALGORITHMS = {
-        'random_edges':
-            randomize_edges,
-        'growing_tree':
-            grow_tree,
-        'backtracker':
-            run_backtrack,
-        'prim':
-            run_prim,
-        'kruskal':
-            run_kruskal,
-        'wilson':
-            run_wilson,
-        'division':
-            run_division,
-        'xdivision':
-            (lambda maze, area=None, record_frame=None: Maze.run_division(maze,roomlength=float('inf'),nest_algorithms=list(alg for name,alg in Maze.ALGORITHMS.items() if name not in {'random_edges','xdivision'}),area=area,record_frame=record_frame))
-    }
+    @maze_algorithm
+    def xdivision(self, area=None, record_frame=None, roomlength=0):
+        self.division(
+                area,
+                record_frame,
+                roomlength=float('inf'),
+                nest_algorithms=[
+                    alg for name,alg in ALGORITHMS.items() if name not in {
+                        'random_edges', 'xdivision'
+                    }
+                ],
+            )
+        return
 
 # END   CLASSES
+
+
+# BEGIN FUNCTIONS
+
+def _algorithm_name_to_id(string):
+    return list(ALGORITHMS.keys()).index(string)
+
+# END   FUNCTIONS
 
 
 # BEGIN MAIN
