@@ -589,13 +589,14 @@ def analysis(maze):
                  :    -- No valid data for bar chart.
                 """,
             )
+
         CWtitle = max(len(title) for title in distribution)
         CWperc = max(len(fmt_perc(perc)) for perc in distribution.values())
         CWbar = (CW()-6-CWperc-2-CWtitle-2) * 4 // 5
         hbar = lambda columns, fill_level: '%' * round(fill_level*columns)
         table = dedent4_concat_strip(
             f"""
-             :    {CWperc*' '}  {CWtitle*' '}  +{CWbar*'-'}+
+             :    {CWperc*' '}  {CWtitle*' '}  +{(CWbar)*'-'}+
             """,
             *(f"""
              :    {fmt_perc(perc).rjust(CWperc)}  {title.ljust(CWtitle)}  |{hbar(CWbar, perc).ljust(CWbar)}|
@@ -647,7 +648,6 @@ def analysis(maze):
     stats_general = dedent4_concat_strip(
         f"""
          General Information.
-         :    Name  '{maze.name()}'
          :   Width  {maze.width}
          :  Height  {maze.height}
          :    Area  {maze.width*maze.height}
@@ -655,9 +655,6 @@ def analysis(maze):
          :  Algorithm used:
         """,
         fmt_barchart(algorithm_distribution),
-    )
-    # Node Stats
-    stats_nodes = dedent4_concat_strip(
         f"""
          Node Statistics.
          :  Node connectivities:
@@ -699,8 +696,6 @@ def analysis(maze):
     statistics = dedent4_concat_strip(
         hrulefill,
             stats_general,
-        hrulefill,
-            stats_nodes,
         hrulefill,
             stats_distance,
         hrulefill,
@@ -745,7 +740,7 @@ def main():
          :  maxim  - find & set longest path
          Viewing in Console
          ;  print  - text art of maze
-         :  txtsol - text art, solutions
+         :  solve  - solution ascii art
          :  stats  - ~statistics of maze
          Viewing as Image
          ;  img    - maze image
@@ -900,6 +895,9 @@ def main():
                     timed_titled(f"saving {image.filename}", image.save)(
                         image.filename
                     )
+            # Show solution using text art
+            case 'solve':
+                maybe_print_solution(maze)
             # Generate and show statistics on the maze
             case 'stats':
                 try:
@@ -914,9 +912,6 @@ def main():
                     timed_titled("storing file", file.write)(data)
                 #with open(maze_storage_file,'wb') as file:
                     #pickle.dump(maze, file, pickle.HIGHEST_PROTOCOL)
-            # Show solution using text art
-            case 'txtsol':
-                maybe_print_solution(maze)
             # Re-open last image shown for preview
             case 'view':
                 if image is None:

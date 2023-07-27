@@ -1130,21 +1130,28 @@ class Maze:
             record_frame = lambda maze:None
         def divide(area, prev_dir):
             (x0,y0,x1,y1) = area
-            ewidth, eheight = (x1-x0), (y1-y0)
-            if ewidth < 1 or eheight < 1 or roomlength and ewidth < roomlength and eheight < roomlength and random.random() < 1/((ewidth+1)*(eheight+1))**.5:
-                if ewidth < 1 or eheight < 1 or not nest_algorithms:
-                    for x in range(x0,x1+1):
-                        for y in range(y0,y1+1):
-                            self.node_at(x,y)._alg_id = alg_id
-                            if x < x1:
-                                self.node_at(x+1,y)._alg_id = alg_id
-                                self.connect((x,y),(x+1,y))
-                            if y < y1:
-                                self.node_at(x,y+1)._alg_id = alg_id
-                                self.connect((x,y),(x,y+1))
-                            record_frame(self)
-                else:
-                    random.choice(nest_algorithms)(self, area, record_frame)
+            print(area)
+            ewidth, eheight = (x1-x0)+1, (y1-y0)+1
+            room1 = ewidth <= 1 or eheight <= 1
+            event_room = (
+                roomlength > 0
+                and ewidth <= roomlength and eheight <= roomlength
+                and random.random() < 1/(ewidth*eheight)**.5
+            )
+            if room1 or (event_room and not nest_algorithms):
+                for x in range(x0,x1+1):
+                    for y in range(y0,y1+1):
+                        self.node_at(x,y)._alg_id = alg_id
+                        if x < x1:
+                            self.node_at(x+1,y)._alg_id = alg_id
+                            self.connect((x,y),(x+1,y))
+                        if y < y1:
+                            self.node_at(x,y+1)._alg_id = alg_id
+                            self.connect((x,y),(x,y+1))
+                        record_frame(self)
+                return
+            elif event_room:
+                random.choice(nest_algorithms)(self, area, record_frame)
                 return
             cut_horizontally = slice_direction_choice(ewidth, eheight, prev_dir)
             if cut_horizontally:
