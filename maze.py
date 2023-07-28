@@ -208,7 +208,7 @@ class Maze:
         candidates = self.generate_algorithm_shares()
         main_algorithm = f"{max(candidates,key=candidates.get)}".replace(' ','-')
         size = f"{self.width}x{self.height}"
-        string = f"maze{size}_{main_algorithm}"
+        string = f"maze_{main_algorithm}-{size}"
         return string
 
     def _stamp(self):
@@ -487,7 +487,7 @@ class Maze:
                     offshoots_maxlengths.append(maxlength)
         return (tiles_counts, branch_distances, offshoots_maxlengths)
 
-    def generate_raster(self, wall_air_ratio=(1,1), columnated=True,
+    def generate_raster(self, wall_air_ratio=(1,1), decolumnated=True,
         show_solution=False, show_distances=False, show_algorithms=False):
         """
         normal:
@@ -509,10 +509,17 @@ class Maze:
             list(list(bool)): 2D raster of the maze
         """
         (wallM, airM) = wall_air_ratio
-        if columnated:
-            column_wall = lambda x,y: True
+        if not decolumnated:
+            column = lambda node, dirc, wall, air: wall
         else:
-            column_wall = lambda x,y: x==self.width-1 or y==self.height-1 or wall(x,y,RIGHT) or wall(x,y,DOWN) or wall(x+1,y+1,LEFT) or wall(x+1,y+1,UP)
+            column = (lambda node, dirc, wall, air:
+                wall if dirc!=3
+                or node.has_wall(RIGHT) or node.has_wall(DOWN)
+                or x==self.width-1 or y==self.height-1
+                or (xp:=1+node.coordinates[0])and()or(yp:=1+node.coordinates[1])and()
+                or self.node_at(xp,yp).has_wall(UP) or self.node_at(xp,yp).has_wall(LEFT)
+                else air
+            )
         # `pxl` takes three values:
         # - `node`: current node we're situated at, None if drawing wall
         # - `dirc`: direction which we're painting away from, None if centered on node
@@ -522,22 +529,23 @@ class Maze:
                 raise RuntimeError("cannot show solution path before computing it")
             is_sol = lambda n: n in self._solution_nodes
             pxl = (lambda node, dirc, nbr:
-                (-1) if node is None # wall
+                column(nbr,dirc,(-1),0) if node is None # wall
                 else (node.distance+1 if is_sol(node) else 0) if dirc is None # center air
                 else (-1) if node.has_wall(dirc) # directional wall
                 else (node.distance+1 if is_sol(node) else 0) if nbr is not None and is_sol(nbr) # directional colored air
                 else 0 # directional air
             )
         elif show_distances:
+            dist_col = lambda node: node.distance if node.distance!=_INFINITY else -2
             pxl = (lambda node, dirc, nbr:
-                (-1) if node is None # wall
-                else (node.distance if node.distance!=_INFINITY else -2) if dirc is None # center air
+                column(nbr,dirc,(-1),dist_col(node)) if node is None # wall
+                else dist_col(node) if dirc is None # center air
                 else (-1) if node.has_wall(dirc) # directional wall
-                else (node.distance if node.distance!=_INFINITY else -2) # directional colored air
+                else dist_col(node) # directional colored air
             )
         elif show_algorithms:
             pxl = (lambda node, dirc, nbr:
-                (-1) if node is None # wall
+                column(nbr,dirc,(-1),node._alg_id) if node is None # wall
                 else node._alg_id if dirc is None # center air
                 else (-1) if node.has_wall(dirc) # directional wall
                 else node._alg_id if nbr is not None and node._alg_id==nbr._alg_id # directional colored air
@@ -545,7 +553,7 @@ class Maze:
             )
         else:
             pxl = (lambda node, dirc, nbr:
-                ( 1) if node is None # wall
+                column(nbr,dirc,( 1),0) if node is None # wall
                 else 0 if dirc is None # center air
                 else ( 1) if node.has_wall(dirc) # directional wall
                 else 0 # directional colored air
@@ -553,23 +561,23 @@ class Maze:
         rows = self._grid
         raster = []
         # Top-left corner
-        row1 = [pxl(None, None, None)] * wallM
+        row1 = [pxl(None, 0, None)] * wallM
         # Top wall
         for x,node in enumerate(rows[0]):
             row1 += [pxl(node, UP, None)] * airM
-            row1 += [pxl(None, None, None)] * wallM
+            row1 += [pxl(None, 1, None)] * wallM
         raster += [row1] * wallM
         # Middle and bottom rows of string
         for y,row in enumerate(rows):
             # Left wall
             row1 = [pxl(row[0], LEFT, None)] * wallM
-            row2 = [pxl(None, None, None)] * wallM
+            row2 = [pxl(None, 2, None)] * wallM
             # Middle and bottom walls (2 blocks/node)
             for x,node in enumerate(row):
                 row1 += [pxl(node, None, None)] * airM
                 row1 += [pxl(node, RIGHT, None if x==self.width-1 else self.node_at(x+1,y))] * wallM
                 row2 += [pxl(node, DOWN, None if y==self.height-1 else self.node_at(x,y+1))] * airM
-                row2 += [pxl(None, None, None)] * wallM
+                row2 += [pxl(None, 3, node)] * wallM
             raster += [row1] * airM
             raster += [row2] * wallM
         return raster
@@ -814,7 +822,7 @@ class Maze:
             linestr += [row2]
         return '\n'.join(''.join(line) for line in linestr)
 
-    def str_frame_ascii_small(self, show_solution=False, columnated=True):
+    def str_frame_ascii_small(self, show_solution=False, decolumnated=False):
         """Produce a minimal (ASCII) frame string presentation of the maze."""
         wall = self.has_wall
         if show_solution and self._solution_nodes is None:
@@ -835,21 +843,21 @@ class Maze:
         def cornersegment_top_left():
             if wall(0,0,LEFT): return ','
             elif wall(0,0,UP): return '_'
-            else: return '.' if columnated else ' '
+            else: return ' ' if decolumnated else '.'
         def cornersegment_top(x):
             if wall(x,0,RIGHT) and not (wall(x,0,UP) and x<self.width-1 and wall(x+1,0,UP)): return ','
             elif wall(x,0,UP) or (x<self.width-1 and wall(x+1,0,UP)): return '_'
-            else: return '.' if columnated else ' '
+            else: return ' ' if decolumnated else '.'
         def cornersegment_left(y):
             if wall(0,y,LEFT): return '|'
             elif y!=self.height-1 and wall(0,y+1,LEFT): return ','
             elif wall(0,y,DOWN): return '_'
-            else: return '.' if columnated else ' '
+            else: return ' ' if decolumnated else '.'
         def cornersegment(x, y):
             if wall(x,y,RIGHT): return '|'
             elif y<self.height-1 and wall(x,y+1,RIGHT) and not (wall(x,y,DOWN) and x<self.width-1 and wall(x+1,y,DOWN)): return ','
             elif wall(x,y,DOWN) or (x<self.width-1 and wall(x+1,y,DOWN)): return '_'
-            else: return '.' if columnated else ' '
+            else: return ' ' if decolumnated else '.'
         def trsfm1(char):
             if show_solution and self.node_at(x,y) in self._solution_nodes:
                 return {'_':'i', ' ':'!'}[char]
@@ -934,14 +942,13 @@ class Maze:
         else:
             (name,index_choice) = name_and_index_choice
             if name not in ALGORITHMS:
-                ALGORITHMS[name] = (
-                    lambda maze, area, record_frame:
-                        Maze.growing_tree(
-                            maze,
-                            area=area,
-                            name_and_index_choice=name_and_index_choice,
-                            record_frame=record_frame,
-                        )
+                ALGORITHMS[name] = (lambda maze, area, record_frame:
+                    Maze.growing_tree(
+                        maze,
+                        area=area,
+                        name_and_index_choice=name_and_index_choice,
+                        record_frame=record_frame,
+                    )
                 )
         alg_id = Maze._algorithm_name_to_id(name)
             #algorithm_variant = (lambda self,area=None,start_coord=None,fast_pop=False:

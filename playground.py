@@ -380,7 +380,7 @@ def animation_helper():
                 gradient_colors=ct.COLORMAPS[colormap_name][::-1],
                 raster=maze.generate_raster(
                     show_distances=True,
-                    columnated=False,
+                    decolumnated=True,
                     wall_air_ratio=ratio
                 )
             )
@@ -391,7 +391,7 @@ def animation_helper():
                 gradient_colors=ct.COLORMAPS[colormap_name][::-1],
                 raster=maze.generate_raster(
                     show_distances=True,
-                    columnated=False,
+                    decolumnated=True,
                     wall_air_ratio=ratio
                 )
             )
@@ -849,7 +849,7 @@ def main():
                 image = timed(maze.generate_algorithmimage)(
                     raster=maze.generate_raster(
                         show_algorithms=True,
-                        columnated=False,
+                        decolumnated=True,
                         wall_air_ratio=ratio
                     )
                 )
@@ -861,7 +861,7 @@ def main():
                     gradient_colors=ct.COLORMAPS[colormap_name][::-1],
                     raster=maze.generate_raster(
                         show_distances=True,
-                        columnated=True,
+                        decolumnated=False,
                         wall_air_ratio=ratio
                     )
                 )
@@ -873,7 +873,7 @@ def main():
                     gradient_colors=ct.COLORMAPS[colormap_name][::-1],
                     raster=maze.generate_raster(
                         show_distances=True,
-                        columnated=False,
+                        decolumnated=True,
                         wall_air_ratio=ratio
                     )
                 )
