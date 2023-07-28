@@ -23,12 +23,17 @@ by Jan Misali (www.seximal.net/colors).
         * `PALETTES`
     - Color gradients dictionary
         * COLORMAPS`
+    - Color spaces available for usage and conversion
+         * `RGB` `LINRGB` `HSV`
+         * `XYZ` `CIELAB` `LCH_AB`
+         * `CIELUV` `LCH_UV`
+         * `OKLAB` `OKLCH`
     - Color conversion functions
         * from_hexcode, to_hexcode, convert_format
     - Random color generation functions
         * randrgb, randhue
     - Color utility functions
-        * mix, interpolate, average, rainbow
+        * mix, interpolate, average, rainbow_color, rainbow_palette
 """
 # END   OUTLINE
 
@@ -608,11 +613,8 @@ COLORMAPS = {
 """dict(str, list(tuple(int,int,int)): Color gradients."""
 
 COLORSPACES = [
-     RGB,  LINRGB,  HSV,  XYZ,  CIELAB,  LCH_AB,  CIELUV,  LCH_UV,  OKLAB,  OKLCH
-] = [s.casefold() for s in [
-    'RGB','LINRGB','HSV','XYZ','CIELAB','LCH_AB','CIELUV','LCH_UV','OKLAB','OKLCH'
-    ]
-]
+     RGB, LINRGB, HSV, XYZ, CIELAB, LCH_AB, CIELUV, LCH_UV, OKLAB, OKLCH, *_,
+] = list(range(10))
 """list(str): Available color spaces."""
 
 # END   CONSTANTS
@@ -713,9 +715,7 @@ def change_space(input_color, from_space, to_space):
     polar_to_cartesian = lambda r,a: (r * math.cos(a), r * math.sin(a))
 
     # Casefold and make a case distinction on the conversion between spaces
-    spaces = (from_space.casefold(), to_space.casefold())
-    if any (space not in COLORSPACES for space in spaces):
-        raise RuntimeError("unrecognized colorspace conversion '{spaces}'")
+    spaces = (from_space, to_space)
     if spaces == (RGB, RGB):
         output_color = input_color
     elif spaces == (RGB, LINRGB):
@@ -758,7 +758,7 @@ def change_space(input_color, from_space, to_space):
         output_color = (R,G,B)
     elif spaces == (RGB, XYZ):
         (R,G,B) = input_color
-        (Rl,Gl,Bl) = change_space((R,G,B),'RGB','LINRGB')
+        (Rl,Gl,Bl) = change_space((R,G,B), RGB,LINRGB)
         X = 0.4124*Rl + 0.3576*Gl + 0.1805*Bl
         Y = 0.2126*Rl + 0.7152*Gl + 0.0722*Bl
         Z = 0.0193*Rl + 0.1193*Gl + 0.9505*Bl
@@ -768,11 +768,11 @@ def change_space(input_color, from_space, to_space):
         Rl =  3.2405*X - 1.5372*Y - 0.4986*Z
         Gl = -0.9689*X + 1.8758*Y + 0.0415*Z
         Bl =  0.0557*X - 0.2040*Y + 1.0570*Z
-        (R,G,B) = change_space((Rl,Gl,Bl),'LINRGB','RGB')
+        (R,G,B) = change_space((Rl,Gl,Bl), LINRGB,RGB)
         output_color = (R,G,B)
     elif spaces == (RGB, CIELAB):
         (R,G,B) = input_color
-        (X,Y,Z) = change_space((R,G,B),'RGB','XYZ')
+        (X,Y,Z) = change_space((R,G,B), RGB,XYZ)
         (X100,Y100,Z100) = X*100, Y*100, Z*100
         def f(x):
             delta = 6/29
@@ -794,11 +794,11 @@ def change_space(input_color, from_space, to_space):
         Y100 = YD65 * f_inv((L + 16)/116)
         Z100 = ZD65 * f_inv((L + 16)/116 - B/200)
         (X,Y,Z) = X100/100, Y100/100, Z100/100
-        (R,G,B) = change_space((X,Y,Z),'XYZ','RGB')
+        (R,G,B) = change_space((X,Y,Z), XYZ,RGB)
         output_color = (R,G,B)
     elif spaces == (RGB, CIELUV):
         (R,G,B) = input_color
-        (X,Y,Z) = change_space((R,G,B),'RGB','XYZ')
+        (X,Y,Z) = change_space((R,G,B), RGB,XYZ)
         (XD65,YD65,ZD65) = (95.0489, 100, 108.8840) # Standard illuminant
         L = 116 * Y/YD65**(1/3) - 16 if Y/YD65 > (6/29)**3 else (29/3)**3 * Y/YD65
         Up = (4*X) / (X + 15*Y + 3*Z)
@@ -816,11 +816,11 @@ def change_space(input_color, from_space, to_space):
         Y = YD65 * ((L + 16) / 116)**3 if L > 8 else YD65 * L * (3/29)**3
         X = Y * (9*Up) / (4*Vp)
         Z = Y * (12 - 3*Up - 20*Vp) / (4*Vp)
-        (R,G,B) = change_space((X,Y,Z),'XYZ','RGB')
+        (R,G,B) = change_space((X,Y,Z), XYZ,RGB)
         output_color = (R,G,B)
     elif spaces == (RGB, OKLAB):
         (R,G,B) = input_color
-        (Rl,Gl,Bl) = change_space((R,G,B),'RGB','LINRGB')
+        (Rl,Gl,Bl) = change_space((R,G,B), RGB,LINRGB)
         l = 0.4122214708*Rl + 0.5363325363*Gl + 0.0514459929*Bl
         m = 0.2119034982*Rl + 0.6806995451*Gl + 0.1073969566*Bl
         s = 0.0883024619*Rl + 0.2817188376*Gl + 0.6299787005*Bl
@@ -838,41 +838,43 @@ def change_space(input_color, from_space, to_space):
         Rl =  4.0767416621*l - 3.3077115913*m + 0.2309699292*s
         Gl = -1.2684380046*l + 2.6097574011*m - 0.3413193965*s
         Bl = -0.0041960863*l - 0.7034186147*m + 1.7076147010*s
-        (R,G,B) = change_space((Rl,Gl,Bl),'LINRGB','RGB')
+        (R,G,B) = change_space((Rl,Gl,Bl), LINRGB,RGB)
         output_color = (R,G,B)
     elif spaces == (RGB, LCH_AB):
         (R,G,B) = input_color
-        (L,A,B) = change_space((R,G,B),'RGB','CIELAB')
+        (L,A,B) = change_space((R,G,B), RGB,CIELAB)
         (C,H) = cartesian_to_polar(A,B)
         output_color = (L,C,H)
     elif spaces == (LCH_AB, RGB):
         (L,C,H) = input_color
         (A,B) = polar_to_cartesian(C,H)
-        (R,G,B) = change_space((L,A,B),'CIELAB','RGB')
+        (R,G,B) = change_space((L,A,B), CIELAB,RGB)
         output_color = (R,G,B)
     elif spaces == (RGB, LCH_UV):
         (R,G,B) = input_color
-        (L,U,V) = change_space((R,G,B),'RGB','CIELUV')
+        (L,U,V) = change_space((R,G,B), RGB,CIELUV)
         (C,H) = cartesian_to_polar(U,V)
         output_color = (L,C,H)
     elif spaces == (LCH_UV, RGB):
         (L,C,H) = input_color
         (U,V) = polar_to_cartesian(C,H)
-        (R,G,B) = change_space((L,U,V),'CIELUV','RGB')
+        (R,G,B) = change_space((L,U,V), CIELUV,RGB)
         output_color = (R,G,B)
     elif spaces == (RGB, OKLCH):
         (R,G,B) = input_color
-        (L,A,B) = change_space((R,G,B),'RGB','OKLAB')
+        (L,A,B) = change_space((R,G,B), RGB,OKLAB)
         (C,H) = cartesian_to_polar(A,B)
         output_color = (L,C,H)
     elif spaces == (OKLCH, RGB):
         (L,C,H) = input_color
         (A,B) = polar_to_cartesian(C,H)
-        (R,G,B) = change_space((L,A,B),'OKLAB','RGB')
+        (R,G,B) = change_space((L,A,B), OKLAB,RGB)
         output_color = (R,G,B)
     else:
+        if any (space not in COLORSPACES for space in spaces):
+            raise RuntimeError("unrecognized colorspace conversion '{spaces}'")
         output_color = change_space(
-            change_space(input_color, from_space, 'RGB'),'RGB', to_space)
+            change_space(input_color, from_space,RGB), RGB,to_space)
     return output_color
 
 def randrgb():
@@ -887,7 +889,7 @@ def randhue():
 	color_random = tuple(val(i) for i in range(3)) # Return tuple
 	return color_random
 
-def mix(color0, color1, param=0.5, rnd=False):
+def mix(color0, color1, param=0.5, rnd=True):
     """Mix two color tuples evenly or with an optional weight parameter.
 
     Args:
@@ -896,19 +898,31 @@ def mix(color0, color1, param=0.5, rnd=False):
         param (float): A linear interpolation parameter 0 <= param <= 1
             used for mixing (default is 0.5).
         rnd (bool): Whether to round channel values, for RGB purposes
-            (default is False).
+            (default is True).
 
     Returns:
         tuple(float,float,float): Mixed color.
     """
     if not (0 <= param <= 1):
-        raise ValueError("interpolation parameter must be 0 <= param <= 1")
-    color_mixed = tuple(round((1-param) * ch0 + param * ch1) for ch0,ch1 in zip(color0,color1))
+        raise ValueError(f"interpolation parameter must be 0 <= param <= 1: {param}")
     if rnd:
-        color_mixed = tuple(round(ch) for ch in color_mixed)
+        color_mixed = (
+            round((1-param) * color0[0] + param * color0[0]),
+            round((1-param) * color0[1] + param * color0[1]),
+            round((1-param) * color0[2] + param * color0[2]),
+        )
+    else:
+        color_mixed = (
+            (1-param) * color0[0] + param * color0[0],
+            (1-param) * color0[1] + param * color0[1],
+            (1-param) * color0[2] + param * color0[2],
+        )
+    #color_mixed = tuple(((1-param) * ch0 + param * ch1) for ch0,ch1 in zip(color0,color1))
+    #if rnd:
+        #color_mixed = tuple(round(ch) for ch in color_mixed)
     return color_mixed
 
-def interpolate(colors, param, rnd=False):
+def interpolate(colors, param, rnd=True):
     """Interpolate a color within a color map using some parameter.
 
     Args:
@@ -917,13 +931,13 @@ def interpolate(colors, param, rnd=False):
         param (float): A linear interpolation parameter 0 <= param <= 1
             used for interpolation (default is 0.5).
         rnd (bool): Whether to round channel values, for RGB purposes
-            (default is False).
+            (default is True).
 
     Returns:
         tuple(float,float,float): Interpolated color.
     """
     if not (0 <= param <= 1):
-        raise ValueError("interpolation parameter must be 0 <= param <= 1")
+        raise ValueError(f"interpolation parameter must be 0 <= param <= 1: {param}")
     if param == 1.0:
         return colors[-1]
     # Find segment in the color map within which to actually interpolate
@@ -935,14 +949,14 @@ def interpolate(colors, param, rnd=False):
     color_interpolated = mix(colors[sector], colors[sector+1], sectorparam, rnd)
     return color_interpolated
 
-def average(*colors, rnd=False):
+def average(*colors, rnd=True):
     """Arithmetically average an iterable of color tuples.
 
     Args:
         *colors (tuple(tuple(float,float,float))): Color tuples in a same
             (arbitrary) space.
         rnd (bool): Whether to round channel values, for RGB purposes
-            (default is False).
+            (default is True).
 
     Returns:
         tuple(float,float,float): Average color.
@@ -954,41 +968,61 @@ def average(*colors, rnd=False):
     for color in colors:
         add(color_sum, color)
         count += 1
-    color_average = tuple(round(color_sum/count) for ch in color_sum)
+    color_average = tuple((color_sum/count) for ch in color_sum)
     if rnd:
         color_mixed = tuple(round(ch) for ch in color_mixed)
     return color_average
 
-def rainbow(param, color0=RED, space='OKLCH'):
-    """Generate cycling RGB rainbow colors using a parameter.
+def rainbow_color(param, color0=RED, over_space=OKLCH):
+    """Generate a rainbow color using a possibly cycling parameter.
 
     Args:
         param (float): Cycle parameter with circle period [0, 1].
         color0 (tuple(int,int,int)): Optional initial RGB color
             (default is RED).
-        space (str): Optional cylindrical color space model
+        over_space (str): Optional cylindrical color space model
             {HSV ,LCH_AB, LCH_UV, OKLCH} (default is OKLCH)
 
     Returns:
         tuple(int,int,int): 'Rainbow' RGB color tuple.
     """
-    space = space.casefold()
     cyclespaces = [HSV, LCH_AB, LCH_UV, OKLCH]
-    if space not in cyclespaces:
-        raise RuntimeError("unrecognized colorspace name for hue cycling")
-    if space == HSV:
-        (H0,S0,V0) = change_space(color0,'RGB','HSV')
+    if over_space == HSV:
+        (H0,S0,V0) = change_space(color0, RGB,HSV)
         H = (H0 + 360 * param) % 360 # Reduce period
         S = S0
         V = V0
-        (R,G,B) = change_space((H,S,V),'HSV','RGB')
-    else:
-        (L0,C0,H0) = change_space(color0,'RGB',space)
+        (R,G,B) = change_space((H,S,V), HSV,RGB)
+    elif over_space in {LCH_AB, LCH_UV, OKLCH}:
+        (L0,C0,H0) = change_space(color0, RGB,over_space)
         L = L0
         C = C0
         H = (H0 + math.tau * param) % math.tau # Reduce period
-        (R,G,B) = change_space((L,C,H),space,'RGB')
+        (R,G,B) = change_space((L,C,H), over_space,RGB)
+    else:
+        raise RuntimeError("unrecognized colorspace name for hue cycling")
     return (R,G,B)
+
+def rainbow_palette(granularity, color0=RED, over_space=OKLCH, keepend=False):
+    """Generate a rainbow palette of specified granularity.
+
+    Args:
+        granularity (int): number of different, equally-spaced hues.
+        color0 (tuple(int,int,int)): Optional initial RGB color
+            (default is RED).
+        over_space (str): Optional cylindrical color space model
+            {HSV ,LCH_AB, LCH_UV, OKLCH} (default is OKLCH)
+        keepend (bool): Whether to additionally include the first hue as last
+            (default is False).
+
+    Returns:
+        list(tuple(int,int,int)): 'Rainbow' RGB color palette.
+    """
+    gradient = [
+        rainbow_color(k/granularity, color0, over_space)
+        for k in range(granularity+keepend)
+    ]
+    return gradient
 
 # END   FUNCTIONS
 

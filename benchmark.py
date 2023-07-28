@@ -22,14 +22,14 @@ from maze       import Maze, ALGORITHMS
 # Functions to be run in main
 FUNCTIONS_TO_RUN = []
 # Directory to store benchmark files in
-OUTPUT_DIRECTORY = 'output_runner'
+OUTPUT_DIRECTORY = 'output_benchmark'
 
 # END   CONSTANTS
 
 
 # BEGIN DECORATORS
 
-def schedule(f):
+def run(f):
     global FUNCTIONS_TO_RUN
     FUNCTIONS_TO_RUN.append(f)
     return f
@@ -61,8 +61,8 @@ def append_text(filename, string):
     return
 
 @timed
-def save_image(filename, image):
-    path = f"{OUTPUT_DIRECTORY}/{filename}"
+def save_image(image):
+    path = f"{OUTPUT_DIRECTORY}/{image.filename}"
     image.save(path)
     return
 
@@ -72,20 +72,20 @@ def grid(n):
 
 # Actual functions to be benchmarked start here
 
-#@schedule
+#@run
 def test_sizes():
     for n in range(32):
         maze = grid(n)
     return
 
-#@schedule
+#@run
 def test_builders():
     for builder in ALGORITHMS.values():
         maze = grid(8)
         timed(builder)(maze)
     return
 
-@schedule
+#@run
 def test_tree_pop():
     N = 10
     maze = grid(N)
@@ -105,7 +105,7 @@ def test_tree_pop():
     )
     return
 
-#@schedule
+#@run
 def test_tree_probabilites():
     filename = 'growing tree test probabilities.txt'
     clear_file(filename)
@@ -115,7 +115,7 @@ def test_tree_probabilites():
             continue
         maze = grid(N)
         timed_with_name(f"growing tree {i}/100", maze.growing_tree)(
-            name_index_choice=(
+            name__and_index_choice=(
                 f"tree_{i/100:.02f}",
                 (lambda mxi:
                      -1 if random.random() < i/100 else random.randint(0,mxi)
@@ -134,6 +134,7 @@ def test_tree_probabilites():
         append_text(filename, string)
     return
 
+#@run
 def test_kanagawa():
     for i in range(50):
         maze = timed(Maze)(128,128)
@@ -148,7 +149,21 @@ def test_kanagawa():
                 wall_air_ratio=(1,3)
             )
         )
-        save_image(image.filename, image)
+        save_image(image)
+    return
+
+@run
+def test_big_images():
+    maze = grid(10)
+    timed(maze.backtracker)()
+    image = timed(maze.generate_algorithmimage)()
+    timed(maze.compute_solution)()
+    image = timed(maze.generate_solutionimage)()
+    timed(maze.compute_distances)()
+    image = timed(maze.generate_colorimage)()
+    timed(maze.compute_branchdistances)()
+    image = timed(maze.generate_colorimage)()
+    timed(save_image)(image)
     return
 
 # END   FUNCTIONS

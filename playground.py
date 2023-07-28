@@ -727,7 +727,7 @@ def main():
     maze.backtracker()
     colormap_name = 'viridis'
     image = None
-    maze_storage_file = 'maze_store.txt'
+    maze_storage_file = 'maze_store.dat'
     main_text = dedent4_concat_strip(
     """
         ~:--------------------------------------:~

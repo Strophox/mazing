@@ -26,7 +26,7 @@ This file contains all important maze-relation implementations to store, create 
 import random
 import time # strftime
 import collections # deque, OrderedDict
-import colortools
+import colortools as ct
 from PIL import Image
 
 # END   IMPORTS
@@ -555,7 +555,7 @@ class Maze:
         image.putdata([value_to_color(value) for row in raster for value in row])
         return image
 
-    def generate_image(self, wall_air_colors=(colortools.BLACK,colortools.WHITE), raster=None):
+    def generate_image(self, wall_air_colors=(ct.BLACK,ct.WHITE), raster=None):
         """Generate a handle to a (PIL) Image object presenting the maze.
 
         Args:
@@ -579,11 +579,13 @@ class Maze:
         # color conversion
         if wall_air_marker_colors is None:
             peak = self.exit.distance or 1
-            wall_color = colortools.BLACK
-            air_color = colortools.WHITE
-            marker_color = lambda value: colortools.rainbow(-value/peak, colortools.VIOLET, 'OKLCH')
-            #marker_color = lambda value: colortools.change_space((360*value/peak, 1, 1),'HSV','RGB')
-            #marker_color = colortools.BLUE
+            wall_color = ct.BLACK
+            air_color = ct.WHITE
+            rainbow = ct.rainbow_palette(32, ct.VIOLET, keepend=True)
+            marker_color = lambda value: ct.interpolate(rainbow, (value-1)/peak)
+            #marker_color = lambda value: ct.rainbow(-value/peak, ct.VIOLET, ct.OKLCH)
+            #marker_color = lambda value: ct.change_space((360*value/peak, 1, 1),ct.HSV,ct.RGB)
+            #marker_color = ct.BLUE
         else:
             wall_color = wall_air_marker_colors[0]
             air_color = wall_air_marker_colors[1]
@@ -591,43 +593,43 @@ class Maze:
         value_to_color = lambda value: wall_color if value==(-1) else air_color if value==0 else marker_color(value)
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
-        image.filename = f"{self.name()}_sol_{self._stamp()}.png"
+        image.filename = f"{self.name()}_solution_{self._stamp()}.png"
         return image
 
     def generate_colorimage(self, gradient_colors=None, raster=None):
         if raster is None:
             raster = self.generate_raster(show_distances=True)
         # color conversion
-        wall_color = colortools.BLACK
-        unreachable_color = colortools.DARK_GRAY
+        wall_color = ct.BLACK
+        unreachable_color = ct.DARK_GRAY
         if gradient_colors is None:
-            gradient_colors = colortools.COLORMAPS['viridis'][::-1]
-        air_color = lambda value: colortools.interpolate(gradient_colors, param=value/peak)
+            gradient_colors = ct.COLORMAPS['viridis'][::-1]
+        air_color = lambda value: ct.interpolate(gradient_colors, param=value/peak)
         peak = max(val for row in raster for val in row) or 1
         value_to_color = lambda value: wall_color if value==(-1) else unreachable_color if value==(-2) else air_color(value)
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
-        image.filename = f"{self.name()}_dist_{self._stamp()}.png"
+        image.filename = f"{self.name()}_colormap_{self._stamp()}.png"
         return image
 
     def generate_algorithmimage(self, raster=None):
         if raster is None:
             raster = self.generate_raster(show_algorithms=True)
         coloring = [
-            colortools.GRAY,
-            colortools.LIGHT_GRAY,
-            colortools.MOSS,
-            colortools.BLUE,
-            colortools.CRIMSON,
-            colortools.GOLDENROD,
-            colortools.mix(colortools.VIOLET,colortools.PURPLE),
-            colortools.WHITE,
-            colortools.BLACK, # Wall
+            ct.GRAY,
+            ct.LIGHT_GRAY,
+            ct.MOSS,
+            ct.BLUE,
+            ct.CRIMSON,
+            ct.GOLDENROD,
+            ct.mix(ct.VIOLET,ct.PURPLE),
+            ct.WHITE,
+            ct.BLACK, # Wall
         ]
         value_to_color = lambda value: coloring[value]
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
-        image.filename = f"{self.name()}_algo_{self._stamp()}.png"
+        image.filename = f"{self.name()}_algorithms_{self._stamp()}.png"
         return image
 
     @staticmethod
