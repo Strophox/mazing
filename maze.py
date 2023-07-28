@@ -508,44 +508,68 @@ class Maze:
         Returns:
             list(list(bool)): 2D raster of the maze
         """
-        wall = self.has_wall
         (wallM, airM) = wall_air_ratio
         if columnated:
             column_wall = lambda x,y: True
         else:
             column_wall = lambda x,y: x==self.width-1 or y==self.height-1 or wall(x,y,RIGHT) or wall(x,y,DOWN) or wall(x+1,y+1,LEFT) or wall(x+1,y+1,UP)
+        # `pxl` takes three values:
+        # - `node`: current node we're situated at, None if drawing wall
+        # - `dirc`: direction which we're painting away from, None if centered on node
+        # - `nbr` : neighboring node into direction, for certain checks, None if fringe
         if show_solution:
             if self._solution_nodes is None:
                 raise RuntimeError("cannot show solution path before computing it")
-            mkval = lambda is_wall, x,y, nx,ny: (
-                (-1) if is_wall
-                else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self._solution_nodes and nx<self.width and ny<self.height and self.node_at(nx,ny) in self._solution_nodes
-                else 0
+            is_sol = lambda n: n in self._solution_nodes
+            pxl = (lambda node, dirc, nbr:
+                (-1) if node is None # wall
+                else (node.distance+1 if is_sol(node) else 0) if dirc is None # center air
+                else (-1) if node.has_wall(dirc) # directional wall
+                else (node.distance+1 if is_sol(node) else 0) if nbr is not None and is_sol(nbr) # directional colored air
+                else 0 # directional air
+            )
         elif show_distances:
-            mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else (-2) if self.node_at(x,y).distance==_INFINITY else self.node_at(x,y).distance
+            pxl = (lambda node, dirc, nbr:
+                (-1) if node is None # wall
+                else (node.distance if node.distance!=_INFINITY else -2) if dirc is None # center air
+                else (-1) if node.has_wall(dirc) # directional wall
+                else (node.distance if node.distance!=_INFINITY else -2) # directional colored air
+            )
         elif show_algorithms:
-            mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else self.node_at(x,y)._alg_id
+            pxl = (lambda node, dirc, nbr:
+                (-1) if node is None # wall
+                else node._alg_id if dirc is None # center air
+                else (-1) if node.has_wall(dirc) # directional wall
+                else node._alg_id if nbr is not None and node._alg_id==nbr._alg_id # directional colored air
+                else 0 # directional air
+            )
         else:
-            mkval = lambda is_wall, x,y, nx,ny: 1 if is_wall else 0
+            pxl = (lambda node, dirc, nbr:
+                ( 1) if node is None # wall
+                else 0 if dirc is None # center air
+                else ( 1) if node.has_wall(dirc) # directional wall
+                else 0 # directional colored air
+            )
+        rows = self._grid
         raster = []
         # Top-left corner
-        row1 = [mkval(True, 0,0, 0,0)] * wallM
+        row1 = [pxl(None, None, None)] * wallM
         # Top wall
-        for x,node in enumerate(self._grid[0]):
-            row1 += [mkval(node.has_wall(UP),x,0, x,0)] * airM
-            row1 += [mkval(True,x,0, x,0)] * wallM
+        for x,node in enumerate(rows[0]):
+            row1 += [pxl(node, UP, None)] * airM
+            row1 += [pxl(None, None, None)] * wallM
         raster += [row1] * wallM
         # Middle and bottom rows of string
-        for y,row in enumerate(self._grid):
+        for y,row in enumerate(rows):
             # Left wall
-            row1 = [mkval(row[0].has_wall(LEFT), 0,y, 0,y)] * wallM
-            row2 = [mkval(True, 0,y, 0,y)] * wallM
+            row1 = [pxl(row[0], LEFT, None)] * wallM
+            row2 = [pxl(None, None, None)] * wallM
             # Middle and bottom walls (2 blocks/node)
             for x,node in enumerate(row):
-                row1 += [mkval(False, x,y, x,y)] * airM
-                row1 += [mkval(node.has_wall(RIGHT), x,y, x+1,y)] * wallM
-                row2 += [mkval(node.has_wall(DOWN), x,y, x,y+1)] * airM
-                row2 += [mkval(column_wall(x,y), x,y, x,y)] * wallM
+                row1 += [pxl(node, None, None)] * airM
+                row1 += [pxl(node, RIGHT, None if x==self.width-1 else self.node_at(x+1,y))] * wallM
+                row2 += [pxl(node, DOWN, None if y==self.height-1 else self.node_at(x,y+1))] * airM
+                row2 += [pxl(None, None, None)] * wallM
             raster += [row1] * airM
             raster += [row2] * wallM
         return raster
@@ -617,14 +641,14 @@ class Maze:
         if raster is None:
             raster = self.generate_raster(show_algorithms=True)
         coloring = [
+            ct.WHITE,
             ct.GRAY,
-            ct.LIGHT_GRAY,
             ct.MOSS,
             ct.BLUE,
             ct.CRIMSON,
             ct.GOLDENROD,
             ct.mix(ct.VIOLET,ct.PURPLE),
-            ct.WHITE,
+            ct.LIGHT_GRAY,
             ct.BLACK, # Wall
         ]
         value_to_color = lambda value: coloring[value]
