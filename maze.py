@@ -1,16 +1,14 @@
 # BEGIN OUTLINE
 """
-Contains the main `Maze` class,
+Module implementing broadly interactable `Maze` object.
 
-This file contains all important maze-relation implementations to store, create and modify grid mazes.
 
-### Ideas/Work in Progress:
+
+NOTE - Ideas in Progress:
 - General
     * a l l   d o c s t r i n g s   m u s t   b e   c h e c k e d   ( p a i n )
     * (Is generate_raster rly bug-free??)
-    * Learn numpy to optimize stuf
 - Printers
-    * Allow choosing of start node for animation
     * (? str_frame solution)
 - Solvers
     * A* pathfinder
@@ -665,32 +663,16 @@ class Maze:
         )
         return string
 
-    def str_raster(self, wall='#', air=None, raster=None):
-        """Produce a binary string presentation of the maze.
-
-        Args:
-            wall (str): Wall texture (default is '#')
-            air (str): Air texture (default is len(wall)*' ')
-            raster (list(list(bool))): Bit map to be rendered (default is self.generate_raster())
-
-        Returns:
-            str: Binary string presentation of the maze
-        """
-        if air is None:
-            air = len(wall)*' '
+    def str_block(self, raster=None, slim=False, show_solution=False):
+        """Produce a (unicode) block string presentation of the maze."""
         if raster is None:
-            raster = self.generate_raster()
-        value_to_chars = lambda value: wall if value else air
+            raster = self.generate_raster(show_solution=show_solution)
+        if show_solution:
+            value_to_chars = lambda value: (2-slim)*('█' if value==-1 else ':' if value else ' ')
+        else:
+            value_to_chars = lambda value: (2-slim)*('█' if value else ' ')
         string = Maze._raster_to_string(raster, value_to_chars)
         return string
-
-    def str_block_double(self, raster=None):
-        """Produce a wide (unicode) block string presentation of the maze."""
-        return self.str_raster(wall='██', raster=raster)
-
-    def str_block(self, raster=None):
-        """Produce a (unicode) block string presentation of the maze."""
-        return self.str_raster(wall='█',raster=raster)
 
     def str_block_half(self, raster=None):
         """Produce a (unicode) half-block string presentation of the maze."""
@@ -796,7 +778,7 @@ class Maze:
             row2 = ['+']
             # Middle and bottom walls (2 blocks/node)
             for node in row:
-                row1 += [f' {"." if show_solution and node in self._solution_nodes else " "} '] * air_ratio
+                row1 += [f' {"o" if show_solution and node in self._solution_nodes else " "} '] * air_ratio
                 row1 += ['|' if node.has_wall(RIGHT) else ' ']
                 row2 += ['---' if node.has_wall(DOWN) else '   '] * air_ratio
                 row2 += ['+']
@@ -869,11 +851,15 @@ class Maze:
                 string.append(trsfm2(cornersegment(x,y)))
         return ''.join(string)
 
+    @staticmethod
+    def _algorithm_name_to_id(string):
+        return list(ALGORITHMS.keys()).index(string)
+
     @maze_algorithm
     def clear(self, area=None, record_frame=None):
         if area is None:
             area = (0,0,self.width-1,self.height-1)
-        alg_id = _algorithm_name_to_id('clear')
+        alg_id = Maze._algorithm_name_to_id('clear')
         record_frame(self)
         for (node0,node1) in self.edges(area):
             self.connect(node0,node1)
@@ -887,7 +873,7 @@ class Maze:
         Args:
             width, height (int): Positive integer dimensions of desired maze
         """
-        alg_id = _algorithm_name_to_id('random_edges')
+        alg_id = Maze._algorithm_name_to_id('random_edges')
         if record_frame is None:
             record_frame = lambda maze:None
         record_frame(self)
@@ -915,7 +901,7 @@ class Maze:
         if start_coord is None:
             start_coord = (random.randint(x0,x1),random.randint(y0,y1))
         if name_and_index_choice is None:
-            alg_id = _algorithm_name_to_id('growing_tree')
+            name = 'growing_tree'
             index_choice = lambda max_index: -1 if random.random()<0.70 else random.randint(0,max_index)
         else:
             (name,index_choice) = name_and_index_choice
@@ -929,7 +915,7 @@ class Maze:
                             record_frame=record_frame,
                         )
                 )
-            alg_id = _algorithm_name_to_id(name)
+        alg_id = Maze._algorithm_name_to_id(name)
             #algorithm_variant = (lambda self,area=None,start_coord=None,fast_pop=False:
                 #Maze.grow_tree(self,area=area,start_coord=start_coord,name_index_choice=name_index_choice,fast_pop=fast_pop))
             #Maze.algorithms[name] = algorithm_variant
@@ -1010,7 +996,7 @@ class Maze:
         Args:
             width, height (int): Positive integer dimensions of desired maze
         """
-        alg_id = _algorithm_name_to_id('kruskal')
+        alg_id = Maze._algorithm_name_to_id('kruskal')
         if area is None:
             nodecount = self.width * self.height
         else:
@@ -1049,7 +1035,7 @@ class Maze:
             width, height (int): Positive integer dimensions of desired maze
             start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
         """
-        alg_id = _algorithm_name_to_id('wilson')
+        alg_id = Maze._algorithm_name_to_id('wilson')
         if area is None:
             area = (0,0,self.width-1,self.height-1)
         (x0,y0,x1,y1) = area
@@ -1104,7 +1090,7 @@ class Maze:
             slice_bias (float): Probability (0<=slice_bias<=1) to do a reroll when dividing a quadrant along the same direction as parent call
             pivot_choice (callable(int,int) -> int): Function to choose a random index between given lower and upper index along which to make a cut
         """
-        alg_id = _algorithm_name_to_id('division')
+        alg_id = Maze._algorithm_name_to_id('division')
         if area is None:
             area = (0,0,self.width-1,self.height-1)
         if pivot_choice is None:
@@ -1185,10 +1171,7 @@ class Maze:
 
 
 # BEGIN FUNCTIONS
-
-def _algorithm_name_to_id(string):
-    return list(ALGORITHMS.keys()).index(string)
-
+# No functions
 # END   FUNCTIONS
 
 

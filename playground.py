@@ -244,8 +244,6 @@ def maybe_print_maze(maze):
         print(CANCEL_TEXT,end='')
         return None
     printers = {x.__name__:x for x in [
-        Maze.str_raster,
-        Maze.str_block_double,
         Maze.str_block,
         Maze.str_block_half,
         Maze.str_block_quarter,
@@ -294,6 +292,8 @@ def maybe_print_solution(maze):
         print(CANCEL_TEXT,end='')
         return None
     printers = {
+        'str_block':
+            lambda m:Maze.str_block(maze, show_solution=True),
         'str_frame_ascii':
             lambda m:Maze.str_frame_ascii(maze, show_solution=True),
         'str_frame_ascii_small':
@@ -423,6 +423,7 @@ def animation_helper():
          ;    = {dimensions[0]} {dimensions[1]}
          :  ratio  - ratio of wall:air in image
          ;    = {ratio[0]} {ratio[1]}
+         :  goal   - set entrance/exit of maze
          :  timefr - ms between animation frames
          ;    = {ms}
          :  onlyfr  - only record n-th frame
@@ -441,40 +442,54 @@ def animation_helper():
     option = 'help'
     while True:
         match option:
+            # Choose method to build maze
             case 'build':
                 new_builder_name =  maybe_get_new_from_string_options(
                     ALGORITHMS,
                     "Choose algorithm to build maze")
                 if new_builder_name is not None:
                     builder_name = new_builder_name
+            # Choose method to visualize maze
             case 'imging':
                 new_image_generator_name =  maybe_get_new_from_string_options(
                     image_generators,
                     "Choose imaging technique to make animation")
                 if new_image_generator_name is not None:
                     image_generator_name = new_image_generator_name
+            # Change color palette for image generation
             case 'color':
                 new_colormap_name = maybe_get_new_from_string_options(
                     ct.COLORMAPS,
                     f"Choose colormap (previously = {colormap_name})")
                 if new_colormap_name is not None:
                     colormap_name = new_colormap_name
+            # Set new maze building size
             case 'dim':
                 new_dimensions = maybe_get_new_dimensions(dimensions)
                 if new_dimensions is not None:
                     dimensions = new_dimensions
+            # Set new maze entrance & exit
+            case 'goal':
+                maybe_set_new_entrance_exit(maze)
+            # Show help menu
+            case 'help':
+                pass
+            # Set new wall-to-air ratio for image generation
             case 'ratio':
                 new_ratio = maybe_get_new_ratio(ratio)
                 if new_ratio is not None:
                     ratio = new_ratio
+            # Set new 'only' number for animation
             case 'onlyfr':
                 new_only = maybe_get_new_only(only)
                 if new_only is not None:
                     only = new_only
+            # Set new time interval between frames
             case 'timefr':
                 new_ms = maybe_get_new_ms(ms)
                 if new_ms is not None:
                     ms = new_ms
+            # Build maze->animation
             case 'start':
                 makedirs(ANIMATION_DIRECTORY, exist_ok=True)
                 (frames, maze) = timed(Maze.generate_animation)(
