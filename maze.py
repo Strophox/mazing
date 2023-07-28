@@ -633,7 +633,7 @@ class Maze:
         return image
 
     @staticmethod
-    def save_animation(width, height, maze_runner, image_generator=None, frame_only=1, frame_ms=30, alert_progress_steps=0):
+    def generate_animation(width, height, maze_runner, image_generator=None, frame_only=1, frame_ms=30, alert_progress_steps=0):
         if image_generator is None:
             image_generator = lambda maze:maze.compute_distances() and()or maze.generate_colorimage(raster=maze.generate_raster(show_distances=True,wall_air_ratio=(1,3)))
             #image_generator = lambda maze:maze.generate_image(raster=maze.generate_raster())
@@ -653,17 +653,8 @@ class Maze:
         maze = Maze(width,height)
         maze_runner(maze, record_frame)
         frames.append(image_generator(maze))
-        filename = f"{maze.name()}_anim_{self._stamp()}.gif"
-        mainframe = frames[0] # lol
-        mainframe.save(
-            filename,
-            save_all=True,
-            append_images=frames[1:],
-            optimize=False,
-            duration=frame_ms,
-            #loop=0,
-        )
-        return (filename, maze)
+        frames[0].filename = f"{maze.name()}_anim_{maze._stamp()}.gif"
+        return (frames, maze)
 
     @staticmethod
     def _raster_to_string(raster, value_to_chars):
@@ -1129,7 +1120,6 @@ class Maze:
             record_frame = lambda maze:None
         def divide(area, prev_dir):
             (x0,y0,x1,y1) = area
-            print(area)
             ewidth, eheight = (x1-x0)+1, (y1-y0)+1
             room1 = ewidth <= 1 or eheight <= 1
             event_room = (
@@ -1180,15 +1170,15 @@ class Maze:
     @maze_algorithm
     def xdivision(self, area=None, record_frame=None, roomlength=0):
         self.division(
-                area,
-                record_frame,
-                roomlength=float('inf'),
-                nest_algorithms=[
-                    alg for name,alg in ALGORITHMS.items() if name not in {
-                        'random_edges', 'xdivision'
-                    }
-                ],
-            )
+            area,
+            record_frame,
+            roomlength=float('inf'),
+            nest_algorithms=[
+                alg for name,alg in ALGORITHMS.items() if name not in {
+                    'random_edges', 'xdivision'
+                }
+            ],
+        )
         return
 
 # END   CLASSES

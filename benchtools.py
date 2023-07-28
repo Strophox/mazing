@@ -31,6 +31,7 @@ Example. The following code...
 # BEGIN IMPORTS
 
 import time
+import functools as ft
 
 # END   IMPORTS
 
@@ -54,6 +55,7 @@ def timed_titled(title, f, show_args=False, show_kwargs=False):
     Returns:
         callable: Identical signature to original function f.
     """
+    @ft.wraps(f)
     def timed_f(*args, **kwargs):
         begin_time = time.perf_counter()
         result     = f(*args, **kwargs)

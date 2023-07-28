@@ -45,8 +45,9 @@ Help menu shown upon execution:
 
 # BEGIN IMPORTS
 
-import colortools
+import colortools as ct
 from shutil     import get_terminal_size
+from os         import makedirs
 from benchtools import timed, timed_titled
 from maze       import Maze, ALGORITHMS
 
@@ -55,10 +56,13 @@ from maze       import Maze, ALGORITHMS
 
 # BEGIN CONSTANTS
 
-CANCEL_TEXT = "*canceled\n" # When cancling out of a menu
-CELL_PRINT_LIMIT = 10_000 # Max cell count before maze gets stopped from printing
 CW = lambda: get_terminal_size()[0] # Console Width
 CH = lambda: get_terminal_size()[1] # Console Height
+CANCEL_TEXT = "*canceled\n" # When cancling out of a menu
+CELL_PRINT_LIMIT = 10_000 # Max cell count before maze gets stopped from printing
+IMAGE_DIRECTORY = 'images'
+ANIMATION_DIRECTORY = 'animations'
+MAZE_STORAGE_FILE = 'maze_store.dat'
 
 # END   CONSTANTS
 
@@ -373,7 +377,7 @@ def animation_helper():
         'imgdst': (lambda maze:
             maze.compute_distances()
             and()or maze.generate_colorimage(
-                gradient_colors=colortools.COLORMAPS[colormap_name][::-1],
+                gradient_colors=ct.COLORMAPS[colormap_name][::-1],
                 raster=maze.generate_raster(
                     show_distances=True,
                     columnated=False,
@@ -384,7 +388,7 @@ def animation_helper():
         'imgbrc': (lambda maze:
             maze.compute_branchdistances()
             and()or maze.generate_colorimage(
-                gradient_colors=colortools.COLORMAPS[colormap_name][::-1],
+                gradient_colors=ct.COLORMAPS[colormap_name][::-1],
                 raster=maze.generate_raster(
                     show_distances=True,
                     columnated=False,
@@ -451,7 +455,7 @@ def animation_helper():
                     image_generator_name = new_image_generator_name
             case 'color':
                 new_colormap_name = maybe_get_new_from_string_options(
-                    colortools.COLORMAPS,
+                    ct.COLORMAPS,
                     f"Choose colormap (previously = {colormap_name})")
                 if new_colormap_name is not None:
                     colormap_name = new_colormap_name
@@ -472,17 +476,25 @@ def animation_helper():
                 if new_ms is not None:
                     ms = new_ms
             case 'start':
-                (filename, maze) = timed(Maze.save_animation)(
+                makedirs(ANIMATION_DIRECTORY, exist_ok=True)
+                (frames, maze) = timed(Maze.generate_animation)(
                     *dimensions,
                     maze_runner=(lambda maze, record_frame:
                         ALGORITHMS[builder_name](maze, record_frame=record_frame)
                     ),
-                    image_generator=timed(image_generators[image_generator_name]),
+                    image_generator=image_generators[image_generator_name],
                     frame_only=only,
                     frame_ms=ms,
                     alert_progress_steps=10,
                 )
-                print(f"Animation was saved under {filename}")
+                timed_titled(f"saving {frames[0].filename}", frames[0].save)(
+                    f"{ANIMATION_DIRECTORY}/{frames[0].filename}",
+                    save_all=True,
+                    append_images=frames[1:],
+                    optimize=False,
+                    duration=ms,
+                    #loop=0,
+                )
             case _:
                 print("Unrecognized option")
         print(helper_text())
@@ -727,7 +739,6 @@ def main():
     maze.backtracker()
     colormap_name = 'viridis'
     image = None
-    maze_storage_file = 'maze_store.dat'
     main_text = dedent4_concat_strip(
     """
         ~:--------------------------------------:~
@@ -790,7 +801,7 @@ def main():
             # Change color palette for image generation
             case 'color':
                 new_colormap_name = maybe_get_new_from_string_options(
-                    colortools.COLORMAPS,
+                    ct.COLORMAPS,
                     f"Choose colormap (previously = {colormap_name})")
                 if new_colormap_name is not None:
                     colormap_name = new_colormap_name
@@ -832,7 +843,7 @@ def main():
             case 'imgbrc':
                 timed(maze.compute_branchdistances)()
                 image = timed(maze.generate_colorimage)(
-                    gradient_colors=colortools.COLORMAPS[colormap_name][::-1],
+                    gradient_colors=ct.COLORMAPS[colormap_name][::-1],
                     raster=maze.generate_raster(
                         show_distances=True,
                         columnated=True,
@@ -844,7 +855,7 @@ def main():
             case 'imgdst':
                 timed(maze.compute_distances)()
                 image = timed(maze.generate_colorimage)(
-                    gradient_colors=colortools.COLORMAPS[colormap_name][::-1],
+                    gradient_colors=ct.COLORMAPS[colormap_name][::-1],
                     raster=maze.generate_raster(
                         show_distances=True,
                         columnated=False,
@@ -874,7 +885,7 @@ def main():
             # Load maze from temporary storage file
             case 'load':
                 try:
-                    with open(maze_storage_file,'r') as file:
+                    with open(MAZE_STORAGE_FILE,'r') as file:
                         string = timed_titled("reading file", file.read)()
                     data = timed_titled("evaluating string", eval)(string)
                     maze = timed_titled("loading maze", Maze.from_repr)(data)
@@ -900,8 +911,9 @@ def main():
                 if image is None:
                     print("Please generate at least one image first (-> `help`)")
                 else:
+                    makedirs(IMAGE_DIRECTORY, exist_ok=True)
                     timed_titled(f"saving {image.filename}", image.save)(
-                        image.filename
+                        f"{IMAGE_DIRECTORY}/{image.filename}"
                     )
             # Show solution using text art
             case 'solve':
@@ -912,10 +924,10 @@ def main():
                 print(stats_text)
             # Store maze to temporary storage file
             case 'store':
-                with open(maze_storage_file,'w') as file:
+                with open(MAZE_STORAGE_FILE,'w') as file:
                     data = timed_titled("generating string", repr)(maze)
                     timed_titled("storing file", file.write)(data)
-                #with open(maze_storage_file,'wb') as file:
+                #with open(MAZE_STORAGE_FILE,'wb') as file:
                     #pickle.dump(maze, file, pickle.HIGHEST_PROTOCOL)
             # Re-open last image shown for preview
             case 'view':
