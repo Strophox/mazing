@@ -505,191 +505,199 @@ def analysis(maze):
         str: Presentation of statistics for the console etc.
     """
     # This function is a huge mess
-    # Store state so we can modify it for analyses
-    temp = (maze.entrance,maze.exit)
-    # Statistics helpers
-    expectation = lambda sample: not sample or (
-        sum(sample)/len(sample)
-    )
-    variance    = lambda sample: not sample or (
-        sum(x**2 for x in sample)/len(sample)- (sum(sample)/len(sample))**2
-    )
-    def sample_to_charted_distribution(pos_int_sample, bars=6):
-        """Take a sample and prepare data for a probability distrib. bar chart."""
-        if not pos_int_sample:
-            return dict()
+    _maze_entrance_exit = (maze.entrance, maze.exit) # So we can restore state
+    # Statistics helper
+    def chart_sample(pos_int_sample, bars=10):
+        """Take a list of positive integer data points and group them."""
+        all_datapoints = len(pos_int_sample)
+        if not all_datapoints:
+            return (0, 0, [])
         # Make a probability distribution
-        sum_distribution = len(pos_int_sample)
         distribution = [
-            pos_int_sample.count(x) / sum_distribution
+            pos_int_sample.count(x)
             for x in range(int(max(pos_int_sample))+1)
         ]
-        # Making the Chart:
-        # Naïve. Take all values
-        #distr_upper = len(distribution)
-        # Better. Take 95% and go linear
-        #distr_upper = min(
-            #x for x in range(len(distribution))
-            #if sum(distribution[0:x+1])/sum_distribution > 0.95
-        #)
-        # Betterer. Binary search
-        (l,r) = (0, len(distribution))
-        x = (l + r) // 2
-        strictly_increasing = True
-        while l < r:
-            key = sum(distribution[0:x+1])
-            if key < 0.95:
-                (l, x) = (x, (x + r) // 2 + 1)
-                if not strictly_increasing:
-                    break
-            else:
-                strictly_increasing = False
-                (x, r) = ((l + x) // 2, x)
-        distr_upper = x
+        distr_lower = 0
+        while not distribution[distr_lower]:
+            distr_lower += 1
+        # Attempt 1. Take all values
+        # Attempt 2. Go through all points and stop at 95%
+        # Attempt 3. Binary search (failed, omitted)
+        # Attempt 4. Exponential decay
+        distr_upper = 1
+        integ = lambda n: sum(distribution[distr_lower:round(n)])
+        while (coverage := integ(distr_upper)) < 0.95 * all_datapoints:
+            distr_upper *= 1.5
+        distr_upper = min(len(distribution)-1, round(distr_upper))
         # Make chart values to be displayed
-        barwidth = (distr_upper // bars) or 1
-        charted_distribution = {
-            f"[{x}, {x+barwidth})":
-                sum(distribution[x:x+barwidth])
-            for x in range(0, distr_upper, barwidth)
-        }
-        return charted_distribution
+        barwidth = ((distr_upper - distr_lower) // bars) or 1
+        chart = [
+            (x, x+barwidth, sum(distribution[x:x+barwidth]))
+            for x in range(distr_lower, distr_upper, barwidth)
+        ]
+        return (all_datapoints, coverage, chart)
     # Formatter helpers
     fmt_perc  = lambda perc: f"{perc:.2%}"
     fmt_float = lambda float_: f"{float_:.01f}"
-    def fmt_stats(numbers):
+    def fmt_stats(sample):
         """Calculate standard statistics of data set and format them as string."""
-        if not numbers:
+        if not sample:
             return dedent4_concat_strip(
                 f"""
-                 : -- No valid data for '{heading}' statistics.
+                 : -- No valid data to calculate statistics.
                 """,
             )
-        statistics = {
+        expectation = lambda smple: not smple or (
+            sum(smple)/len(smple))
+        variance    = lambda smple: not smple or (
+            sum(x**2 for x in smple)/len(smple)- (sum(smple)/len(smple))**2)
+        evaluations = {
             "Expectation":
-                expectation(numbers),
+                expectation(sample),
             "Deviation":
-                variance(numbers)**.5,
+                variance(sample)**.5,
             "Maximum":
-                max(numbers),
+                max(sample),
         }
-        CWtitle = max(len(title) for title in statistics) # Column Width title
-        CWstat  = max(len(fmt_float(stat)) for stat in statistics.values())
+        CWtitle = max(len(title) for title in evaluations.keys())
+        CWstat  = max(len(fmt_float(stat)) for stat in evaluations.values())
         string = dedent4_concat_strip(
             *(f"""
              :    {title.ljust(CWtitle)}  {fmt_float(stat).rjust(CWstat)}
-            """ for (title,stat) in statistics.items()),
+            """ for (title,stat) in evaluations.items()),
         )
         return string
-    def fmt_barchart(distribution):
+    def fmt_barchart(chart):
         """Take a normalized distribution and turn contents into bar chart str."""
-        if not distribution:
+        if not chart:
             return dedent4_concat_strip(
                 f"""
                  :    -- No valid data for bar chart.
                 """,
             )
-
-        CWtitle = max(len(title) for title in distribution)
-        CWperc = max(len(fmt_perc(perc)) for perc in distribution.values())
-        CWbar = (CW()-6-CWperc-2-CWtitle-2) * 4 // 5
-        hbar = lambda columns, fill_level: '%' * round(fill_level*columns)
+        CWs = [0 for _ in chart[0]]
+        for row in chart:
+            CWs = [max(a,len(b)) for a,b in zip(CWs,row[:-1])]
+        CWs_concat = sum(c+2 for c in CWs) - 2
+        CWbar = (CW()-2-4-CWs_concat-1-0-2) * 4 // 5
+        hbar = lambda fill_level: '%' * round(fill_level*CWbar)
         table = dedent4_concat_strip(
             f"""
-             :    {CWperc*' '}  {CWtitle*' '}  +{(CWbar)*'-'}+
+             :    {CWs_concat*' '}  +{(CWbar)*'-'}+
             """,
             *(f"""
-             :    {fmt_perc(perc).rjust(CWperc)}  {title.ljust(CWtitle)}  |{hbar(CWbar, perc).ljust(CWbar)}|
-            """ for (title,perc) in distribution.items()),
+             :    {
+                 ''.join(f"{val.ljust(CW_)}  " for CW_,val in zip(CWs,row[:-1]))
+            }|{hbar(row[-1]).ljust(CWbar)}|
+            """ for row in chart),
             f"""
-             :    {CWperc*' '}  {CWtitle*' '}  +{CWbar*'-'}+
+             :    {CWs_concat*' '}  +{(CWbar)*'-'}+
             """,
         )
         return table
-    nodecount = maze.width * maze.height
-    algorithm_shares = timed(maze.generate_algorithm_shares)()
-    algorithm_distribution = {
-        alg_name:alg_nodecount/nodecount
-        for alg_name,alg_nodecount in algorithm_shares.items()
-        if alg_nodecount
-    }
-    (
-        tiles_counts,
-        branch_distances,
-        offshoots_maxlengths,
-        offshoots_avglengths
-    ) = timed_titled("computing stats+",
-        maze.generate_stats)()
-    len_longest_path = timed(maze.compute_longest_path)()
-    sum_branch_distances = sum(branch_distances)
-    branch_distance_distribution_chart = timed_titled("distr. chart 1",
-        sample_to_charted_distribution)(branch_distances)
+    # Solution Stats Data
+    node_count = maze.width * maze.height
     if maze.solution is None:
         timed(maze.compute_solution)()
-    len_solution = len(maze.solution)
-    offshoots_maxlengths_distribution = timed_titled("distr. chart 2",
-        sample_to_charted_distribution)(offshoots_maxlengths)
-    offshoots_avglengths_distribution = timed_titled("distr. chart 3",
-        sample_to_charted_distribution)(offshoots_avglengths)
-    make_perc = (lambda *tileselection:
-        sum(tiles_counts[t] for t in tileselection) / nodecount
-    )
-    nodetypes = {
-        "dead ends":
-            make_perc(0b0001,0b0010,0b0100,0b1000),
-        "tunnels":
-            make_perc(0b0011,0b0101,0b0110,0b1001,0b1010,0b1100),
-        "three-ways":
-            make_perc(0b0111,0b1011,0b1101,0b1110),
-        "intersections":
-            make_perc(0b1111)
-    }
-    # General Stats
-    stats_general = dedent4_concat_strip(
-        f"""
-         General Information.
-         :   Width  {maze.width}
-         :  Height  {maze.height}
-         :    Area  {maze.width*maze.height}
-         :
-         :  Algorithm used:
-        """,
-        fmt_barchart(algorithm_distribution),
-        f"""
-         Node Statistics.
-         :  Node connectivities:
-        """,
-        fmt_barchart(nodetypes),
-     )
-    # Distance Stats
-    stats_distance = dedent4_concat_strip(
-        f"""
-         Distance Statistics.
-         :  Longest path       {len_longest_path} = {fmt_perc(len_longest_path/nodecount)} of area
-         :  Nodes in branches  {sum_branch_distances} = {fmt_perc(sum_branch_distances/nodecount)} of area
-         :
-         :  Distance from dead end to nearest three-way/intersection:
-        """,
-        fmt_stats(branch_distances),
-        fmt_barchart(branch_distance_distribution_chart),
-    )
-    # Solution Stats
+    sol_len = len(maze.solution)
+    (
+        tiles_counts,
+        branch_dist_list,
+        offsh_maxlen_list,
+    ) = timed_titled("computing stats+", maze.generate_stats)()
+    (
+        offsh_maxlen_listcount,
+        offsh_maxlen_listcovg,
+        offsh_maxlen_chart_data
+    ) = timed_titled("chart 2", chart_sample)(offsh_maxlen_list)
+    offsh_maxlen_chart = [
+        (
+            f"[{x},{xp})",
+            fmt_perc(points / offsh_maxlen_listcount),
+            points / offsh_maxlen_listcount,
+        ) for (x,xp,points) in offsh_maxlen_chart_data
+    ]
+    # Solution Stats Text
     stats_solution = dedent4_concat_strip(
         f"""
          Solution Path Statistics.
          :  Start, End coordinates   {maze.entrance.coordinates}, {maze.exit.coordinates}
-         :  Path length of solution  {len_solution} = {fmt_perc(len_solution/nodecount)} of area
-         :  Offshoot paths on sol.   {len(offshoots_maxlengths)}
+         :  Path length of solution  {sol_len} = {fmt_perc(sol_len/node_count)} of area
+         :  Offshoot paths on sol.   {len(offsh_maxlen_list)}
          :
          :  Offshoot paths maximum distance:
+         :  (showing {offsh_maxlen_listcovg} / {offsh_maxlen_listcount} datapoints, {fmt_perc(1 - offsh_maxlen_listcovg/offsh_maxlen_listcount)} not shown)
         """,
-        fmt_stats(offshoots_maxlengths),
-        fmt_barchart(offshoots_maxlengths_distribution),
-        #f"""
-         #:  Average distance of an offshooting path
-        #""",
-        #fmt_stats(offshoots_avglengths),
-        #fmt_barchart(offshoots_avglengths_distribution),
+        fmt_barchart(offsh_maxlen_chart),
+        fmt_stats(offsh_maxlen_list),
+    )
+    # General Stats Data
+    alg_shares = timed(maze.generate_algorithm_shares)()
+    alg_chart = sorted([
+        (
+            fmt_perc(alg_node_count / node_count),
+            f"{alg_name}",
+            alg_node_count / node_count,
+        ) for alg_name,alg_node_count in alg_shares.items()
+        if alg_node_count
+    ],key=lambda t:t[1])
+    node_connectivities = [
+        ("dead ends",     [0b0001,0b0010,0b0100,0b1000]),
+        ("tunnels",       [0b0011,0b0101,0b0110,0b1001,0b1010,0b1100]),
+        ("three-ways",    [0b0111,0b1011,0b1101,0b1110]),
+        ("intersections", [0b1111]),
+    ]
+    node_conn_chart = [
+        (
+            f"{f_u_python}",
+            f"{name}",
+            fmt_perc(f_u_python / node_count),
+            f_u_python / node_count,
+        ) for (name, tile_selection) in node_connectivities
+        if (f_u_python:=sum(tiles_counts[t] for t in tile_selection))and()or 1
+    ]
+    # General Stats Text
+    stats_general = dedent4_concat_strip(
+        f"""
+         General Information.
+         :   Width x Height      {maze.width} x {maze.height}
+         :   Area / Total Nodes  {node_count}
+         :
+         :  Algorithms used:
+        """,
+        fmt_barchart(alg_chart),
+        f"""
+         :  Node connectivities:
+        """,
+        fmt_barchart(node_conn_chart),
+     )
+    # Solution Branching Stats Data
+    (
+        branch_dist_listcount,
+        branch_dist_listcovg,
+        branch_dist_chart_data
+    ) = timed_titled("chart 1", chart_sample)(branch_dist_list)
+    longpath_len = timed(maze.compute_longest_path)()
+    branch_dist_sum = sum(branch_dist_list)
+    branch_dist_chart = [
+        (
+            f"[{x},{xp})",
+            fmt_perc(points / branch_dist_listcount),
+            points / branch_dist_listcount,
+        ) for (x,xp,points) in branch_dist_chart_data
+    ]
+    # Distance Stats
+    stats_distance = dedent4_concat_strip(
+        f"""
+         Distance Statistics.
+         :  Longest path       {longpath_len} = {fmt_perc(longpath_len/node_count)} of area
+         :  Nodes in branches  {branch_dist_sum} = {fmt_perc(branch_dist_sum/node_count)} of area
+         :
+         :  Distance from dead end to nearest three-way/intersection:
+         :  (showing {branch_dist_listcovg} / {branch_dist_listcount} datapoints, {fmt_perc(1 - branch_dist_listcovg/branch_dist_listcount)} not shown)
+        """,
+        fmt_barchart(branch_dist_chart),
+        fmt_stats(branch_dist_list),
     )
     # Final print
     hrulefill = f"\n~:{'-'*(CW()-4)}:~\n"
@@ -703,7 +711,7 @@ def analysis(maze):
         hrulefill,
     )
     # Restore modified state
-    (maze.entrance,maze.exit) = temp
+    (maze.entrance, maze.exit) = _maze_entrance_exit
     return statistics
 
 # END   FUNCTIONS
@@ -900,11 +908,8 @@ def main():
                 maybe_print_solution(maze)
             # Generate and show statistics on the maze
             case 'stats':
-                try:
-                    stats_text = timed_titled("total time for maze analysis", analysis)(maze)
-                    print(stats_text)
-                except ValueError as e:
-                    print(f"<error: {e}>")
+                stats_text = timed_titled("total time for maze analysis", analysis)(maze)
+                print(stats_text)
             # Store maze to temporary storage file
             case 'store':
                 with open(maze_storage_file,'w') as file:

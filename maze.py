@@ -151,7 +151,7 @@ class Maze:
             self.exit.coordinates,
             [
                 [
-                    node._edges for node in row
+                    node._edges + (node._alg_id << 4) for node in row
                 ] for row in self._grid
             ],
         ).__repr__()
@@ -480,7 +480,6 @@ class Maze:
         if tiles_counts[0b0001]+tiles_counts[0b0010]+tiles_counts[0b0100]+tiles_counts[0b1000] == 0:
             raise ValueError("maze has no dead ends, aborting analysis")
         offshoots_maxlengths = []
-        offshoots_avglengths = []
         for node in self._solution_nodes:
             for offshoot in self.connected_to(node):
                 if offshoot not in self._solution_nodes:
@@ -488,10 +487,8 @@ class Maze:
                     length_adder = lambda n: lengths.append(n.distance) if is_dead_end(n) else None
                     self._breadth_first_search(offshoot, scanr=length_adder)
                     maxlength = max(lengths, default=0)
-                    avglength = 0 if not lengths else round(sum(lengths)/len(lengths))
                     offshoots_maxlengths.append(maxlength)
-                    offshoots_avglengths.append(avglength)
-        return (tiles_counts, branch_distances, offshoots_maxlengths, offshoots_avglengths)
+        return (tiles_counts, branch_distances, offshoots_maxlengths)
 
     def generate_raster(self, wall_air_ratio=(1,1), columnated=True, show_solution=False, show_distances=False, show_algorithms=False): # TODO wall_air_ratio
         """
