@@ -9,12 +9,11 @@ NOTE - Ideas in Progress:
     * a l l   d o c s t r i n g s   m u s t   b e   c h e c k e d   ( p a i n )
     * (Is generate_raster rly bug-free??)
 - Printers
-    * (? str_frame solution)
 - Solvers
     * A* pathfinder
 - ETC Dreams
-    * curses maze navigator
     * CHALLENGE doom; "░▒▓█.,-~:;=!*#$@"
+    * curses maze navigator
 """
 # END   OUTLINE
 
@@ -488,7 +487,8 @@ class Maze:
                     offshoots_maxlengths.append(maxlength)
         return (tiles_counts, branch_distances, offshoots_maxlengths)
 
-    def generate_raster(self, wall_air_ratio=(1,1), columnated=True, show_solution=False, show_distances=False, show_algorithms=False): # TODO wall_air_ratio
+    def generate_raster(self, wall_air_ratio=(1,1), columnated=True,
+        show_solution=False, show_distances=False, show_algorithms=False):
         """
         normal:
             wall = +1  air = 0
@@ -517,7 +517,10 @@ class Maze:
         if show_solution:
             if self._solution_nodes is None:
                 raise RuntimeError("cannot show solution path before computing it")
-            mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self._solution_nodes and nx<self.width and ny<self.height and self.node_at(nx,ny) in self._solution_nodes else 0
+            mkval = lambda is_wall, x,y, nx,ny: (
+                (-1) if is_wall
+                else self.node_at(x,y).distance + 1 if self.node_at(x,y) in self._solution_nodes and nx<self.width and ny<self.height and self.node_at(nx,ny) in self._solution_nodes
+                else 0
         elif show_distances:
             mkval = lambda is_wall, x,y, nx,ny: (-1) if is_wall else (-2) if self.node_at(x,y).distance==_INFINITY else self.node_at(x,y).distance
         elif show_algorithms:
@@ -631,7 +634,8 @@ class Maze:
         return image
 
     @staticmethod
-    def generate_animation(width, height, maze_runner, image_generator=None, frame_only=1, frame_ms=30, alert_progress_steps=0):
+    def generate_animation(width, height, maze_runner, image_generator=None,
+        frame_only=1, frame_ms=30, alert_progress_steps=0):
         if image_generator is None:
             image_generator = lambda maze:maze.compute_distances() and()or maze.generate_colorimage(raster=maze.generate_raster(show_distances=True,wall_air_ratio=(1,3)))
             #image_generator = lambda maze:maze.generate_image(raster=maze.generate_raster())
@@ -886,7 +890,7 @@ class Maze:
 
     @maze_algorithm
     def growing_tree(self, area=None, record_frame=None,
-            start_coord=None, name_and_index_choice=None, fast_pop=False):
+        start_coord=None, name_and_index_choice=None, fast_pop=False):
         """Build a random maze using the '(random) growing tree' algorithm.
 
         Args:
