@@ -2,7 +2,57 @@
 """
 Module implementing broadly interactable `Maze` object.
 
-
+TODO
+- Low-level
+    + Magic Funcs
+        * __init__, __repr__
+    + `repr` Parser
+        * from_repr (staticmethod)
+    + Properties
+        * width, height, solution
+    + Other access or modification
+        * name, nodes, edges
+        * node_at, has_wall, adjacent_to, connected_to
+        * connect
+- Computations & Light Modifications
+    * set_entrance, set_exit
+    * compute_solution
+    * compute_distances
+    * compute_branchdistances
+    * compute_longest_path
+- Generating Data
+    + Purer data
+        * generate_algorithm_shares
+        * generate_stats
+        * generate_raster
+    + Images
+        * generate_image
+        * generate_solutionimage
+        * generate_colorimage
+        * generate_algorithmimage
+    + Animations
+        * generate_animation (staticmethod)
+- Generating Strings
+    * str_block
+    * str_block_half
+    * str_block_quarter
+    * str_pipes
+    * str_frame
+    * str_frame_ascii
+    * str_frame_ascii_small
+- Building & Main Modification
+    + Algorithms
+        * clear
+        * random_edges
+        * growing_tree
+        * backtracker
+        * prim
+        * kruskal
+        * wilson
+        * division
+        * xdivision
+    + Modification algorithms
+        * make_unicursal
 
 NOTE - Ideas in Progress:
 - General
@@ -269,16 +319,6 @@ class Maze:
                 edge_iterators.append(edges)
         return (edge for itr in edge_iterators for edge in itr)
 
-    def set_entrance(self, x, y):
-        """Mark new entrance of maze."""
-        self.entrance = self.node_at(x,y)
-        return
-
-    def set_exit(self, x, y):
-        """Mark new exit of maze."""
-        self.exit = self.node_at(x,y)
-        return
-
     def node_at(self, x, y):
         """Access node at those coordinates in the maze.
 
@@ -301,32 +341,6 @@ class Maze:
             bool
         """
         return self.node_at(x,y).has_wall(direction)
-
-    def connect(self, item0, item1, invert=False):
-        """Enable/disable edge connection between two nodes in the maze.
-
-        Args:
-            node0, node1 (Node or tuple(int,int)): Two nodes in the maze that
-                lie adjacent.
-            invert (bool): Erase connection if True (default is False).
-        """
-        if type(item0) == tuple:
-            node0, node1 = self.node_at(*item0), self.node_at(*item1)
-            (x0,y0), (x1,y1) = item0, item1
-        else: # Node
-            node0, node1 = item0, item1
-            (x0,y0), (x1,y1) = item0.coordinates, item1.coordinates
-        dx, dy = x1-x0, y1-y0
-        if abs(dx) + abs(dy) != 1:
-            raise ValueError("nodes to connect must be neighbors")
-        get_dir = lambda dx,dy: (LEFT if dx<0 else RIGHT) if dx else (UP if dy<0 else DOWN)
-        if invert:
-            node0.remove_edge(get_dir(dx,dy))
-            node1.remove_edge(get_dir(-dx,-dy))
-        else:
-            node0.put_edge(get_dir(dx,dy))
-            node1.put_edge(get_dir(-dx,-dy))
-        return
 
     def adjacent_to(self, node, area=None):
         """Get all nodes that are adjacent to one in the maze.
@@ -378,6 +392,42 @@ class Maze:
             if y0 < y and node.has_edge(UP):    yield self.node_at(x,y-1)
             if y < y1 and node.has_edge(DOWN):  yield self.node_at(x,y+1)
 
+    def connect(self, item0, item1, invert=False):
+        """Enable/disable edge connection between two nodes in the maze.
+
+        Args:
+            node0, node1 (Node or tuple(int,int)): Two nodes in the maze that
+                lie adjacent.
+            invert (bool): Erase connection if True (default is False).
+        """
+        if type(item0) == tuple:
+            node0, node1 = self.node_at(*item0), self.node_at(*item1)
+            (x0,y0), (x1,y1) = item0, item1
+        else: # Node
+            node0, node1 = item0, item1
+            (x0,y0), (x1,y1) = item0.coordinates, item1.coordinates
+        dx, dy = x1-x0, y1-y0
+        if abs(dx) + abs(dy) != 1:
+            raise ValueError("nodes to connect must be neighbors")
+        get_dir = lambda dx,dy: (LEFT if dx<0 else RIGHT) if dx else (UP if dy<0 else DOWN)
+        if invert:
+            node0.remove_edge(get_dir(dx,dy))
+            node1.remove_edge(get_dir(-dx,-dy))
+        else:
+            node0.put_edge(get_dir(dx,dy))
+            node1.put_edge(get_dir(-dx,-dy))
+        return
+
+    def set_entrance(self, x, y):
+        """Mark new entrance of maze."""
+        self.entrance = self.node_at(x,y)
+        return
+
+    def set_exit(self, x, y):
+        """Mark new exit of maze."""
+        self.exit = self.node_at(x,y)
+        return
+
     def _breadth_first_search(self, start, scanr=lambda _:None):
         """Start a breadth first search at some node in the maze.
 
@@ -404,6 +454,25 @@ class Maze:
                     queue.append(neighbor)
                     neighbor._distance = current.distance + 1
                     scanr(neighbor)
+        return
+
+    def compute_solution(self, recompute_distances=True):
+        """Recompute distances and solve maze by backtracking.
+
+        Args:
+            recompute_distances (bool): Whether to recompute distances using
+                `computer_distances` (default is True).
+        """
+        if recompute_distances:
+            self.compute_distances()
+        self._solution_nodes = set()
+        if self.exit.distance == _INFINITY:
+            return
+        current = self.exit
+        self._solution_nodes.add(self.exit)
+        while current != self.entrance:
+            current = min(self.connected_to(current), default=False, key=lambda n:n.distance)
+            self._solution_nodes.add(current)
         return
 
     def compute_distances(self, start_coord=None):
@@ -445,25 +514,6 @@ class Maze:
                     current = neighbors[0]
         return
 
-    def compute_solution(self, recompute_distances=True):
-        """Recompute distances and solve maze by backtracking.
-
-        Args:
-            recompute_distances (bool): Whether to recompute distances using
-                `computer_distances` (default is True).
-        """
-        if recompute_distances:
-            self.compute_distances()
-        self._solution_nodes = set()
-        if self.exit.distance == _INFINITY:
-            return
-        current = self.exit
-        self._solution_nodes.add(self.exit)
-        while current != self.entrance:
-            current = min(self.connected_to(current), default=False, key=lambda n:n.distance)
-            self._solution_nodes.add(current)
-        return
-
     def compute_longest_path(self):
         """Compute and set as entrance&exit a longest path within the maze."""
         for node in self.nodes():
@@ -487,18 +537,6 @@ class Maze:
         farthest = max(finite_nodes, key=lambda n:n.distance)
         self.exit = farthest
         return self.exit.distance
-
-    def make_unicursal(self):
-        """Convert maze into a unicursal maze.
-
-        A unicursal maze has no dead ends (and only cycles), the conversion
-        is done by finding all dead ends and randomly connecting them again.
-        """
-        for node in self.nodes():
-            while sum(1 for _ in self.connected_to(node)) <= 1:
-                neighbor = random.choice(list(self.connected_to(node,invert=True)))
-                self.connect(node,neighbor)
-        return
 
     def generate_algorithm_shares(self):
         """Count number of nodes written by any algorithm.
@@ -1498,7 +1536,7 @@ class Maze:
 
     @maze_algorithm
     def xdivision(self, area=None, record_frame=None, roomlength=0):
-        """Routine that clears a maze of its edges.
+        """Div&Cqr to make a random maze with other recursive algorithm calls.
 
         Args:
             area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
@@ -1517,6 +1555,23 @@ class Maze:
                 }
             ],
         )
+        return
+
+    def make_unicursal(self, area=None, record_frame=None):
+        """Convert maze into a unicursal maze.
+
+        A unicursal maze has no dead ends (and only cycles), the conversion
+        is done by finding all dead ends and randomly connecting them again.
+        """
+        if area is None:
+            area = (0,0,self.width-1,self.height-1)
+        if record_frame is None:
+            record_frame = lambda maze:None
+        for node in self.nodes(area):
+            while sum(1 for _ in self.connected_to(node)) <= 1:
+                neighbor = random.choice(list(self.connected_to(node,invert=True)))
+                self.connect(node,neighbor)
+                record_frame(self)
         return
 
 # END   CLASSES
