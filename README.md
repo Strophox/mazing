@@ -192,9 +192,37 @@ Mazes for the console!
 
 ## Animations
 
-<details><summary>Recursive Algorithm Mix Timelapse</summary>
+<details><summary>Backtracker Timelapse</summary>
 
-sadf
+![Backtracker Timelapse](Gallery/maze_backtracker-16x16_anim_2023.07.29-07h43m17.gif)
+
+</details>
+
+
+<details><summary>Growing-Tree Timelapse</summary>
+
+![Growing-Tree Timelapse](Gallery/maze_growing_tree-16x16_anim_2023.07.29-07h47m32.gif)
+
+</details>
+
+
+<details><summary>Prim Timelapse</summary>
+
+![Prim Timelapse](Gallery/maze_prim-16x16_anim_2023.07.29-07h46m14.gif)
+
+</details>
+
+
+<details><summary>Kruskal Timelapse</summary>
+
+![Kruskal Timelapse](Gallery/maze_kruskal-16x16_anim_2023.07.29-07h46m40.gif)
+
+</details>
+
+
+<details><summary>Divide and Conquer Timelapse</summary>
+
+![Divide and Conquer Timelapse](Gallery/maze_division-16x16_anim_2023.07.29-07h45m26.gif)
 
 </details>
 
@@ -203,9 +231,9 @@ sadf
 
 <div style="position:relative">
 
-<img align="left" src="/Gallery/maze_division-128x128_anim_2023.07.29-07h12m21.gif" width=256 alt="xdivision animation">
+<img align="left" src="/Gallery/maze_division-128x128_anim_2023.07.29-07h12m21.gif" width=512 alt="xdivision animation">
 
-<img align="center" src="/Gallery/maze_division-128x128_algorithms_2023.07.29-07h13m35.png" width=256 alt="xdivision endresult">
+<img align="right" src="/Gallery/maze_division-128x128_algorithms_2023.07.29-07h13m35.png" width=512 alt="xdivision endresult">
 
 </div>
 
@@ -216,21 +244,14 @@ sadf
 
 While developing this project I had to come up with some functionality best factored out into different modules.
 
-|-------------------------------------|-------------------|
-| `colortools`                        | `benchtools`      |
-|-------------------------------------|-------------------|
-| Homebrewn color module.             | Timing decorators |
-| - Loads of useful color constants   | - `timed`         |
-| - Interpolation functions           | - `timed_titled`  |
-| - Color gradient presets            |                   |
-| - Conversion between color systems  |                   |
-|-------------------------------------|-------------------|
-
-## `benchtools`
-
-I used this project to learn a bit about decorators;
-- `timed`
-- `timed_titled` (for displaying lambdas with no name)
+- `colortools` - Homebrewn color module.
+    * Loads of useful color constants
+    * Interpolation functions
+    * Color gradient presets
+    * Conversion between color systems
+- `benchtools` - Timing decorators.
+    * `timed`
+    * `timed_titled` for lambdas
 
 
 # Code Examples
