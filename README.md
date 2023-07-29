@@ -191,13 +191,23 @@ Mazes for the console!
 *` TODO `*
 
 ## Animations
-(Expand to see animations.)
 
 <details><summary>Recursive Algorithm Mix Timelapse</summary>
 
+sadf
+
+</details>
+
+
+<details><summary>Big Mixed Algorithm Timelapse</summary>
+
+<div style="position:relative">
+
 <img align="left" src="/Gallery/maze_division-128x128_anim_2023.07.29-07h12m21.gif" width=256 alt="xdivision animation">
 
-<img align="right" src="/Gallery/maze_division-128x128_algorithms_2023.07.29-07h13m35.png" width=256 alt="xdivision endresult">
+<img align="center" src="/Gallery/maze_division-128x128_algorithms_2023.07.29-07h13m35.png" width=256 alt="xdivision endresult">
+
+</div>
 
 </details>
 
@@ -206,14 +216,15 @@ Mazes for the console!
 
 While developing this project I had to come up with some functionality best factored out into different modules.
 
-## `colortools`
-
-To manipulate colors effectively I brewed my own color module.
-Important for this project:
-- Loads of useful color constants
-- Color gradient presets (including standard ones for scientific heatmaps)
-- Interpolation functions
-- Conversion between more complex color systems (to generate perceptually uniform rainbows)
+|-------------------------------------|-------------------|
+| `colortools`                        | `benchtools`      |
+|-------------------------------------|-------------------|
+| Homebrewn color module.             | Timing decorators |
+| - Loads of useful color constants   | - `timed`         |
+| - Interpolation functions           | - `timed_titled`  |
+| - Color gradient presets            |                   |
+| - Conversion between color systems  |                   |
+|-------------------------------------|-------------------|
 
 ## `benchtools`
 
