@@ -191,10 +191,15 @@ Mazes for the console!
 *` TODO `*
 
 ## Animations
+(Expand to see animations.)
+
+<details><summary>Recursive Algorithm Mix Timelapse</summary>
 
 <img align="left" src="/Gallery/maze_division-128x128_anim_2023.07.29-07h12m21.gif" width=256 alt="xdivision animation">
 
 <img align="right" src="/Gallery/maze_division-128x128_algorithms_2023.07.29-07h13m35.png" width=256 alt="xdivision endresult">
+
+</details>
 
 
 # Helper Modules
@@ -219,8 +224,7 @@ I used this project to learn a bit about decorators;
 
 # Code Examples
 
-<details>
-    <summary>*Generate a simple maze and print it to console (Unicode & ASCII).</summary>
+<details><summary>Generate a simple maze and print it to console (Unicode & ASCII).</summary>
 
 ```py
 from mazing import Maze
@@ -237,10 +241,10 @@ print(my_maze.str_frame())
 # Choose an ASCII string function
 print(my_maze.str_frame_ascii())
 ```
+
 </details>
 
-<details>
-    <summary>*Generate a large maze and save a normal- and a solution image in current directory.</summary>
+<details><summary>Generate a large maze and save a normal- and a solution image in current directory.</summary>
 
 ```py
 from mazing import Maze
@@ -259,10 +263,10 @@ img.save(img1.filename)
 imgsol = my_maze.generate_solutionimage()
 imgsol.save(img1.filename)
 ```
+
 </details>
 
-<details>
-    <summary>*Generate an animation of how a maze gets built.</summary>
+<details><summary>Generate an animation of how a maze gets built.</summary>
 
 ```py
 from mazing import Maze
@@ -278,10 +282,10 @@ frames[0].save(
     duration=30,
 )
 ```
+
 </details>
 
-<details>
-    <summary>*Make very large, rosey maze as desktop wallpaper.</summary>
+<details><summary>Make very large, rosey maze as desktop wallpaper.</summary>
 
 ```py
 from mazing import Maze
@@ -308,10 +312,11 @@ imgdst = my_maze.generate_colorimage(
 # Save image
 imgdst.save(imgdst.filename)
 ```
+
 </details>
 
-<details>
-<summary>*Generate a heterogeneous maze, then stepwise escalate image saving customization.</summary>
+<details><summary>Generate a heterogeneous maze, then stepwise escalate image saving customization.</summary>
+
 ```py
 from mazing import Maze
 import colortools as ct
@@ -350,4 +355,5 @@ imgdst = my_maze.generate_colorimage(
 )
 imgdst.save(imgdst.filename)
 ```
+
 </details>

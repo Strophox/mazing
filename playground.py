@@ -38,7 +38,6 @@ Help menu shown upon execution:
  (Commands are autocompleted if possible)
  Enter blank command to quit
 ~:--------------------------------------:~
-
 """
 # END   OUTLINE
 
@@ -360,6 +359,7 @@ def animation_helper():
     image_generators = { #### color,ratio
         'img': (lambda maze:
             maze.generate_image(
+                wall_air_colors=(ct.WHITE,ct.BLACK),
                 raster=maze.generate_raster(
                     wall_air_ratio=ratio
                 )
@@ -423,7 +423,6 @@ def animation_helper():
          ;    = {dimensions[0]} {dimensions[1]}
          :  ratio  - ratio of wall:air in image
          ;    = {ratio[0]} {ratio[1]}
-         :  goal   - set entrance/exit of maze
          :  timefr - ms between animation frames
          ;    = {ms}
          :  onlyfr  - only record n-th frame
@@ -468,9 +467,9 @@ def animation_helper():
                 new_dimensions = maybe_get_new_dimensions(dimensions)
                 if new_dimensions is not None:
                     dimensions = new_dimensions
-            # Set new maze entrance & exit
-            case 'goal':
-                maybe_set_new_entrance_exit(maze)
+            # Set new maze entrance & exit TODO
+            #case 'goal':
+                #maybe_set_new_entrance_exit(maze)
             # Show help menu
             case 'help':
                 pass
