@@ -4,29 +4,27 @@ Generating, visualising, playing around with mazes
 <img align="right" src="/Gallery/maze_backtracker-32x32_anim_2023.07.29-06h57m21.gif" width=200 alt="A Mazing animation" title="randomized-DFS carving">
 
 ## What is this?
-My first project to learn Git.
+A project to familiarize with Git.
 
-Mazes are fun, so I wrote up some code to build arbitrarily large ones--and nothing easier for a computer than to solve them, too!
+Mazes are fun, so I wrote up some code to build arbitrarily large ones--and nothing ~~ more painful ~~ easier than make the computer solve, print, draw and color them, too!
 
-I liked ASCII art visualize them, but PNG is nice too, especially to color stuff. (Along the way animated GIFs also found their way into this.)
-
-In essence, the main [`mazing`](./mazing.py) module provides a handy *`Maze`* class to work with.
+In essence, the main [`mazing`](./mazing.py) module provides a handy *`Maze`* class to mess with.
 
 
-## How is it used?
-Run `playground.py` as main to directly try most stuff out!
+## How could I use it?
+Run `playground.py` directly to try stuff out!
 (I put some small effort into making it usable, too)
 
 *Direct usage:*
-I tried adding consistent [Google-style docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) to everything including `mazing.py`.
-Also see code examples in section further below.
+I attempted adding [Google-style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) docstrings to everything including `mazing.py`.
+Also see code examples in last section.
 
 
 ## What can it do?
-Features of interest include but are not limited to:
-- **Carving** random (so-called) 'perfect' mazes with unique solution.
-    * Standard algorithms implemented (Growing tree, backtracker, (simplified) Prim's, Kruskal's, Wilson's, divide-and-conquer)
-    * Mix of different methods ('X'-divide-and-conquer)
+Features include but are not limited to:
+- **Randomly carving** (so-called) 'perfect' mazes with a unique solution.
+    * Common algorithms implemented (Growing tree, backtracker, (simplified) Prim's, Kruskal's, Wilson's, divide-and-conquer)
+    * Mix of different methods ('x-divide-and-conquer')
 - **Text art.**
     * 7 different ways to print maze as text (including 3 w/ solution path)
 - **Imaging.**
@@ -48,10 +46,11 @@ Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamis
 # Gallery
 
 ## Text Art
-Mazes for the console!
 
 ### ASCII
-> *ASCII 'frame'*
+> *Timeless maze art for any (any?) console!*
+
+> ASCII 'frame'
 ```
 +   +---+---+---+---+---+---+---+---+---+
 |               |                       |
@@ -76,7 +75,7 @@ Mazes for the console!
 +---+---+---+---+---+---+---+---+---+   +
 ```
 
-> *'Minimalist' ASCII frame*
+> 'Minimalist' ASCII frame
 ```
 , ______________________________,
 | ,__ |___, |_, , , |___, |___, |
@@ -102,7 +101,7 @@ Mazes for the console!
 
 <details markdown=1><summary>Show Unicode arts</summary>
 
-> *'Frame'*
+> 'Frame'
 ```
 ╷ ┌───────────┬─────────────┬───┐
 │ ╵ ╷ ┌───┬─╴ └───╴ ╷ ┌─────┘ ╷ │
@@ -123,7 +122,7 @@ Mazes for the console!
 └───┴─────┴─────────┴─────────┘ ╵
 ```
 
-> *'Half-block'*
+> 'Half-block'
 ```
 █ ▀▀█▀▀▀▀▀▀▀█▀▀▀█▀▀▀█▀▀▀█▀▀▀▀▀▀▀█
 █▀▀ ▀▀▀ █▀▀ ▀▀▀ █▀▀ ▀ ▀▀█▀▀ █▀▀ █
@@ -144,7 +143,7 @@ Mazes for the console!
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀▀▀
 ```
 
-> *'Quarter-block'*
+> 'Quarter-block'
 ```
 ▛▀▀▀▀▀▛▀▀▀▀▀▀▛▀▀▀▀▀▀▛▀▀▀▀▀▀▀▀▀▀▀▌
 ▌▘▌▀▀▘▌▀▘▀▌▛▘▌▌▘▛▀▘▌▘▛▘▛▀▘▌▀▌▀▘▘▌
@@ -165,7 +164,7 @@ Mazes for the console!
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▘
 ```
 
-> *'Pipes'*
+> 'Pipes'
 ```
 ┌──────────┐┌──────────────┐┌──────────────────┐
 │  ┌┐  ┌┐  ││  ┌────┐  ┌┐  ││  ┌┐  ┌┐  ┌┐  ┌┐  │
@@ -217,59 +216,62 @@ Mazes for the console!
 
 ### Bigger samples
 
-> Solution to a 128×128 Kruskal maze.
+> Solution of a 128×128 randomized-Kruskal maze.
 ![Kruskal Solution](Gallery/maze_kruskal-128x128_solution_2023.07.29-09h00m07.png)
 
-> *"Great Wave off Kanagawa"*
+> 'Great Wave off Kanagawa'
 ![Kanagawa](Gallery/maze128x128_backtracker_dist_2023.07.26-08h27m14.png)
 
-> 1920×1080 maze as wallpaper ([see all variations here](Gallery/wallpapers))
+> 1920×1080 maze wallpaper variation ([see others here](Gallery/wallpapers))
 ![Wallpaper](Gallery/wallpapers/wallpaper_brewerBlue_maze_kruskal-1920x1080_colormap_2023.07.29-09h37m37.png)
 
-> "Magma" colormap.
+> 'Magma' colormap.
 ![Magma](Gallery/maze1024x1024_TREE_dist_2023.07.24-03h16m55.png)
 
 ## Animations
 
-### Different Algorithm Timelapses
+### Different Algorithm Animations
 
 <details><summary>Backtracker</summary>
 
-![Backtracker Timelapse](Gallery/maze_backtracker-16x16_anim_2023.07.29-07h43m17.gif)
+![Backtracker Animation](Gallery/maze_backtracker-16x16_anim_2023.07.29-07h43m17.gif)
 
 </details>
 
 
 <details><summary>Growing-Tree</summary>
 
-![Growing-Tree Timelapse](Gallery/maze_growing_tree-16x16_anim_2023.07.29-07h47m32.gif)
+![Growing-Tree Animation](Gallery/maze_growing_tree-16x16_anim_2023.07.29-07h47m32.gif)
 
 </details>
 
 
 <details><summary>Prim</summary>
 
-![Prim Timelapse](Gallery/maze_prim-16x16_anim_2023.07.29-07h46m14.gif)
+![Prim Animation](Gallery/maze_prim-16x16_anim_2023.07.29-07h46m14.gif)
 
 </details>
 
 
 <details><summary>Kruskal</summary>
 
-![Kruskal Timelapse](Gallery/maze_kruskal-16x16_anim_2023.07.29-07h46m40.gif)
+![Kruskal Animation](Gallery/maze_kruskal-16x16_anim_2023.07.29-07h46m40.gif)
 
 </details>
 
 
 <details><summary>Divide and Conquer</summary>
 
-![Divide and Conquer Timelapse](Gallery/maze_division-16x16_anim_2023.07.29-07h45m26.gif)
+![Divide and Conquer Animation](Gallery/maze_division-16x16_anim_2023.07.29-07h45m26.gif)
 
 </details>
 
-### Mixed Divide-and-Conquer Timelapse
+### Mixed Timelapse
 
-<details><summary>Open Animation</summary>
+'x-divide-and-conquer' *(better name pending)* is a variation of div-n-cqr which can randomly interrupt in any recursive call and let a different algorithm finish a remaining subsection.
+That way mazes can be seamlessly built using multiple algorithms.
+
+<details><summary>Mixed Divide-and-Conquer</summary>
 
 <div style="position:relative">
 
@@ -284,21 +286,21 @@ Mazes for the console!
 
 # Helper Modules
 
-While developing this project I had to come up with some functionality best factored out into different modules.
+While developing this project I had to come up with some functionality best factored out into their own interesting modules.
 
 - `colortools` - Homebrewn color module.
     * Loads of useful color constants
     * Interpolation functions
     * Color gradient presets
     * Conversion between color systems
-- `benchtools` - Timing decorators.
-    * `timed`
-    * `timed_titled` for lambdas
+- `benchtools` - Minimal timing decorators.
+    * `timed` to time a function by its name
+    * explicit `timed_titled` for lambdas
 
 
 # Code Examples
 
-<details><summary>Generate a simple maze and print it to console (Unicode & ASCII).</summary>
+<details><summary>Generate a simple maze and print it to console (Unicode&ASCII).</summary>
 
 ```py
 from mazing import Maze
@@ -318,7 +320,7 @@ print(my_maze.str_frame_ascii())
 
 </details>
 
-<details><summary>Generate a large maze and save a normal- and a solution image in current directory.</summary>
+<details><summary>Generate a large maze and save a normal image and a solution.</summary>
 
 ```py
 from mazing import Maze
@@ -340,7 +342,7 @@ imgsol.save(img1.filename)
 
 </details>
 
-<details><summary>Generate an animation of how a maze gets built.</summary>
+<details><summary>Generate an animation of how `backtracker` works.</summary>
 
 ```py
 from mazing import Maze
@@ -359,7 +361,7 @@ frames[0].save(
 
 </details>
 
-<details><summary>Make very large, rosey maze as desktop wallpaper.</summary>
+<details><summary>Make a very large maze to be used as HD desktop wallpaper.</summary>
 
 ```py
 from mazing import Maze
@@ -389,7 +391,7 @@ imgdst.save(imgdst.filename)
 
 </details>
 
-<details><summary>Generate a heterogeneous maze, then stepwise escalate image saving customization.</summary>
+<details><summary>Generate an interesting maze, then slowly escalate customization when saving images.</summary>
 
 ```py
 from mazing import Maze
@@ -397,6 +399,7 @@ import colortools as ct
 
 my_maze = Maze(256,256)
 my_maze.xdivision()
+
 # 1) Solution image
 imgsol = my_maze.generate_solutionimage()
 imgsol.save(imgsol.filename)
