@@ -1,6 +1,8 @@
 # 'Mazing
 Generating, visualising, playing around with mazes
 
+<img align="right" src="/Gallery/maze_backtracker-32x32_anim_2023.07.29-06h57m21.gif" width=200 alt="A Mazing animation">
+
 ## What is this?
 My first project to learn Git.
 
@@ -206,40 +208,54 @@ I used this project to learn a bit about decorators;
 
 # Code Examples
 
-1. *Generate a simple maze and print it to console (Unicode & ASCII).*
+<details>
+<summary>*Generate a simple maze and print it to console (Unicode & ASCII).*</summary>
 ```py
 from mazing import Maze
 
 # Blank, new maze
 my_maze = Maze(16,16)
+
 # Randomize maze
 my_maze.backtracker()
+
 # Choose an Unicode string function
 print(my_maze.str_frame())
+
 # Choose an ASCII string function
 print(my_maze.str_frame_ascii())
 ```
-2. *Generate a large maze and save a normal- and a solution image in current directory.*
+</details>
+
+<details>
+<summary>Generate a large maze and save a normal- and a solution image in current directory.*</summary>
 ```py
 from mazing import Maze
 
 # Blank, new maze
 my_maze = Maze(100,100)
+
 # Randomize maze
 my_maze.growing_tree()
+
 # Generate normal image, then save it
 img = my_maze.generate_image()
 img.save(img1.filename)
+
 # Generate solution image, then save it
 imgsol = my_maze.generate_solutionimage()
 imgsol.save(img1.filename)
 ```
-4. *Generate an animation of how a maze gets built.*
+</details>
+
+<details>
+<summary>*Generate an animation of how a maze gets built.*</summary>
 ```py
 from mazing import Maze
 
 # Generate animation frames
 (frames, my_unused_maze) = Maze.generate_animation(16,16, Maze.backtracker)
+
 # Save frames as .gif
 frames[0].save(
     frames[0].filename,
@@ -248,17 +264,23 @@ frames[0].save(
     duration=30,
 )
 ```
-3. *Make very large, rosey wallpaper.*
+</details>
+
+<details>
+<summary>*Make very large, rosey wallpaper.*</summary>
 ```py
 from mazing import Maze
 import colortools as ct
 
 # Blank, new maze
 my_maze = Maze(1920,1080) # (<!- Python be slow)
+
 # Randomize maze
 my_maze.backtracker()
+
 # Precomputes distances
 my_maze.compute_distances()
+
 # Generate image
 imgdst = my_maze.generate_colorimage(
     gradient_colors=ct.COLORMAPS['acton'][::-1], # makes bright -> dark
@@ -267,24 +289,30 @@ imgdst = my_maze.generate_colorimage(
         show_distances=True
     )
 )
+
 # Save image
 imgdst.save(imgdst.filename)
 ```
-4. *Generate a heterogeneous maze, then stepwise escalate image saving customization.*
+</details>
+
+<details>
+<summary>*Generate a heterogeneous maze, then stepwise escalate image saving customization.*</summary>
 ```py
 from mazing import Maze
 import colortools as ct
 
 my_maze = Maze(256,256)
-my_maze.backtracker()
+my_maze.xdivision()
 # 1) Solution image
 imgsol = my_maze.generate_solutionimage()
 imgsol.save(imgsol.filename)
+
 # 2) Normal image, altered colors
 img = my_maze.generate_image(
     wall_air_colors=(ct.COLORS['sepia'],ct.COLORS['pergament']),
 )
 img.save(img.filename)
+
 # 3) Algorithms map, raster adapted
 imgalg = my_maze.generate_algorithmimage(
     raster=my_maze.generate_raster(
@@ -294,6 +322,7 @@ imgalg = my_maze.generate_algorithmimage(
     ),
 )
 imgalg.save(imgalg.filename)
+
 # 4) Branch distances, colors and raster adapted
 my_maze.compute_branchdistances()
 imgdst = my_maze.generate_colorimage(
@@ -306,3 +335,4 @@ imgdst = my_maze.generate_colorimage(
 )
 imgdst.save(imgdst.filename)
 ```
+</details>
