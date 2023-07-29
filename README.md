@@ -1,12 +1,12 @@
 # 'Mazing
-Generating, visualising, playing around with mazes
+*Generating, visualising, playing around with mazes*
 
 <img align="right" src="/Gallery/maze_backtracker-32x32_anim_2023.07.29-06h57m21.gif" width=200 alt="A Mazing animation" title="randomized-DFS carving">
 
 ## What is this?
-A project to familiarize myself with Git.
+A hobby project to familiarize myself with Git.
 
-Mazes are fun, so I wrote up some code to build arbitrarily large ones – and nothing better than make the computer solve, print, draw and color them in for you, too!
+Mazes are fun, so I whipped up some code to build arbitrarily large ones – and nothing easier for a computer than to solve, print, draw and color them in, too!
 
 In essence, [`mazing.py`](./mazing.py) provides a handy *`Maze`* class to play around with.
 
@@ -15,9 +15,7 @@ In essence, [`mazing.py`](./mazing.py) provides a handy *`Maze`* class to play a
 Run `playground.py` directly to try stuff out on the command line!
 (I put some small effort into making this usable, too)
 
-*Direct usage.*
-I tried adding [Google-style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) docstrings to everything, so `help(mazing)` should yield sensible information,
-*c.f. code examples in last section.*
+I tried adding [Google-style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) docstrings to everything, so `help()` should yield sensible information for usage of any script/module (c.f. code examples in last section).
 
 
 ## What can it do?
@@ -40,7 +38,7 @@ Functionality includes but is not limited to
 
 
 ## Don't you have exams to write?
-Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamisbuck.org/presentations/rubyconf2011/index.html) are interesting (lots of different ['flavors' of mazes](https://www.astrolog.org/labyrnth/algrithm.htm), also [ASCII art](https://en.wikipedia.org/wiki/ASCII_art) is cool, and, then I uh, kinda got lost learning about different [color systems](https://bottosson.github.io/posts/oklab/) and [good heatmap colors for scientific graphs](https://www.youtube.com/watch?v=o9KxYxROSgM) too, and, and [Python decorators](https://stackoverflow.com/questions/308999/what-does-functools-wraps-do) kept me occupied *(& did you know that [`yield from`](https://stackoverflow.com/questions/9708902/in-practice-what-are-the-main-uses-for-the-yield-from-syntax-in-python-3-3) is a valid syntax struct in Python?)*, so anyway uh....
+Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamisbuck.org/presentations/rubyconf2011/index.html) are interesting (lots of different ['flavors' of mazes](https://www.astrolog.org/labyrnth/algrithm.htm)), also [ASCII art](https://en.wikipedia.org/wiki/ASCII_art) is cool, and, then I uh, kinda got lost learning about different [color spaces](https://bottosson.github.io/posts/oklab/) and what makes [good color gradients for scientific graphs](https://www.youtube.com/watch?v=o9KxYxROSgM) too, and, and [Python decorators](https://stackoverflow.com/questions/308999/what-does-functools-wraps-do) kept me occupied *(& did you know that [`yield from`](https://stackoverflow.com/questions/9708902/in-practice-what-are-the-main-uses-for-the-yield-from-syntax-in-python-3-3) is a valid syntax struct in Python?)*, so anyway uh....
 
 
 # Gallery
@@ -216,8 +214,6 @@ Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamis
 
 ### Bigger maze samples
 
-*Could you solve these?*
-
 > Solution of a 128×128 randomized-Kruskal maze.
 ![Kruskal Solution](Gallery/maze_kruskal-128x128_solution_2023.07.29-09h00m07.png)
 
@@ -270,8 +266,8 @@ Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamis
 
 ### Mixed Algorithm Timelapse
 
-'x-divide-and-conquer' *(better name pending)* is a variation on divide-and-conquer, where any recursive call may decide to let a another algorithm finish the remaining subsection.
-This allows mazes to be seamlessly and correctly built using independent, arbitrary perfect maze algorithms.
+'x-divide-and-conquer' *(better name pending)* is a variation on normal divide-and-conquer where any recursive call may decide to let an arbitrary algorithm finish the remaining subsection.
+This allows mazes to be correctly and seamlessly built using independent perfect maze algorithms.
 
 <details><summary>Mixed Divide-and-Conquer</summary>
 
@@ -313,7 +309,7 @@ my_maze = Maze(16,16)
 # Randomize maze
 my_maze.backtracker()
 
-# Choose an Unicode string function
+# Choose a Unicode string function
 print(my_maze.str_frame())
 
 # Choose an ASCII string function
@@ -335,11 +331,11 @@ my_maze.growing_tree()
 
 # Generate normal image, then save it
 img = my_maze.generate_image()
-img.save(img1.filename)
+img.save(img.filename)
 
 # Generate solution image, then save it
 imgsol = my_maze.generate_solutionimage()
-imgsol.save(img1.filename)
+imgsol.save(imgsol.filename)
 ```
 
 </details>
