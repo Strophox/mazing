@@ -1,7 +1,7 @@
 # 'Mazing
 Generating, visualising, playing around with mazes
 
-<img align="right" src="/Gallery/maze_backtracker-32x32_anim_2023.07.29-06h57m21.gif" width=200 alt="A Mazing animation">
+<img align="right" src="/Gallery/maze_backtracker-32x32_anim_2023.07.29-06h57m21.gif" width=200 alt="A Mazing animation" title="DFS-based algorithm.">
 
 ## What is this?
 My first project to learn Git.
@@ -10,16 +10,16 @@ Mazes are fun, so I wrote up some code to build arbitrarily large ones--and noth
 
 I liked ASCII art visualize them, but PNG is nice too, especially to color stuff. (Along the way animated GIFs also found their way into this.)
 
-In essence, the main `mazing.py` module provides a handy `Maze` class to work with.
+In essence, the main `mazing` module provides a handy `Maze` class to work with.
 
 
 ## How is it used?
-Run `playground.py` as main to directly try most stuff out!
-(Making that nicely usable in console took some small effort, too.)
+Run [`playground.py`](./playground.py) as main to directly try most stuff out!
+(I put some small effort into making it usable, too)
 
-*Concerning direct usage:*
-Google-style Docstrings should be added to everything in `mazing.py` (\*and others).
-See code examples in section further below.
+*Direct usage:*
+I tried adding consistent [Google-style docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) to everything including the main [`mazing.py`](./mazing.py).
+Also see code examples in section further below.
 
 
 ## What can it do?
@@ -42,7 +42,7 @@ Features of interest include but are not limited to:
 
 
 ## Don't you have exams to write?
-Graph algorithms are interesting, and ASCII art is cool, and, messing with mazes is tons of fun, and I, uh, kinda got lost learning about different color systems, Python decorators were kinda cool, and uh...
+Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamisbuck.org/presentations/rubyconf2011/index.html) are interesting, also [ASCII art](https://en.wikipedia.org/wiki/ASCII_art) is cool, and, then I uh, kinda got lost learning about different [color systems](https://bottosson.github.io/posts/oklab/) and [good scientific heatmap colors](https://www.youtube.com/watch?v=o9KxYxROSgM) too, and, and understanding [Python decorators](https://stackoverflow.com/questions/308999/what-does-functools-wraps-do) was kinda good, so uh....
 
 
 # Gallery
@@ -97,7 +97,7 @@ Mazes for the console!
 ```
 
 ### Unicode Art
-*Note:* Unfortunately it may happen that certain special characters don't display correctly (uneven character width);
+> *Note: Unfortunately it may happen that certain special characters don't display correctly (uneven character width)*
 
 <details markdown=1><summary>Show Unicode arts</summary>
 
@@ -193,46 +193,74 @@ Mazes for the console!
 </details>
 
 ## Images
-*` TODO `*
+
+### Practical example
+
+![Test Maze](Gallery/maze_backtracker-20x20_2023.07.29-09h11m07.png)
+
+<details><summary>Solution of above maze</summary>
+
+![Maze Solution](Gallery/maze_backtracker-20x20_solution_2023.07.29-09h11m32.png)
+
+</details>
+
+<details><summary>Distance heatmap of maze</summary>
+
+![Maze Heatmap](Gallery/maze_backtracker-20x20_colormap_2023.07.29-09h11m42.png)
+
+</details>
+
+### Bigger samples
+
+![Kruskal Solution](Gallery/maze_kruskal-128x128_solution_2023.07.29-09h00m07.png)
+
+![Magma](Gallery/maze1024x1024_TREE_dist_2023.07.24-03h16m55.png)
+
+![Wallpaper](Gallery/maze_backtracker-1920x1080_colormap_2023.07.29-06h41m20.png)
+
+![Kanagawa](Gallery/maze128x128_backtracker_dist_2023.07.26-08h27m14.png)
 
 ## Animations
 
-<details><summary>Backtracker Timelapse</summary>
+### Different Algorithm Timelapses
+
+<details><summary>Backtracker</summary>
 
 ![Backtracker Timelapse](Gallery/maze_backtracker-16x16_anim_2023.07.29-07h43m17.gif)
 
 </details>
 
 
-<details><summary>Growing-Tree Timelapse</summary>
+<details><summary>Growing-Tree</summary>
 
 ![Growing-Tree Timelapse](Gallery/maze_growing_tree-16x16_anim_2023.07.29-07h47m32.gif)
 
 </details>
 
 
-<details><summary>Prim Timelapse</summary>
+<details><summary>Prim</summary>
 
 ![Prim Timelapse](Gallery/maze_prim-16x16_anim_2023.07.29-07h46m14.gif)
 
 </details>
 
 
-<details><summary>Kruskal Timelapse</summary>
+<details><summary>Kruskal</summary>
 
 ![Kruskal Timelapse](Gallery/maze_kruskal-16x16_anim_2023.07.29-07h46m40.gif)
 
 </details>
 
 
-<details><summary>Divide and Conquer Timelapse</summary>
+<details><summary>Divide and Conquer</summary>
 
 ![Divide and Conquer Timelapse](Gallery/maze_division-16x16_anim_2023.07.29-07h45m26.gif)
 
 </details>
 
+### Mixed Divide-and-Conquer Timelapse
 
-<details><summary>Big Mixed Algorithm Timelapse</summary>
+<details><summary>Open Animation</summary>
 
 <div style="position:relative">
 
