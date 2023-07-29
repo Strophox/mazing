@@ -97,7 +97,10 @@ Mazes for the console!
 ```
 
 ### Unicode Art
-*Note: Unfortunately it may happen that certain special characters don't display correctly (uneven character width);*
+*Note:* Unfortunately it may happen that certain special characters don't display correctly (uneven character width);
+
+<details markdown=1><summary>Show Unicode arts</summary>
+
 - *'Frame'* (box drawing characters)
 ```
 ╷ ┌───────────┬─────────────┬───┐
@@ -187,6 +190,8 @@ Mazes for the console!
 
 ```
 
+</details>
+
 ## Images
 *` TODO `*
 
@@ -231,9 +236,9 @@ Mazes for the console!
 
 <div style="position:relative">
 
-<img align="left" src="/Gallery/maze_division-128x128_anim_2023.07.29-07h12m21.gif" width=512 alt="xdivision animation">
+<img align="left" src="/Gallery/maze_division-128x128_anim_2023.07.29-07h12m21.gif" width=300 alt="xdivision animation">
 
-<img align="right" src="/Gallery/maze_division-128x128_algorithms_2023.07.29-07h13m35.png" width=512 alt="xdivision endresult">
+<img align="center" src="/Gallery/maze_division-128x128_algorithms_2023.07.29-07h13m35.png" width=300 alt="xdivision endresult">
 
 </div>
 
