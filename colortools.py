@@ -24,10 +24,11 @@ by Jan Misali (www.seximal.net/colors).
     - Color gradients dictionary
         * COLORMAPS`
     - Color spaces available for usage and conversion
-         * `RGB` `LINRGB` `HSV`
-         * `XYZ` `CIELAB` `LCH_AB`
+         * `RGB` `HSV`
+         * `LINRGB` `XYZ`
          * `CIELUV` `LCH_UV`
-         * `OKLAB` `OKLCH`
+         * `CIELAB` `LCH_AB`
+         * `OKLAB`  `OKLCH`
     - Color conversion functions
         * from_hexcode, to_hexcode, convert_format
     - Random color generation functions
@@ -613,8 +614,9 @@ COLORMAPS = {
 """dict(str, list(tuple(int,int,int)): Color gradients."""
 
 COLORSPACES = [
-     RGB, LINRGB, HSV, XYZ, CIELAB, LCH_AB, CIELUV, LCH_UV, OKLAB, OKLCH, *_,
-] = list(range(10))
+     RGB, HSV, LINRGB, XYZ, CIELUV, LCH_UV, CIELAB, LCH_AB, OKLAB, OKLCH,
+] = [  0,   1,      2,   3,      4,      5,      6,      7,     8,     9,
+]
 """list(str): Available color spaces."""
 
 # END   CONSTANTS
