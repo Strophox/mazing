@@ -194,8 +194,8 @@ While developing this project I had to come up with some functionality best fact
 To manipulate colors effectively I brewed my own color module.
 Important for this project:
 - Loads of useful color constants
-- Color gradient presets
-- Interpolation (mixing) functions
+- Color gradient presets (including standard ones for scientific heatmaps)
+- Interpolation functions
 - Conversion between more complex color systems (to generate perceptually uniform rainbows)
 
 ## `benchtools`
@@ -205,4 +205,104 @@ I used this project to learn a bit about decorators;
 - `timed_titled` (for displaying lambdas with no name)
 
 # Code Examples
-*` TODO `*
+
+1. *Generate a simple maze and print it to console (Unicode & ASCII).*
+```py
+from mazing import Maze
+
+# Blank, new maze
+my_maze = Maze(16,16)
+# Randomize maze
+my_maze.backtracker()
+# Choose an Unicode string function
+print(my_maze.str_frame())
+# Choose an ASCII string function
+print(my_maze.str_frame_ascii())
+```
+2. *Generate a large maze and save a normal- and a solution image in current directory.*
+```py
+from mazing import Maze
+
+# Blank, new maze
+my_maze = Maze(100,100)
+# Randomize maze
+my_maze.growing_tree()
+# Generate normal image, then save it
+img = my_maze.generate_image()
+img.save(img1.filename)
+# Generate solution image, then save it
+imgsol = my_maze.generate_solutionimage()
+imgsol.save(img1.filename)
+```
+4. *Generate an animation of how a maze gets built.*
+```py
+from mazing import Maze
+
+# Generate animation frames
+(frames, my_unused_maze) = Maze.generate_animation(16,16, Maze.backtracker)
+# Save frames as .gif
+frames[0].save(
+    frames[0].filename,
+    save_all=True,
+    append_images=frames[1:],
+    duration=30,
+)
+```
+3. *Make very large, rosey wallpaper.*
+```py
+from mazing import Maze
+import colortools as ct
+
+# Blank, new maze
+my_maze = Maze(1920,1080) # (<!- Python be slow)
+# Randomize maze
+my_maze.backtracker()
+# Precomputes distances
+my_maze.compute_distances()
+# Generate image
+imgdst = my_maze.generate_colorimage(
+    gradient_colors=ct.COLORMAPS['acton'][::-1], # makes bright -> dark
+    raster=my_maze.generate_raster(
+        wall_air_ratio=(0,1),
+        show_distances=True
+    )
+)
+# Save image
+imgdst.save(imgdst.filename)
+```
+4. *Generate a heterogeneous maze, then stepwise escalate image saving customization.*
+```py
+from mazing import Maze
+import colortools as ct
+
+my_maze = Maze(256,256)
+my_maze.backtracker()
+# 1) Solution image
+imgsol = my_maze.generate_solutionimage()
+imgsol.save(imgsol.filename)
+# 2) Normal image, altered colors
+img = my_maze.generate_image(
+    wall_air_colors=(ct.COLORS['sepia'],ct.COLORS['pergament']),
+)
+img.save(img.filename)
+# 3) Algorithms map, raster adapted
+imgalg = my_maze.generate_algorithmimage(
+    raster=my_maze.generate_raster(
+        decolumnated=True,
+        wall_air_ratio=(1,2),
+        show_algorithms=True,
+    ),
+)
+imgalg.save(imgalg.filename)
+# 4) Branch distances, colors and raster adapted
+my_maze.compute_branchdistances()
+imgdst = my_maze.generate_colorimage(
+    gradient_colors=ct.COLORMAPS['redyellowblue'][::-1], # makes bright -> dark
+    raster=my_maze.generate_raster(
+        decolumnated=True,
+        wall_air_ratio=(1,2),
+        show_distances=True,
+    ),
+)
+imgdst.save(imgdst.filename)
+```

@@ -2,46 +2,9 @@
 """
 Module implementing broadly interactable `Maze` object.
 
-TODO
-- Low-level
-    + Magic Funcs
-        * __init__, __repr__
-    + `repr` Parser
-        * from_repr (staticmethod)
-    + Properties
-        * width, height, solution
-    + Other access or modification
-        * name, nodes, edges
-        * node_at, has_wall, adjacent_to, connected_to
-        * connect
-- Computations & Light Modifications
-    * set_entrance, set_exit
-    * compute_solution
-    * compute_distances
-    * compute_branchdistances
-    * compute_longest_path
-- Generating Data
-    + Purer data
-        * generate_algorithm_shares
-        * generate_stats
-        * generate_raster
-    + Images
-        * generate_image
-        * generate_solutionimage
-        * generate_colorimage
-        * generate_algorithmimage
-    + Animations
-        * generate_animation (staticmethod)
-- Generating Strings
-    * str_block
-    * str_block_half
-    * str_block_quarter
-    * str_pipes
-    * str_frame
-    * str_frame_ascii
-    * str_frame_ascii_small
-- Building & Main Modification
-    + Algorithms
+Comprehensive list of public interface methods:
+- Building & Main Modification.
+    + Algorithms.
         * clear
         * random_edges
         * growing_tree
@@ -51,13 +14,47 @@ TODO
         * wilson
         * division
         * xdivision
-    + Modification algorithms
+    + Modification algorithms.
         * make_unicursal
+- Generating Strings.
+    * str_block
+    * str_block_half
+    * str_block_quarter
+    * str_pipes
+    * str_frame
+    * str_frame_ascii
+    * str_frame_ascii_small
+- Generating Data.
+    + Information
+        * generate_algorithm_shares
+        * generate_stats
+        * generate_raster
+    + Images.
+        * generate_image
+        * generate_solutionimage
+        * generate_colorimage
+        * generate_algorithmimage
+    + Animations.
+        * generate_animation (staticmethod)
+- Computations & Light Modifications.
+    * set_entrance, set_exit
+    * compute_solution
+    * compute_distances
+    * compute_branchdistances
+    * compute_longest_path
+- 'Low-level.'
+    + Magics.
+        * __init__, __repr__
+    + Parser.
+        * from_repr (staticmethod)
+    + Read-only properties.
+        * width, height, solution
+    + Other access.
+        * name, nodes, edges
+        * node_at, has_wall, adjacent_to, connected_to
+        * connect
 
 NOTE - Ideas in Progress:
-- General
-    * a l l   d o c s t r i n g s   m u s t   b e   c h e c k e d   ( p a i n )
-- Printers
 - Solvers
     * A* pathfinder
 - ETC Dreams
@@ -738,7 +735,7 @@ class Maze:
         value_to_color = lambda value: wall_color if value else air_color
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
-        image.filename = f"{self.name()}_{self._stamp}.png"
+        image.filename = f"{self.name()}_{self._stamp()}.png"
         return image
 
     def generate_solutionimage(self, wall_air_marker_colors=None, raster=None):
@@ -775,7 +772,7 @@ class Maze:
             air_color = wall_air_marker_colors[1]
             marker_color = lambda value: wall_air_marker_colors[2]
         value_to_color = lambda value: wall_color if value==(-1) else air_color if value==0 else marker_color(value)
-        # Convert to image # TODO NOTICE
+        # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
         image.filename = f"{self.name()}_solution_{self._stamp()}.png"
         return image
@@ -871,8 +868,12 @@ class Maze:
                 The first Image object has an additional `filename` attribute.
         """
         if image_generator is None:
-            image_generator = lambda maze:maze.compute_distances() and()or maze.generate_colorimage(raster=maze.generate_raster(show_distances=True,wall_air_ratio=(1,3)))
-            #image_generator = lambda maze:maze.generate_image(raster=maze.generate_raster())
+            #image_generator = lambda maze:maze.compute_distances() and()or maze.generate_colorimage(raster=maze.generate_raster(show_distances=True,wall_air_ratio=(1,3)))
+            image_generator = (lambda maze:
+                maze.generate_image(
+                    raster=maze.generate_raster(wall_air_ratio=(1,3))
+                )
+            )
         global counter, frames, n_progress_milestone
         counter = int()
         frames = list()
@@ -891,7 +892,7 @@ class Maze:
         frames.append(image_generator(maze))
         frames[0].filename = f"{maze.name()}_anim_{maze._stamp()}.gif"
         return (frames, maze)
-`
+
     @staticmethod
     def _raster_to_string(raster, value_to_chars):
         """Convert a raster into a string using a conversion function.
@@ -1144,15 +1145,15 @@ class Maze:
         return list(ALGORITHMS.keys()).index(string)
 
     @maze_algorithm
-    def clear(self, area=None, record_frame=None):
+    def clear(self, record_frame=None, area=None):
         """Routine that clears a maze of its edges.
 
         Args:
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
             area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
                 and bottom right (..,x1,y1) corners between which to execute
                 (default is (0,0, self.width-1,self.height-1)).
-            record_frame (callable(Maze)): Function to take snapshot of maze
-                periodically (default is lambda _: None).
         """
         if area is None:
             area = (0,0,self.width-1,self.height-1)
@@ -1166,15 +1167,15 @@ class Maze:
         self._solution_nodes = None
 
     @maze_algorithm
-    def random_edges(self, area=None, record_frame=None, edge_probability=0.5):
+    def random_edges(self, record_frame=None, area=None, edge_probability=0.5):
         """Routine that uniformly randomly assigns edges between nodes in grid.
 
         Args:
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
             area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
                 and bottom right (..,x1,y1) corners between which to execute
                 (default is (0,0, self.width-1,self.height-1)).
-            record_frame (callable(Maze)): Function to take snapshot of maze
-                periodically (default is lambda _: None).
             edge_probability (float): Probability 0<=p<=1 with which to roll.
         """
         alg_id = Maze._algorithm_name_to_id('random_edges')
@@ -1189,7 +1190,7 @@ class Maze:
         return
 
     @maze_algorithm
-    def growing_tree(self, area=None, record_frame=None, start_coord=None, name_and_index_choice=None, fast_pop=False):
+    def growing_tree(self, record_frame=None, area=None, start_coord=None, name_and_index_choice=None, fast_pop=False):
         """Growing Tree algorithm to carve a maze.
 
         The algorithm works by having an active set of nodes at a time, and
@@ -1208,11 +1209,11 @@ class Maze:
             [Undeterminted, subject to experimenting.]
 
         Args:
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
             area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
                 and bottom right (..,x1,y1) corners between which to execute
                 (default is (0,0, self.width-1,self.height-1)).
-            record_frame (callable(Maze)): Function to take snapshot of maze
-                periodically (default is lambda _: None).
             start_coord (int,int): Coordinates 0<=x<width && 0<=y<height from
                 which to start the alg. (default is uniformly random choice).
             name_and_index_choice (str, callable(int) -> int): Algorithm name
@@ -1245,15 +1246,12 @@ class Maze:
                 ALGORITHMS[name] = (lambda maze, area, record_frame:
                     Maze.growing_tree(
                         maze,
+                        record_frame=record_frame,
                         area=area,
                         name_and_index_choice=name_and_index_choice,
-                        record_frame=record_frame,
                     )
                 )
         alg_id = Maze._algorithm_name_to_id(name)
-            #algorithm_variant = (lambda self,area=None,start_coord=None,fast_pop=False:
-                #Maze.grow_tree(self,area=area,start_coord=start_coord,name_index_choice=name_index_choice,fast_pop=fast_pop))
-            #Maze.algorithms[name] = algorithm_variant
         start = self.node_at(*start_coord)
         start.flag = True
         start._alg_id = alg_id
@@ -1283,71 +1281,69 @@ class Maze:
         return
 
     @maze_algorithm
-    def backtracker(self, area=None, record_frame=None, start_coord=None):
+    def backtracker(self, record_frame=None, area=None, start_coord=None):
         """Depth-First-Search like 'backtracker' algorithm to produce rndm maze.
 
         See `growing_tree` algorithm.
 
         Args:
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
             area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
                 and bottom right (..,x1,y1) corners between which to execute
                 (default is (0,0, self.width-1,self.height-1)).
-            record_frame (callable(Maze)): Function to take snapshot of maze
-                periodically (default is lambda _: None).
             start_coord (int,int): Coordinates 0<=x<width && 0<=y<height from
                 which to start the alg. (default is uniformly random choice).
         """
         self.growing_tree(
+            record_frame=record_frame,
             area=area,
             start_coord=start_coord,
             name_and_index_choice=(
                 'backtracker',
                 (lambda max_index: -1),
             ),
-            fast_pop=False,
-            record_frame=record_frame,
         )
         return
 
     @maze_algorithm
-    def prim(self, area=None, record_frame=None, start_coord=None):
+    def prim(self, record_frame=None, area=None, start_coord=None):
         """'Simplified Prim' algorithm to produce random maze.
 
         See `growing_tree` algorithm.
 
         Args:
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
             area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
                 and bottom right (..,x1,y1) corners between which to execute
                 (default is (0,0, self.width-1,self.height-1)).
-            record_frame (callable(Maze)): Function to take snapshot of maze
-                periodically (default is lambda _: None).
             start_coord (int,int): Coordinates 0<=x<width && 0<=y<height from
                 which to start the alg. (default is uniformly random choice).
             start_coord (int,int): Coordinates 0<=x<width && 0<=y<height from
                 which to start the alg. (default is uniformly random choice).
         """
         self.growing_tree(
+            record_frame=record_frame,
             area=area,
             start_coord=start_coord,
             name_and_index_choice=(
                 'prim',
                 (lambda max_index: random.randint(0,max_index)),
             ),
-            fast_pop=False,
-            record_frame=record_frame,
         )
         return
 
     @maze_algorithm
-    def kruskal(self, area=None, record_frame=None):
+    def kruskal(self, record_frame=None, area=None):
         """Randomized Kruskal's algorithm to produce random maze.
 
         Args:
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
             area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
                 and bottom right (..,x1,y1) corners between which to execute
                 (default is (0,0, self.width-1,self.height-1)).
-            record_frame (callable(Maze)): Function to take snapshot of maze
-                periodically (default is lambda _: None).
         """
         alg_id = Maze._algorithm_name_to_id('kruskal')
         if area is None:
@@ -1381,15 +1377,15 @@ class Maze:
         return
 
     @maze_algorithm
-    def wilson(self, area=None, record_frame=None, start_coord=None):
+    def wilson(self, record_frame=None, area=None, start_coord=None):
         """Wilson's uniform random spanning tree algorithm to make a rndm maze.
 
         Args:
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
             area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
                 and bottom right (..,x1,y1) corners between which to execute
                 (default is (0,0, self.width-1,self.height-1)).
-            record_frame (callable(Maze)): Function to take snapshot of maze
-                periodically (default is lambda _: None).
             start_coord (int,int): Coordinates 0<=x<width && 0<=y<height from
                 which to start the alg. (default is uniformly random choice).
         """
@@ -1438,18 +1434,18 @@ class Maze:
         return
 
     @maze_algorithm
-    def division(self, area=None, record_frame=None, slice_direction_choice=None, pivot_choice=None, roomlength=0, nest_algorithms=[]):
+    def division(self, record_frame=None, area=None, slice_direction_choice=None, pivot_choice=None, roomlength=0, nest_algorithms=[]):
         """Divide-and-conquer approach to making a random maze.
 
         Customizable through choice of direction and position of area cut.
         Additionally supports leaving open rooms, or nesting algorithms therein.
 
         Args:
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
             area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
                 and bottom right (..,x1,y1) corners between which to execute
                 (default is (0,0, self.width-1,self.height-1)).
-            record_frame (callable(Maze)): Function to take snapshot of maze
-                periodically (default is lambda _: None).
             slice_direction_choice (callable(int,int,bool) -> bool): Function to
                 determine whether to slice *horizontally* next, based on area
                 width&height and whether previous cut was horizontal
@@ -1507,7 +1503,7 @@ class Maze:
                         record_frame(self)
                 return
             elif event_room:
-                random.choice(nest_algorithms)(self, area, record_frame)
+                random.choice(nest_algorithms)(self, record_frame, area)
                 return
             cut_horizontally = slice_direction_choice(ewidth, eheight, prev_dir)
             if cut_horizontally:
@@ -1535,19 +1531,19 @@ class Maze:
         return
 
     @maze_algorithm
-    def xdivision(self, area=None, record_frame=None, roomlength=0):
+    def xdivision(self, record_frame=None, area=None, roomlength=0):
         """Div&Cqr to make a random maze with other recursive algorithm calls.
 
         Args:
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
             area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
                 and bottom right (..,x1,y1) corners between which to execute
                 (default is (0,0, self.width-1,self.height-1)).
-            record_frame (callable(Maze)): Function to take snapshot of maze
-                periodically (default is lambda _: None).
         """
         self.division(
-            area,
-            record_frame,
+            record_frame=record_frame,
+            area=area,
             roomlength=float('inf'),
             nest_algorithms=[
                 alg for name,alg in ALGORITHMS.items() if name not in {
@@ -1557,11 +1553,18 @@ class Maze:
         )
         return
 
-    def make_unicursal(self, area=None, record_frame=None):
+    def make_unicursal(self, record_frame=None, area=None):
         """Convert maze into a unicursal maze.
 
         A unicursal maze has no dead ends (and only cycles), the conversion
         is done by finding all dead ends and randomly connecting them again.
+
+        Args:
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
+                and bottom right (..,x1,y1) corners between which to execute
+                (default is (0,0, self.width-1,self.height-1)).
         """
         if area is None:
             area = (0,0,self.width-1,self.height-1)
