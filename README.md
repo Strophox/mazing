@@ -23,24 +23,22 @@ See code examples in section further below.
 
 
 ## What can it do?
-Features of interest may include:
-- Building random (so-called) 'perfect' mazes (guaranteed single solution)
+Features of interest include but are not limited to:
+- **Carving** random (so-called) 'perfect' mazes with unique solution.
     * Standard algorithms *(Growing tree, backtracker, (simplified) Prim's, Kruskal's, Wilson's, divide-and-conquer)*
-    * Mix of different methods *('X' divide-and-conquer)*
-    * (Also, make a maze unicursal <=> remove all dead ends)
-- Computing information
-    * Solution path
-    * Longest possible path through maze
-    * More, simple statistics (number of dead ends, length of branches, ...)
-- Text art
+    * Mix of different methods *('X'-divide-and-conquer)*
+- **Text art.**
     * 7 different ways to print maze as text (3 with solution path)
-- Image generation
+- **Imaging.**
     * Normal PNG
     * Indicate solution path
     * Colored by distance from entrance (heatmap)
     * Colored by algorithm used (for mixed maze generation)
-- Generation of animations
+- **Animation.**
     * Use any of above imaging methods to visualize building of a maze
+- **Computing information.**
+    * Solution path
+    * Longest possible path through maze and other stats
 
 
 ## Don't you have exams to write?
@@ -162,29 +160,41 @@ Mazes for the console!
 ```
 - *'Pipes'*
 ```
-┌──────────────────────────────┐
-│  ┌────────┐  ┌┐  ┌────┐  ┌┐  │
-│  └───────┐│  └┘  └────┘  ││  │
-└───────┐  │└───────────┐  ││  │
-┌───────┘  │┌──────┐┌───┘  └┘  │
-│  ┌───────┘│  ┌┐  ││  ┌┐  ┌───┘
-│  └────────┘  ││  └┘  ││  └───┐
-│  ┌────────┐  ││  ┌───┘│  ┌┐  │
-│  └───┐┌───┘  ││  └───┐│  ││  │
-└───┐  ││  ┌───┘│  ┌┐  ││  ││  │
-┌───┘  ││  │┌───┘  ││  ││  ││  │
-│  ┌┐  ││  ││  ┌───┘│  ││  ││  │
-│  ││  ││  └┘  │┌───┘  ││  └┘  │
-│  ││  ││  ┌┐  ││  ┌───┘└───┐  │
-│  └┘  └┘  ││  └┘  └────────┘  │
-└──────────┘└──────────────────┘
+┌──────────┐┌──────────────┐┌──────────────────┐
+│  ┌┐  ┌┐  ││  ┌────┐  ┌┐  ││  ┌┐  ┌┐  ┌┐  ┌┐  │
+│  ││  ││  └┘  │┌───┘  ││  └┘  ││  ││  ││  ││  │
+│  ││  ││  ┌┐  ││  ┌───┘│  ┌───┘│  ││  ││  ││  │
+│  └┘  ││  ││  └┘  └────┘  │┌───┘  ││  └┘  └┘  │
+│  ┌───┘│  ││  ┌┐  ┌───────┘│  ┌───┘└───┐  ┌───┘
+│  │┌───┘  ││  └┘  │┌──────┐│  └───────┐│  └───┐
+│  ││  ┌───┘└──────┘│  ┌┐  ││  ┌────┐  ││  ┌┐  │
+│  └┘  │┌──────────┐│  ││  └┘  └────┘  ││  └┘  │
+│  ┌───┘│  ┌┐  ┌┐  ││  ││  ┌────┐  ┌───┘│  ┌───┘
+│  └───┐│  ││  ││  ││  ││  └────┘  └───┐│  └───┐
+│  ┌┐  ││  ││  ││  ││  ││  ┌┐  ┌┐  ┌┐  ││  ┌┐  │
+│  └┘  ││  └┘  └┘  └┘  ││  └┘  ││  ││  └┘  ││  │
+│  ┌───┘└───┐  ┌────┐  ││  ┌───┘│  ││  ┌───┘│  │
+│  │┌──────┐│  │┌───┘  ││  └───┐│  └┘  │┌───┘  │
+│  ││  ┌┐  ││  ││  ┌───┘│  ┌┐  ││  ┌───┘│  ┌┐  │
+│  ││  └┘  ││  └┘  │┌───┘  ││  └┘  └───┐│  ││  │
+│  ││  ┌┐  ││  ┌┐  ││  ┌───┘│  ┌────┐  ││  ││  │
+│  └┘  ││  ││  └┘  ││  │┌───┘  │┌───┘  ││  └┘  │
+└───┐  ││  ││  ┌───┘│  ││  ┌┐  ││  ┌───┘│  ┌┐  │
+┌───┘  └┘  ││  └───┐│  └┘  └┘  └┘  └────┘  ││  │
+│  ┌────┐  │└───┐  ││  ┌┐  ┌┐  ┌┐  ┌┐  ┌───┘│  │
+│  └────┘  └────┘  └┘  ││  └┘  └┘  ││  └────┘  │
+└──────────────────────┘└──────────┘└──────────┘
+
 ```
 
 ## Images
 *` TODO `*
 
 ## Animations
-*` TODO `*
+
+<img align="left" src="/Gallery/maze_division-128x128_anim_2023.07.29-07h12m21.gif" width=256 alt="xdivision animation">
+
+<img align="right" src="/Gallery/maze_division-128x128_algorithms_2023.07.29-07h13m35.png" width=256 alt="xdivision endresult">
 
 
 # Helper Modules
@@ -206,10 +216,12 @@ I used this project to learn a bit about decorators;
 - `timed`
 - `timed_titled` (for displaying lambdas with no name)
 
+
 # Code Examples
 
 <details>
-<summary>*Generate a simple maze and print it to console (Unicode & ASCII).*</summary>
+    <summary>*Generate a simple maze and print it to console (Unicode & ASCII).</summary>
+
 ```py
 from mazing import Maze
 
@@ -228,7 +240,8 @@ print(my_maze.str_frame_ascii())
 </details>
 
 <details>
-<summary>Generate a large maze and save a normal- and a solution image in current directory.*</summary>
+    <summary>*Generate a large maze and save a normal- and a solution image in current directory.</summary>
+
 ```py
 from mazing import Maze
 
@@ -249,7 +262,8 @@ imgsol.save(img1.filename)
 </details>
 
 <details>
-<summary>*Generate an animation of how a maze gets built.*</summary>
+    <summary>*Generate an animation of how a maze gets built.</summary>
+
 ```py
 from mazing import Maze
 
@@ -267,7 +281,8 @@ frames[0].save(
 </details>
 
 <details>
-<summary>*Make very large, rosey wallpaper.*</summary>
+    <summary>*Make very large, rosey maze as desktop wallpaper.</summary>
+
 ```py
 from mazing import Maze
 import colortools as ct
@@ -296,7 +311,7 @@ imgdst.save(imgdst.filename)
 </details>
 
 <details>
-<summary>*Generate a heterogeneous maze, then stepwise escalate image saving customization.*</summary>
+<summary>*Generate a heterogeneous maze, then stepwise escalate image saving customization.</summary>
 ```py
 from mazing import Maze
 import colortools as ct
