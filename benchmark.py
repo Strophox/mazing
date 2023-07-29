@@ -12,7 +12,7 @@ Note to self: do `python3 -m scalene small_benchmark.py`
 import random
 from os         import makedirs
 from benchtools import timed, timed_titled
-from maze       import Maze, ALGORITHMS
+from mazing     import Maze, ALGORITHMS
 
 # END   IMPORTS
 

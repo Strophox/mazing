@@ -49,7 +49,7 @@ import colortools as ct
 from shutil     import get_terminal_size
 from os         import makedirs
 from benchtools import timed, timed_titled
-from maze       import Maze, ALGORITHMS
+from mazing     import Maze, ALGORITHMS
 
 # END   IMPORTS
 
@@ -499,7 +499,6 @@ def animation_helper():
                     ),
                     image_generator=image_generators[image_generator_name],
                     frame_only=only,
-                    frame_ms=ms,
                     alert_progress_steps=10,
                 )
                 timed_titled(f"saving {frames[0].filename}", frames[0].save)(

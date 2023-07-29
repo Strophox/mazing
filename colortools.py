@@ -907,15 +907,15 @@ def mix(color0, color1, param=0.5, rnd=True):
         raise ValueError(f"interpolation parameter must be 0 <= param <= 1: {param}")
     if rnd:
         color_mixed = (
-            round((1-param) * color0[0] + param * color0[0]),
-            round((1-param) * color0[1] + param * color0[1]),
-            round((1-param) * color0[2] + param * color0[2]),
+            round((1-param) * color0[0] + param * color1[0]),
+            round((1-param) * color0[1] + param * color1[1]),
+            round((1-param) * color0[2] + param * color1[2]),
         )
     else:
         color_mixed = (
-            (1-param) * color0[0] + param * color0[0],
-            (1-param) * color0[1] + param * color0[1],
-            (1-param) * color0[2] + param * color0[2],
+            (1-param) * color0[0] + param * color1[0],
+            (1-param) * color0[1] + param * color1[1],
+            (1-param) * color0[2] + param * color1[2],
         )
     #color_mixed = tuple(((1-param) * ch0 + param * ch1) for ch0,ch1 in zip(color0,color1))
     #if rnd:

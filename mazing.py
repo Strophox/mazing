@@ -7,7 +7,6 @@ Module implementing broadly interactable `Maze` object.
 NOTE - Ideas in Progress:
 - General
     * a l l   d o c s t r i n g s   m u s t   b e   c h e c k e d   ( p a i n )
-    * (Is generate_raster rly bug-free??)
 - Printers
 - Solvers
     * A* pathfinder
@@ -31,8 +30,8 @@ from PIL import Image
 
 # BEGIN CONSTANTS
 
-# Public list of available maze algorithms
 ALGORITHMS = collections.OrderedDict()
+"""Public list of available maze algorithms."""
 
 # Directions
 RIGHT = 0b0001
@@ -40,7 +39,6 @@ UP    = 0b0010
 LEFT  = 0b0100
 DOWN  = 0b1000
 
-# Infinity
 _INFINITY = float('inf')
 
 # END   CONSTANTS
@@ -49,6 +47,7 @@ _INFINITY = float('inf')
 # BEGIN DECORATORS
 
 def maze_algorithm(f):
+    """Maze algorithm decorator: add to ALGORITHMS."""
     ALGORITHMS[f.__name__] = f
     return f
 
@@ -59,7 +58,7 @@ def maze_algorithm(f):
 
 class Node:
     """
-    A class representing a maze grid cell/node.
+    A class representing a rectangular grid cell / maze node.
     """
     def __init__(self, x, y):
         """Initialize a node by its grid coordinates."""
@@ -74,34 +73,36 @@ class Node:
 
     @property
     def coordinates(self):
+        """Location of node."""
         return self._coordinates
 
     @property
     def distance(self):
+        """Distance of node to some target."""
         return self._distance
 
     def has_wall(self, direction):
-        """Check whether there is a wall in a certain direction from the node."""
+        """Check whether there is a wall in some direction from the node."""
         return not (self._edges & direction)
 
     def has_edge(self, direction):
-        """Check whether there is an edge in a certain direction from the node."""
+        """Check whether there is an edge in some direction from the node."""
         return self._edges & direction
 
     def set_edges(self, direction):
-        """Set node to be connected exactly into the given directions."""
+        """Set node to be connected exactly into the given direction(s)."""
         self._edges = direction
 
     def put_edge(self, direction):
-        """Connect the node into the given directions."""
+        """Connect node into the given direction(s)."""
         self._edges |= direction
 
     def remove_edge(self, direction):
-        """Connect the node into the given directions."""
+        """Connect node into the given directions."""
         self._edges &= ~direction
 
     def toggle_edge(self, direction):
-        """Connect/disconnect the node into the given directions."""
+        """Connect/disconnect node into the given directions."""
         self._edges ^= direction
 
 class Maze:
@@ -109,29 +110,18 @@ class Maze:
     A class to store and interact with a maze grid.
 
     All methods of this class fall into these broad categories:
-    - Primitive Interaction
-        * __init__, __iter__, __repr__
-        * generate_name
-        * adjacent_to, connect, has_wall, node_at
-    - Sophisticated maze presentation
-        * bitmap
-        * str_bitmap
-        * str_block, str_block_double, str_block_half, str_block_quarter
-        * str_frame, str_frame_ascii, str_frame_ascii_small
-        * str_pipes
-        * generate_image
-    - Generation algorithms (static methods)
-        * from_template
-        * backtracker, bogus, division, growing_tree, kruskal, prim, quad_division, wilson
-    - Maze modification
-        * make_unicursal
+    - Lower-level Interaction
+        *
     """
 
     def __init__(self, width, height):
-        """Initialize a node by its size.
+        """Initialize an unmodified grid by size.
 
         Args:
-            width, height (int): Positive integer dimensions of desired maze
+            width, height (int): Positive integer dimensions of grid.
+
+        Returns:
+            Maze
         """
         if not (width > 0 and height > 0):
             raise ValueError("Maze must have positive width and height")
@@ -193,18 +183,24 @@ class Maze:
 
     @property
     def width(self):
+        """Width of the maze."""
         return self._width
 
     @property
     def height(self):
+        """Height of the maze."""
         return self._height
 
     @property
     def solution(self):
+        """Set of nodes on maze solution path. Empty if no solution."""
         return self._solution_nodes#.copy()
 
     def name(self):
-        """Generate human-readable name for the maze."""
+        """Get a human-readable, informative shortname for the maze.
+
+        Returns:
+            str"""
         candidates = self.generate_algorithm_shares()
         main_algorithm = f"{max(candidates,key=candidates.get)}".replace(' ','-')
         size = f"{self.width}x{self.height}"
@@ -212,11 +208,20 @@ class Maze:
         return string
 
     def _stamp(self):
+        """Get a timestamp as str."""
         # return f"{random.getrandbits(32):032b}"
         return time.strftime('%Y.%m.%d-%Hh%Mm%S')
 
     def nodes(self, area=None):
-        """Produce iterator over the nodes of the maze."""
+        """Produce iterator over the `Node`s of the maze.
+
+        Args:
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0),
+                and bottom (x1,y1) corner within which to return nodes from.
+                (default is (0,0, self.width-1,self.height-1))
+        Returns:
+            iter(Node): Iterator over nodes.
+        """
         if area is None:
             return (node for row in self._grid for node in row)
         else:
@@ -224,7 +229,16 @@ class Maze:
             return (node for row in self._grid[y0:y1+1] for node in row[x0:x1+1])
 
     def edges(self, area=None):
-        """Produce iterator over the edges of the maze."""
+        """Produce iterator over the edges of the maze.
+
+        Args:
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0),
+                and bottom (x1,y1) corner within which to return edges from,
+                that don't cross outside.
+                (default is (0,0, self.width-1,self.height-1))
+        Returns:
+            iter(tuple(Node,Node)): Iterator over 'edges'.
+        """
         edge_iterators = []
         if area is None:
             rows = self._grid
@@ -256,15 +270,17 @@ class Maze:
         return (edge for itr in edge_iterators for edge in itr)
 
     def set_entrance(self, x, y):
+        """Mark new entrance of maze."""
         self.entrance = self.node_at(x,y)
         return
 
     def set_exit(self, x, y):
+        """Mark new exit of maze."""
         self.exit = self.node_at(x,y)
         return
 
     def node_at(self, x, y):
-        """Get node at those coordinates in the maze.
+        """Access node at those coordinates in the maze.
 
         Args:
             x, y (int): Coordinates with 0<=x<self.width && 0<=y<self.height
@@ -272,27 +288,27 @@ class Maze:
         Returns:
             Node: Node object at position (x,y) in maze
         """
-        #if not (0 <= x < self.width and 0 <= y < self.height):
-            #raise ValueError("coordinates not within boundaries")
         return self._grid[y][x]
 
     def has_wall(self, x, y, direction):
-        """Check for a wall, facing some direction at some location in the maze.
+        """Check for wall when facing some direction at some node in the maze.
 
         Args:
             x, y (int): Coordinates with 0<=x<self.width && 0<=y<self.height
-            direction (int) : One of (RIGHT,UP,LEFT,DOWN) = (1,2,4,8)
+            direction (int): One of (RIGHT,UP,LEFT,DOWN) = (1,2,4,8)
 
         Returns:
-            bool: Whether there is a wall when facing direction from (x,y) in maze
+            bool
         """
         return self.node_at(x,y).has_wall(direction)
 
     def connect(self, item0, item1, invert=False):
-        """Toggle the connection between two nodes in the maze.
+        """Enable/disable edge connection between two nodes in the maze.
 
         Args:
-            node0, node1 (Node): Two nodes in the maze that lie adjacent
+            node0, node1 (Node or tuple(int,int)): Two nodes in the maze that
+                lie adjacent.
+            invert (bool): Erase connection if True (default is False).
         """
         if type(item0) == tuple:
             node0, node1 = self.node_at(*item0), self.node_at(*item1)
@@ -313,14 +329,16 @@ class Maze:
         return
 
     def adjacent_to(self, node, area=None):
-        """Get all cells that are adjacent to node in the maze.
+        """Get all nodes that are adjacent to one in the maze.
 
         Args:
-            node (Node): Origin node
-            connected (bool): Flag to additionally check cells for being connected or disconnected (default is None)
+            node (Node): A node.
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
+                and bottom right (..,x1,y1) corners between which to return
+                adjacent's from (default is (0,0, self.width-1,self.height-1)).
 
         Yields:
-            Node: Neighboring node fulfilling conditions
+            Node: Adjacent grid node within area.
         """
         (x,y) = node.coordinates
         if area is None:
@@ -333,6 +351,17 @@ class Maze:
         if y < y1: yield self.node_at(x,y+1)
 
     def connected_to(self, node, area=None, invert=False):
+        """Get all nodes that are connected to one in the maze.
+
+        Args:
+            node (Node): A node.
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
+                and bottom right (..,x1,y1) corners between which to return
+                neighbors from (default is (0,0, self.width-1,self.height-1)).
+
+        Yields:
+            Node: Neighboring grid node within area.
+        """
         (x,y) = node.coordinates
         if area is None:
             (x0,y0,x1,y1) = (0,0,self.width-1,self.height-1)
@@ -350,25 +379,39 @@ class Maze:
             if y < y1 and node.has_edge(DOWN):  yield self.node_at(x,y+1)
 
     def _breadth_first_search(self, start, scanr=lambda _:None):
+        """Start a breadth first search at some node in the maze.
+
+        BFS won't start if start doesn't have infinite `distance`.
+        Otherwise BFS will set the start distance to 0 and then look for
+        unvisited nodes (distance infinity) until no more are found as usual.
+
+        Args:
+            start (Node): Node to start at.
+            scanr (callable(Node)): Arbitrary function that gets called on every
+                node exactly once (default: lambda _: None)
+        """
         if start.distance < _INFINITY:
             return
         queue = collections.deque(maxlen=3*max(self.width,self.height))
         queue.append(start)
-        start._distance = 0 ; scanr(start)
+        start._distance = 0
+        scanr(start)
         while queue:
             current = queue.popleft()
             neighbors = list(self.connected_to(current))
             for neighbor in neighbors:
                 if neighbor.distance == _INFINITY:
                     queue.append(neighbor)
-                    neighbor._distance = current.distance + 1 ; scanr(neighbor)
+                    neighbor._distance = current.distance + 1
+                    scanr(neighbor)
         return
 
     def compute_distances(self, start_coord=None):
-        """Compute all node distances using breadth first search.
+        """Reset and compute all node distances within maze.
 
         Args:
-            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is (0,0))
+            start_coord (int,int): Starting coordinates with
+                0<=x<width && 0<=y<height (default is (0,0))
         """
         if start_coord is None:
             start = self.entrance
@@ -380,23 +423,35 @@ class Maze:
         return
 
     def compute_branchdistances(self):
+        """Reset and compute all distances from nearest dead end within branch.
+
+        This will compute the distance a node that are within a 'branch',
+        i.e. between an intersection and a dead end.
+        """
         for node in self.nodes():
             node._distance = _INFINITY
-        for node in self.nodes(): # TODO optimize
+        for node in self.nodes():
             if node.distance == _INFINITY:
                 previous = None
+                previous_distance = -1
                 current = node
-                if node._edges in [1,2,4,8]: node._distance = 0 # ugly hack
                 while True:
                     neighbors = [nbr for nbr in self.connected_to(current) if nbr!=previous]
                     if len(neighbors) != 1:
                         break
+                    current._distance = previous_distance + 1
+                    previous_distance = current._distance
                     previous = current
                     current = neighbors[0]
-                    current._distance = previous.distance + 1
         return
 
     def compute_solution(self, recompute_distances=True):
+        """Recompute distances and solve maze by backtracking.
+
+        Args:
+            recompute_distances (bool): Whether to recompute distances using
+                `computer_distances` (default is True).
+        """
         if recompute_distances:
             self.compute_distances()
         self._solution_nodes = set()
@@ -410,6 +465,7 @@ class Maze:
         return
 
     def compute_longest_path(self):
+        """Compute and set as entrance&exit a longest path within the maze."""
         for node in self.nodes():
             node._distance = _INFINITY
         global counter
@@ -433,7 +489,11 @@ class Maze:
         return self.exit.distance
 
     def make_unicursal(self):
-        """Convert self into a unicursal/ maze by removing no dead ends."""
+        """Convert maze into a unicursal maze.
+
+        A unicursal maze has no dead ends (and only cycles), the conversion
+        is done by finding all dead ends and randomly connecting them again.
+        """
         for node in self.nodes():
             while sum(1 for _ in self.connected_to(node)) <= 1:
                 neighbor = random.choice(list(self.connected_to(node,invert=True)))
@@ -441,6 +501,12 @@ class Maze:
         return
 
     def generate_algorithm_shares(self):
+        """Count number of nodes written by any algorithm.
+
+        Returns:
+            dict(str,int): A table of algorithm names and how many nodes
+                they wrote/visited within the maze.
+        """
         null_cat = 'unidentified'
         algorithm_amounts = [0] * len(ALGORITHMS)
         for node in self.nodes():
@@ -450,6 +516,16 @@ class Maze:
         return algorithm_shares
 
     def generate_stats(self):
+        """Compute some mildly interesting statistics about the maze.
+
+        Returns:
+            tuple(list(int),list(int),list(int)): The first list describes the
+                numberof appearance of ach tile type [...]
+                The second is a list of all the distances found within branch
+                nodes from their nearest dead end.
+                The third list is a list of all maximum distances of paths that
+                branch off the current solution path.
+        """
         def nearest_branch_distance(node):
             dist = 0
             previous = None
@@ -487,26 +563,32 @@ class Maze:
                     offshoots_maxlengths.append(maxlength)
         return (tiles_counts, branch_distances, offshoots_maxlengths)
 
-    def generate_raster(self, wall_air_ratio=(1,1), decolumnated=True,
-        show_solution=False, show_distances=False, show_algorithms=False):
-        """
-        normal:
-            wall = +1  air = 0
-        show_solution:
-            wall = -1  air = 0  marker = [1,2..]
-        show_distances:
-            wall = -1  air = [0,1..]  unreachable = -2
-        show_algorithms:
-            wall = -1  air = [0,1..]
-        """
-        """Return a simple 2D raster representation of the maze.
+    def generate_raster(self, wall_air_ratio=(1,1), decolumnated=False, show_solution=False, show_distances=False, show_algorithms=False):
+        """Generate a rasterized representation of the maze for print usage etc.
+
+        The wall-air ratio multiplies the walls/air thicknesses respectively,
+        therefore (2,2) will yield a 4-times bigger image than (1,1).
+
+        When four nodes form a square, unwanted 'columns' in such cycles are
+        prevented by setting `decolumnated` to True.
+
+        Depending on which (mutually exclusive) `show_X` option is activated,
+        the raster will contain the following values:
+        (none)          : wall =  1  air = 0
+        show_solution   : wall = -1  air = 0        marker = [1,2..]
+        show_distances  : wall = -1  air = [0,1..]  unreachable = -2
+        show_algorithms : wall = -1  air = [0,1..]
 
         Args:
-            corridorwidth (int): Multiplier of how much wider corridors should be compared to the walls (default is 1)
-            columnated (bool): Whether free-standing 'column' pieces should be placed in free 4x4 sections of the maze (default is True)
+            wall_air_ratio (tuple(int,int)): Thickness of wall and air parts.
+            decolumnated (bool): Whether free-standing 'column' pieces should
+                be removed in free 4x4 sections of the maze (default is False).
+            show_solution (bool): Whether to include solution path in raster.
+            show_distances (bool): Whether to include distances in raster.
+            show_algorithms (bool): Whether to include algorithm IDs in raster.
 
         Returns:
-            list(list(bool)): 2D raster of the maze
+            list(list(bool)): 2D raster 'image' of the maze.
         """
         (wallM, airM) = wall_air_ratio
         if not decolumnated:
@@ -536,16 +618,16 @@ class Maze:
                 else 0 # directional air
             )
         elif show_distances:
-            dist_col = lambda node: node.distance if node.distance!=_INFINITY else -2
+            dist_col = lambda node: node.distance if node.distance!=_INFINITY else -2 # None check only because py not lazily evaluated <curse words here>
             pxl = (lambda node, dirc, nbr:
-                column(nbr,dirc,(-1),dist_col(node)) if node is None # wall
+                column(nbr,dirc,(-1),dist_col(nbr) if nbr is not None else (-1)) if node is None # wall
                 else dist_col(node) if dirc is None # center air
                 else (-1) if node.has_wall(dirc) # directional wall
                 else dist_col(node) # directional colored air
             )
         elif show_algorithms:
             pxl = (lambda node, dirc, nbr:
-                column(nbr,dirc,(-1),node._alg_id) if node is None # wall
+                column(nbr,dirc,(-1),nbr._alg_id if nbr is not None else 0) if node is None # wall
                 else node._alg_id if dirc is None # center air
                 else (-1) if node.has_wall(dirc) # directional wall
                 else node._alg_id if nbr is not None and node._alg_id==nbr._alg_id # directional colored air
@@ -584,15 +666,32 @@ class Maze:
 
     @staticmethod
     def _raster_to_image(raster, value_to_color):
+        """Convert a raster into a PIL Image object using a conversion function.
+
+        Args:
+            raster (list(list(int))): 2D 'map'.
+            value_to_color (callable(int) -> tuple(int,int,int)): a function to
+                convert raster values to RGB integer tuples.
+
+        Returns:
+            PIL.Image: Image object.
+        """
         image = Image.new('RGB', (len(raster[0]),len(raster)))
         image.putdata([value_to_color(value) for row in raster for value in row])
         return image
 
     def generate_image(self, wall_air_colors=(ct.BLACK,ct.WHITE), raster=None):
-        """Generate a handle to a (PIL) Image object presenting the maze.
+        """Generate an Image object showing the maze.
 
         Args:
-            raster (list(list(bool))): Bit map to be rendered (default is self.generate_raster())
+            wall_air_colors (tuple(tuple(int,int,int),tuple(int,int,int))):
+                RGB integer color tuples for the wall- and air pixel colors,
+                respectivel (default is (ct.BLACK,ct.WHITE)).
+            raster (list(list(bool))): Custom raster map to be rendered
+                (default is self.generate_raster()).
+
+        Returns:
+            PIL.Image: Image object with additional `filename` attribute.
         """
         if raster is None:
             raster = self.generate_raster()
@@ -605,6 +704,20 @@ class Maze:
         return image
 
     def generate_solutionimage(self, wall_air_marker_colors=None, raster=None):
+        """Generate an Image object showing the maze and its solution.
+
+        Args:
+            wall_air_marker_colors (
+                tuple(tuple(int,int,int),tuple(int,int,int)),tuple(int,int,int)
+                ): RGB integer color tuples for the wall-, air- and solution-
+                marked pixel colors (default is (ct.BLACK,ct.WHITE) and a
+                cycling (OKLCH) rainbow for the solution path).
+            raster (list(list(bool))): Custom raster map to be rendered
+                (default is self.generate_raster(show_solution=True)).
+
+        Returns:
+            PIL.Image: Image object with additional `filename` attribute.
+        """
         if raster is None:
             if self._solution_nodes is None:
                 self.compute_solution()
@@ -624,12 +737,24 @@ class Maze:
             air_color = wall_air_marker_colors[1]
             marker_color = lambda value: wall_air_marker_colors[2]
         value_to_color = lambda value: wall_color if value==(-1) else air_color if value==0 else marker_color(value)
-        # Convert to image
+        # Convert to image # TODO NOTICE
         image = Maze._raster_to_image(raster, value_to_color)
         image.filename = f"{self.name()}_solution_{self._stamp()}.png"
         return image
 
     def generate_colorimage(self, gradient_colors=None, raster=None):
+        """Generate an Image object showing the maze and its node distances.
+
+        Args:
+            gradient_colors (list(tuple(int,int,int))): RGB integer color tuple
+                list for the node distance gradient pixel colors
+                (default is ct.COLORMAPS['viridis']).
+            raster (list(list(bool))): Custom raster map to be rendered
+                (default is self.generate_raster(show_distances=True)).
+
+        Returns:
+            PIL.Image: Image object with additional `filename` attribute.
+        """
         if raster is None:
             raster = self.generate_raster(show_distances=True)
         # color conversion
@@ -646,6 +771,15 @@ class Maze:
         return image
 
     def generate_algorithmimage(self, raster=None):
+        """Generate Image object showing the maze and its algorithms colored in.
+
+        Args:
+            raster (list(list(bool))): Custom raster map to be rendered
+                (default is self.generate_raster(show_algorithms=True)).
+
+        Returns:
+            PIL.Image: Image object with additional `filename` attribute.
+        """
         if raster is None:
             raster = self.generate_raster(show_algorithms=True)
         coloring = [
@@ -666,8 +800,38 @@ class Maze:
         return image
 
     @staticmethod
-    def generate_animation(width, height, maze_runner, image_generator=None,
-        frame_only=1, frame_ms=30, alert_progress_steps=0):
+    def generate_animation(width, height, maze_runner, image_generator=None, frame_only=1, alert_progress_steps=0):
+        """Generate a list of Image objects showing an animation of a maze.
+
+        The animation shows an algorithm working a blank maze.
+        The algorithm and the way images are generated can be customized.
+        The rate at which frames are recorded can be customized.
+
+        Args:
+            width, height (int): Integer dimensions of new maze.
+            maze_runner (callable(Maze, callable(Maze))): An algorithm that
+                takes as input the maze to carve, as well as a record_frame
+                function to periodically call after changes have been made.
+            image_generator (callable(Maze) -> PIL.Image): A function producing
+                the frames for the animation (default is
+                    lambda maze:
+                        maze.compute_distances() and()or
+                        maze.generate_colorimage(
+                            raster=maze.generate_raster(
+                                show_distances=True,
+                                wall_air_ratio=(1,3)
+                            )
+                        )
+                )
+            frame_only (int): Determines to takes a screenshot every n-th frame.
+                (default is 1 (every frame)).
+            alert_progress_steps (int): TODO (vaguely: give feedback after
+                n-th part of the process).
+
+        Returns:
+            (list(PIL.Image),Maze): Animation and end result maze.
+                The first Image object has an additional `filename` attribute.
+        """
         if image_generator is None:
             image_generator = lambda maze:maze.compute_distances() and()or maze.generate_colorimage(raster=maze.generate_raster(show_distances=True,wall_air_ratio=(1,3)))
             #image_generator = lambda maze:maze.generate_image(raster=maze.generate_raster())
@@ -689,9 +853,19 @@ class Maze:
         frames.append(image_generator(maze))
         frames[0].filename = f"{maze.name()}_anim_{maze._stamp()}.gif"
         return (frames, maze)
-
+`
     @staticmethod
     def _raster_to_string(raster, value_to_chars):
+        """Convert a raster into a string using a conversion function.
+
+        Args:
+            raster (list(list(int))): 2D 'map'.
+            value_to_chars (callable(int) -> str): a function to
+                convert raster values to text characters.
+
+        Returns:
+            str: Maze text art.
+        """
         string = '\n'.join(
             ''.join(
                 value_to_chars(value) for value in row
@@ -700,7 +874,18 @@ class Maze:
         return string
 
     def str_block(self, raster=None, slim=False, show_solution=False):
-        """Produce a (unicode) block string presentation of the maze."""
+        """Produce a (Unicode) block string presentation of the maze.
+
+        Args:
+            raster (list(list(bool))): Custom raster map to be rendered
+                (default is self.generate_raster()).
+            slim (bool): Whether to make string half as wide (default is False).
+            show_solution (bool): Whether to include solution path in string
+                (default is False).
+
+        Returns:
+            str: Presentation of the maze.
+        """
         if raster is None:
             raster = self.generate_raster(show_solution=show_solution)
         if show_solution:
@@ -711,7 +896,15 @@ class Maze:
         return string
 
     def str_block_half(self, raster=None):
-        """Produce a (unicode) half-block string presentation of the maze."""
+        """Produce a (Unicode) half-block string presentation of the maze.
+
+        Args:
+            raster (list(list(bool))): Custom raster map to be rendered
+                (default is self.generate_raster()).
+
+        Returns:
+            str: Presentation of the maze.
+        """
         if raster is None:
             raster = self.generate_raster()
         # Pad raster to even height
@@ -727,7 +920,15 @@ class Maze:
         return string
 
     def str_block_quarter(self, raster=None):
-        """Produce a (unicode) quarter-block string presentation of the maze."""
+        """Produce a (Unicode) quarter-block string presentation of the maze.
+
+        Args:
+            raster (list(list(bool))): Custom raster map to be rendered
+                (default is self.generate_raster()).
+
+        Returns:
+            str: Presentation of the maze.
+        """
         if raster is None:
             raster = self.generate_raster()
         # Pad bitmap to even height and width
@@ -745,7 +946,7 @@ class Maze:
         return string
 
     def str_pipes(self):
-        """Produce a (unicode) pipe-like string presentation of the maze."""
+        """Produce a (Unicode) pipe-like string presentation of the maze."""
         tiles = " ╶╺╵└┕╹┖┗╴─╼┘┴┶┚┸┺╸╾━┙┵┷┛┹┻╷┌┍│├┝╿┞┡┐┬┮┤┼┾┦╀╄┑┭┯┥┽┿┩╃╇╻┎┏╽┟┢┃┠┣┒┰┲┧╁╆┨╂╊┓┱┳┪╅╈┫╉╋"
         make_tile = lambda a,b,c,d: tiles[27*d + 9*c + 3*b + 1*a]
         string = ""
@@ -761,13 +962,13 @@ class Maze:
         return string
 
     def str_frame(self, slim=False):
-        """Produce a (unicode) frame string presentation of the maze.
+        """Produce a (Unicode) frame-like string presentation of the maze.
 
         Args:
-            slim (bool): Whether art should be half as wide (default is False)
+            slim (bool): Whether to make string half as wide (default is False).
 
         Returns:
-            str: (unicode) frame string presentation of the maze
+            str: Presentation of the maze.
         """
         wall = self.has_wall
         tiles = " ╶╵└╴─┘┴╷┌│├┐┬┤┼"
@@ -790,14 +991,16 @@ class Maze:
         return string
 
     def str_frame_ascii(self, air_ratio=1, show_solution=False):
-        """Produce an (ASCII) frame string presentation of the maze.
+        """Produce an ASCII frame-like string presentation of the maze.
 
         Args:
-            air_ratio (int): Multiplier of how much wider corridors should be compared to the walls (default is 1)
-            show_marked_nodes (bool): Whether solution should be displayed if calculated (default is True)
+            air_ratio (int): Multiplier of how much wider corridors should be
+                (default is 1)
+            show_solution (bool): Whether to include solution path in string.
+                (default is False).
 
         Returns:
-            str: (ASCII) frame string presentation of the maze
+            str: Presentation of the maze.
         """
         if show_solution and self._solution_nodes is None:
             raise RuntimeError("cannot show solution path before searching for it")
@@ -823,7 +1026,17 @@ class Maze:
         return '\n'.join(''.join(line) for line in linestr)
 
     def str_frame_ascii_small(self, show_solution=False, decolumnated=False):
-        """Produce a minimal (ASCII) frame string presentation of the maze."""
+        """Produce a minimal ASCII frame-like string presentation of the maze.
+
+        Args:
+            show_solution (bool): Whether to include solution path in string.
+                (default is False).
+            decolumnated (bool): Whether free-standing 'column' pieces should
+                be removed in free 4x4 sections of the maze (default is False).
+
+        Returns:
+            str: Presentation of the maze.
+        """
         wall = self.has_wall
         if show_solution and self._solution_nodes is None:
             raise RuntimeError("cannot show solution path before searching for it")
@@ -889,12 +1102,24 @@ class Maze:
 
     @staticmethod
     def _algorithm_name_to_id(string):
+        """Canonically mapping str to int using ALGORITHMS (OrderedDict)."""
         return list(ALGORITHMS.keys()).index(string)
 
     @maze_algorithm
     def clear(self, area=None, record_frame=None):
+        """Routine that clears a maze of its edges.
+
+        Args:
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
+                and bottom right (..,x1,y1) corners between which to execute
+                (default is (0,0, self.width-1,self.height-1)).
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
+        """
         if area is None:
             area = (0,0,self.width-1,self.height-1)
+        if record_frame is None:
+            record_frame = lambda maze:None
         alg_id = Maze._algorithm_name_to_id('clear')
         record_frame(self)
         for (node0,node1) in self.edges(area):
@@ -904,10 +1129,15 @@ class Maze:
 
     @maze_algorithm
     def random_edges(self, area=None, record_frame=None, edge_probability=0.5):
-        """Build a bogus maze by flipping a coin on every edge.
+        """Routine that uniformly randomly assigns edges between nodes in grid.
 
         Args:
-            width, height (int): Positive integer dimensions of desired maze
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
+                and bottom right (..,x1,y1) corners between which to execute
+                (default is (0,0, self.width-1,self.height-1)).
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
+            edge_probability (float): Probability 0<=p<=1 with which to roll.
         """
         alg_id = Maze._algorithm_name_to_id('random_edges')
         if record_frame is None:
@@ -921,19 +1151,51 @@ class Maze:
         return
 
     @maze_algorithm
-    def growing_tree(self, area=None, record_frame=None,
-        start_coord=None, name_and_index_choice=None, fast_pop=False):
-        """Build a random maze using the '(random) growing tree' algorithm.
+    def growing_tree(self, area=None, record_frame=None, start_coord=None, name_and_index_choice=None, fast_pop=False):
+        """Growing Tree algorithm to carve a maze.
+
+        The algorithm works by having an active set of nodes at a time, and
+        randomly choosing one from which to choose and add an unvisited
+        neighbor node to the active set. If an active node has no neighbors,
+        remove it.
+        New nodes are appended at the back of the list, yet the next node to
+        draw can be arbitrary, which allows for some flexibility:
+        - Draw back node [stack-like / latest neighbor]:
+            'Backtracker' algorithm, DFS-like.
+        - Draw random node [random active node]:
+            '(Simplified) Prim' algorithm.
+        - Draw front node [queue-like / oldest neighbor]:
+            Uninteresting, leads to straight corridors all the way, BFS-like.
+        - Mixed behaviours:
+            [Undeterminted, subject to experimenting.]
 
         Args:
-            width, height (int): Positive integer dimensions of desired maze
-            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
-            index_choice (callable(int) -> int): Function to pick an index between 0 and a given max_index, used to determine behaviour of the algorithm (default is lambda max_index: -1 if random.random()<0.95 else random.randint(0,max_index))
-            fast_pop (bool): Whether to switch chosen element with last element when removing from active set. This is to speed up generation of large, random mazes (default is False)
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
+                and bottom right (..,x1,y1) corners between which to execute
+                (default is (0,0, self.width-1,self.height-1)).
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
+            start_coord (int,int): Coordinates 0<=x<width && 0<=y<height from
+                which to start the alg. (default is uniformly random choice).
+            name_and_index_choice (str, callable(int) -> int): Algorithm name
+                and choice function to draw next index between 0 and
+                the given (max_index).
+                Note that the algorithm will be added to ALGORITHMS if it has
+                a unique name
+                (default is
+                    'growing_tree', lambda max_index:
+                        -1 if random.random()<0.95
+                        else random.randint(0,max_index)
+                ).
+            fast_pop (bool): Activate small optimization, each switching chosen
+                element with last element in active set (list) when removing it
+                (default is False).
         """
         if area is None:
             area = (0,0,self.width-1,self.height-1)
         (x0,y0,x1,y1) = area
+        if record_frame is None:
+            record_frame = lambda maze:None
         if start_coord is None:
             start_coord = (random.randint(x0,x1),random.randint(y0,y1))
         if name_and_index_choice is None:
@@ -954,8 +1216,6 @@ class Maze:
             #algorithm_variant = (lambda self,area=None,start_coord=None,fast_pop=False:
                 #Maze.grow_tree(self,area=area,start_coord=start_coord,name_index_choice=name_index_choice,fast_pop=fast_pop))
             #Maze.algorithms[name] = algorithm_variant
-        if record_frame is None:
-            record_frame = lambda maze:None
         start = self.node_at(*start_coord)
         start.flag = True
         start._alg_id = alg_id
@@ -986,11 +1246,18 @@ class Maze:
 
     @maze_algorithm
     def backtracker(self, area=None, record_frame=None, start_coord=None):
-        """Build a random maze using randomized depth first search.
+        """Depth-First-Search like 'backtracker' algorithm to produce rndm maze.
+
+        See `growing_tree` algorithm.
 
         Args:
-            width, height (int): Positive integer dimensions of desired maze
-            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
+                and bottom right (..,x1,y1) corners between which to execute
+                (default is (0,0, self.width-1,self.height-1)).
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
+            start_coord (int,int): Coordinates 0<=x<width && 0<=y<height from
+                which to start the alg. (default is uniformly random choice).
         """
         self.growing_tree(
             area=area,
@@ -1006,11 +1273,20 @@ class Maze:
 
     @maze_algorithm
     def prim(self, area=None, record_frame=None, start_coord=None):
-        """Build a random maze using randomized Prim's algorithm.
+        """'Simplified Prim' algorithm to produce random maze.
+
+        See `growing_tree` algorithm.
 
         Args:
-            width, height (int): Positive integer dimensions of desired maze
-            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
+                and bottom right (..,x1,y1) corners between which to execute
+                (default is (0,0, self.width-1,self.height-1)).
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
+            start_coord (int,int): Coordinates 0<=x<width && 0<=y<height from
+                which to start the alg. (default is uniformly random choice).
+            start_coord (int,int): Coordinates 0<=x<width && 0<=y<height from
+                which to start the alg. (default is uniformly random choice).
         """
         self.growing_tree(
             area=area,
@@ -1026,10 +1302,14 @@ class Maze:
 
     @maze_algorithm
     def kruskal(self, area=None, record_frame=None):
-        """Build a random maze using randomized Kruskal's algorithm.
+        """Randomized Kruskal's algorithm to produce random maze.
 
         Args:
-            width, height (int): Positive integer dimensions of desired maze
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
+                and bottom right (..,x1,y1) corners between which to execute
+                (default is (0,0, self.width-1,self.height-1)).
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
         """
         alg_id = Maze._algorithm_name_to_id('kruskal')
         if area is None:
@@ -1064,11 +1344,16 @@ class Maze:
 
     @maze_algorithm
     def wilson(self, area=None, record_frame=None, start_coord=None):
-        """Build a random maze using Wilson's uniform spanning tree algorithm..
+        """Wilson's uniform random spanning tree algorithm to make a rndm maze.
 
         Args:
-            width, height (int): Positive integer dimensions of desired maze
-            start_coord (int,int): Coordinates with 0<=x<width && 0<=y<height (default is random)
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
+                and bottom right (..,x1,y1) corners between which to execute
+                (default is (0,0, self.width-1,self.height-1)).
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
+            start_coord (int,int): Coordinates 0<=x<width && 0<=y<height from
+                which to start the alg. (default is uniformly random choice).
         """
         alg_id = Maze._algorithm_name_to_id('wilson')
         if area is None:
@@ -1115,19 +1400,44 @@ class Maze:
         return
 
     @maze_algorithm
-    def division(self, area=None, record_frame=None,
-            slice_direction_choice=None, pivot_choice=None,
-            roomlength=0, nest_algorithms=[]):
-        """Build a random maze using randomized divide-and-conquer.
+    def division(self, area=None, record_frame=None, slice_direction_choice=None, pivot_choice=None, roomlength=0, nest_algorithms=[]):
+        """Divide-and-conquer approach to making a random maze.
+
+        Customizable through choice of direction and position of area cut.
+        Additionally supports leaving open rooms, or nesting algorithms therein.
 
         Args:
-            width, height (int): Positive integer dimensions of desired maze
-            slice_bias (float): Probability (0<=slice_bias<=1) to do a reroll when dividing a quadrant along the same direction as parent call
-            pivot_choice (callable(int,int) -> int): Function to choose a random index between given lower and upper index along which to make a cut
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
+                and bottom right (..,x1,y1) corners between which to execute
+                (default is (0,0, self.width-1,self.height-1)).
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
+            slice_direction_choice (callable(int,int,bool) -> bool): Function to
+                determine whether to slice *horizontally* next, based on area
+                width&height and whether previous cut was horizontal
+                (default is
+                    lambda w,h, prev:
+                        h > w if h != w else random.getrandbits(1)
+                ).
+            pivot_choice (callable(int,int) -> int): Function to determine where
+                to make the cut within the interval [l, r]
+                (default is
+                    lambda l,r:
+                        min(max(l,int(random.gauss((l+r)/2,(l+r)/2**7))),r)
+                ).
+            roomlength (int): Maximum sidel ength of rooms to randomly leave
+                open/fill recursively (default is 0).
+            nest_algorithms (
+                list(callable(Maze, tuple(int,int,int,int), callable(Maze)))
+                ): List of recursively callable maze algorithms.
+                To qualify, an algorithm must accept a maze to modify,
+                an area to selectively carve and a record_frame for snapshots.
         """
         alg_id = Maze._algorithm_name_to_id('division')
         if area is None:
             area = (0,0,self.width-1,self.height-1)
+        if record_frame is None:
+            record_frame = lambda maze:None
         if pivot_choice is None:
             #pivot_choice = lambda l,r: (l+r)//2
             pivot_choice = lambda l,r: min(max(l,int(random.gauss((l+r)/2,(l+r)/2**7))),r)
@@ -1137,8 +1447,6 @@ class Maze:
             slice_direction_choice = lambda w,h, prev: h > w if h != w else random.getrandbits(1)
             #slice_direction_choice = lambda w,h, prev: prev ^ (random.random() < 1.9)
             #slice_direction_choice = lambda w,h, prev: random.getrandbits(1)
-        if record_frame is None:
-            record_frame = lambda maze:None
         def divide(area, prev_dir):
             (x0,y0,x1,y1) = area
             ewidth, eheight = (x1-x0)+1, (y1-y0)+1
@@ -1184,12 +1492,21 @@ class Maze:
                 record_frame(self)
                 divide((x0,y0,xP,y1), False)
                 divide((xP+1,y0,x1,y1), False)
-        zeroth_cut = self.width < self.height
-        divide(area, zeroth_cut)
+        hello_reader = self.width < self.height
+        divide(area, hello_reader)
         return
 
     @maze_algorithm
     def xdivision(self, area=None, record_frame=None, roomlength=0):
+        """Routine that clears a maze of its edges.
+
+        Args:
+            area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
+                and bottom right (..,x1,y1) corners between which to execute
+                (default is (0,0, self.width-1,self.height-1)).
+            record_frame (callable(Maze)): Function to take snapshot of maze
+                periodically (default is lambda _: None).
+        """
         self.division(
             area,
             record_frame,
