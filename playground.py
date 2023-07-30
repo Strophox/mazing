@@ -752,7 +752,7 @@ def playground():
     colormap_name = 'viridis'
     image = None
     main_text = dedent4_concat_strip(
-    """
+        """
         ~:--------------------------------------:~
                    A Mazing Playground
         ~:--------------------------------------:~

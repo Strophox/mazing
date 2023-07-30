@@ -273,9 +273,9 @@ This allows mazes to be correctly and seamlessly built using independent perfect
 
 <div style="position:relative">
 
-<img align="left" src="/Gallery/maze_division-128x128_anim_2023.07.29-07h12m21.gif" width=384 alt="xdivision animation">
+<img align="left" src="/Gallery/maze_division-100x100_anim_2023.07.31-00h43m20.gif" width=400 alt="xdivision animation">
 
-<img align="center" src="/Gallery/maze_division-128x128_algorithms_2023.07.29-07h13m35.png" width=384 alt="xdivision endresult">
+<img align="center" src="/Gallery/maze_division-100x100_algorithms_2023.07.31-00h44m29.png" width=400 alt="xdivision endresult">
 
 </div>
 

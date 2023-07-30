@@ -79,6 +79,8 @@ from PIL import Image
 
 ALGORITHMS = collections.OrderedDict()
 """Public list of available maze algorithms."""
+_ALGORITHMS_EXP2_MAX = 15
+"""Power of two determining the expected maximum number of maze algorithms."""
 
 # Directions
 RIGHT = 0b0001
@@ -662,10 +664,10 @@ class Maze:
             )
         elif show_algorithms:
             pxl = (lambda node, dirc, nbr:
-                column(nbr,dirc,(-1),nbr._alg_id if nbr is not None else 0) if node is None # wall
-                else node._alg_id if dirc is None # center air
+                column(nbr,dirc,(-1),(nbr._alg_id<<1) if nbr is not None else 0) if node is None # wall
+                else (node._alg_id<<1) if dirc is None # center air
                 else (-1) if node.has_wall(dirc) # directional wall
-                else node._alg_id if nbr is not None and node._alg_id==nbr._alg_id # directional colored air
+                else 1+(node._alg_id<<1)+(nbr._alg_id<<(1+_ALGORITHMS_EXP2_MAX)) if nbr is not None # directional colored air
                 else 0 # directional air
             )
         else:
@@ -817,7 +819,8 @@ class Maze:
         """
         if raster is None:
             raster = self.generate_raster(show_algorithms=True)
-        coloring = [
+        wallcolor = ct.BLACK
+        algcolors = [
             ct.WHITE,
             ct.GRAY,
             ct.MOSS,
@@ -826,9 +829,26 @@ class Maze:
             ct.GOLDENROD,
             ct.mix(ct.VIOLET,ct.PURPLE),
             ct.LIGHT_GRAY,
-            ct.BLACK, # Wall
         ]
-        value_to_color = lambda value: coloring[value]
+        def value_to_color(value):
+            if value==-1:
+                return wallcolor
+            elif value%2==0:
+                return algcolors[value>>1]
+            else:
+                return ct.mix(
+                    algcolors[(value%(1+_ALGORITHMS_EXP2_MAX))>>1],
+                    algcolors[value>>(1+_ALGORITHMS_EXP2_MAX)],
+                )
+                #return ct.change_space(ct.mix(
+                    #ct.change_space(algcolors[
+                            #(value%(1+_ALGORITHMS_EXP2_MAX))>>1
+                    #], ct.RGB,ct.OKLAB),
+                    #ct.change_space(algcolors[
+                        #value>>(1+_ALGORITHMS_EXP2_MAX)
+                    #], ct.RGB,ct.OKLAB),
+                    #rnd=False,
+                #), ct.OKLAB,ct.RGB)
         # Convert to image
         image = Maze._raster_to_image(raster, value_to_color)
         image.filename = f"{self.name()}_algorithms_{self._stamp()}.png"

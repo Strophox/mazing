@@ -707,8 +707,8 @@ def change_space(input_color, from_space, to_space):
 
     Args:
         input_color (tupled(int,int,int)): Color tuple in valid space
-        from_space (str): A string standing for a valid source space
-        to_space (str): A string standing for a valid destination space
+        from_space (int): A string standing for a valid source space
+        to_space (int): A string standing for a valid destination space
 
     Returns:
         tuple(float,float,float): Output color in valid space.
@@ -984,7 +984,7 @@ def rainbow_color(param, color0=RED, over_space=OKLCH):
         param (float): Cycle parameter with circle period [0, 1].
         color0 (tuple(int,int,int)): Optional initial RGB color
             (default is RED).
-        over_space (str): Optional cylindrical color space model
+        over_space (int): Optional cylindrical color space model
             {HSV ,LCH_AB, LCH_UV, OKLCH} (default is OKLCH)
 
     Returns:
