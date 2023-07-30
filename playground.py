@@ -739,13 +739,12 @@ def analysis(maze):
     (maze.entrance, maze.exit) = _maze_entrance_exit
     return statistics
 
-# END   FUNCTIONS
+def playground():
+    """Interactable console 'playground' to try out mazing.py.
 
-
-# BEGIN MAIN
-
-def main():
-    # Sandkasten
+    Returns:
+        Maze: Last maze produced during playing.
+    """
     dimensions = (16,16)
     ratio = (1, 1)
     maze = Maze(*dimensions)
@@ -960,6 +959,15 @@ def main():
         command = autocomplete(user_input.lower(), commands)
         if command != user_input:
             print(f"-> {command}")
+    return maze
+
+# END   FUNCTIONS
+
+
+# BEGIN MAIN
+
+def main():
+    playground()
     return
 
 if __name__=="__main__": main()
