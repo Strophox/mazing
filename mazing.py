@@ -174,7 +174,7 @@ class Maze:
             raise ValueError("Maze must have positive width and height")
         self._width  = width
         self._height = height
-        self._grid = [[Node(x,y) for x in range(width)] for y in range(height)]
+        self._lattice = [[Node(x,y) for x in range(width)] for y in range(height)]
         self._solution_nodes = None
         self.entrance = self.node_at(0,0)
         self.exit = self.node_at(-1,-1)
@@ -186,7 +186,7 @@ class Maze:
             [
                 [
                     node._edges + (node._alg_id << 4) for node in row
-                ] for row in self._grid
+                ] for row in self._lattice
             ],
         ).__repr__()
         return string
@@ -270,10 +270,10 @@ class Maze:
             iter(Node): Iterator over nodes.
         """
         if area is None:
-            return (node for row in self._grid for node in row)
+            return (node for row in self._lattice for node in row)
         else:
             (x0,y0,x1,y1) = area
-            return (node for row in self._grid[y0:y1+1] for node in row[x0:x1+1])
+            return (node for row in self._lattice[y0:y1+1] for node in row[x0:x1+1])
 
     def edges(self, area=None):
         """Produce iterator over the edges of the maze.
@@ -288,7 +288,7 @@ class Maze:
         """
         edge_iterators = []
         if area is None:
-            rows = self._grid
+            rows = self._lattice
             # Horizontal edges
             for row in rows:
                 row_shifted_right = iter(row) ; next(row_shifted_right)
@@ -301,14 +301,14 @@ class Maze:
             (x0,y0,x1,y1) = area
             edge_iterators = []
             # Horizontal edges
-            rows_slice = self._grid[y0:y1+1]
+            rows_slice = self._lattice[y0:y1+1]
             for row in rows_slice:
                 row_slice = row[x0:x1+1]
                 row_slice_right = row[x0+1:x1+1]
                 edges = zip(row_slice,row_slice_right)
                 edge_iterators.append(edges)
             # Vertical edges
-            rows_slice_below = self._grid[y0+1:y1+1]
+            rows_slice_below = self._lattice[y0+1:y1+1]
             for row,row_below in zip(rows_slice,rows_slice_below):
                 row_slice = row[x0:x1+1]
                 row_slice_below = row_below[x0:x1+1]
@@ -325,7 +325,7 @@ class Maze:
         Returns:
             Node: Node object at position (x,y) in maze
         """
-        return self._grid[y][x]
+        return self._lattice[y][x]
 
     def has_wall(self, x, y, direction):
         """Check for wall when facing some direction at some node in the maze.
@@ -675,7 +675,7 @@ class Maze:
                 else ( 1) if node.has_wall(dirc) # directional wall
                 else 0 # directional colored air
             )
-        rows = self._grid
+        rows = self._lattice
         raster = []
         # Top-left corner
         row1 = [pxl(None, 0, None)] * wallM
@@ -989,7 +989,7 @@ class Maze:
         tiles = " ╶╺╵└┕╹┖┗╴─╼┘┴┶┚┸┺╸╾━┙┵┷┛┹┻╷┌┍│├┝╿┞┡┐┬┮┤┼┾┦╀╄┑┭┯┥┽┿┩╃╇╻┎┏╽┟┢┃┠┣┒┰┲┧╁╆┨╂╊┓┱┳┪╅╈┫╉╋"
         make_tile = lambda a,b,c,d: tiles[27*d + 9*c + 3*b + 1*a]
         string = ""
-        for row in self._grid:
+        for row in self._lattice:
             string  += '\n'
             strbelow = "\n"
             for node in row:
@@ -1046,11 +1046,11 @@ class Maze:
         # Top-left corner
         linestr = [['+']]
         # Top wall
-        for node in self._grid[0]:
+        for node in self._lattice[0]:
             linestr[0] += ['---' if node.has_wall(UP) else '   '] * air_ratio
             linestr[0] += ['+']
         # Middle and bottom rows of string
-        for row in self._grid:
+        for row in self._lattice:
             # Left wall
             row1 = ['|' if row[0].has_wall(LEFT) else ' ']
             row2 = ['+']
