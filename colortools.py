@@ -95,6 +95,20 @@ PERIWINKLE = (187, 204, 255) # '#bbccff'
 PINK       = (255, 170, 221) # '#ffaadd'
 
 COLORS = {
+    'dark':
+        ( 42,  42,  46), # '#2a2a2e'
+    'error':
+        (176,   0,  32), # '#b00020'
+    'symbiogenesis':
+        (116, 127, 141), # '#747f8d'
+    'geodesic':
+        (110, 109, 117), # '#6e6d75'
+    'metalrobe':
+        ( 74,  78,  91), # '#4a4e5b'
+    'rayzngray':
+        ( 88,  94, 108), # '#585e6c'
+    'rayznblack':
+        ( 26,  28,  32), # '#1a1c20'
     'viper':
         (157, 248,  86), # '#9df856'
     'greener':
@@ -107,16 +121,6 @@ COLORS = {
         (131,  56, 249), # '#8338f9'
     'tomato':
         (245,  68,  79), # '#f5444f'
-    'symbiogenesis':
-        (116, 127, 141), # '#747f8d'
-    'geodesic':
-        (110, 109, 117), # '#6e6d75'
-    'metalrobe':
-        ( 74,  78,  91), # '#4a4e5b'
-    'cloudscape':
-        (161, 159, 244), # '#a19ff4'
-    'dusk':
-        (176, 159, 244), # '#b09ff4'
     'octahedral':
         (109, 189, 221), # '#6dbddd'
     'temptation':
@@ -129,18 +133,12 @@ COLORS = {
         ( 92, 116, 156), # '#5c749c'
     'lightgold':
         (255, 192, 107), # '#ffc06b'
+    'cloudscape':
+        (161, 159, 244), # '#a19ff4'
+    'dusk':
+        (176, 159, 244), # '#b09ff4'
     'rosey':
         (243, 102, 144), # '#f36690'
-    'pergament':
-        (239, 226, 207), # '#EFE2CF'
-    'sepia':
-        ( 50,  45,  35), # '#322D23'
-    'rayzngray':
-        ( 88,  94, 108), # '#585e6c'
-    'rayznblack':
-        ( 26,  28,  32), # '#1a1c20'
-    'error':
-        (176,   0,  32), # '#b00020'
     'classicblurple':
         (114, 137, 218), # '#7289da'
     'discordblurple':
@@ -149,6 +147,10 @@ COLORS = {
         (237,  66,  69), # '#ED4245'
     'discordgray':
         (117, 126, 138), # '#757e8a'
+    'pergament':
+        (239, 226, 207), # '#EFE2CF'
+    'sepia':
+        ( 50,  45,  35), # '#322D23'
     'clardigfug':
         (112, 113,  84), # '#707154'
 }
