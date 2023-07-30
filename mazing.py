@@ -1553,7 +1553,7 @@ class Maze:
         )
         return
 
-    def make_unicursal(self, record_frame=None, area=None):
+    def make_unicursal(self, record_frame=None, area=None, probability=1):
         """Convert maze into a unicursal maze.
 
         A unicursal maze has no dead ends (and only cycles), the conversion
@@ -1565,16 +1565,20 @@ class Maze:
             area (tuple(int,int,int,int)): Coordinates of upper left (x0,y0,..),
                 and bottom right (..,x1,y1) corners between which to execute
                 (default is (0,0, self.width-1,self.height-1)).
+            probability (float): Probability 0<=p<=1 to connect a dead end with
+                a random neighbor (default is 1).
         """
         if area is None:
             area = (0,0,self.width-1,self.height-1)
         if record_frame is None:
             record_frame = lambda maze:None
         for node in self.nodes(area):
-            while sum(1 for _ in self.connected_to(node)) <= 1:
-                neighbor = random.choice(list(self.connected_to(node,invert=True)))
-                self.connect(node,neighbor)
-                record_frame(self)
+            if random.random() < probability:
+                while sum(1 for _ in self.connected_to(node)) <= 1:
+                    neighbor = random.choice(
+                        list(self.connected_to(node,invert=True)))
+                    self.connect(node,neighbor)
+                    record_frame(self)
         return
 
 # END   CLASSES
