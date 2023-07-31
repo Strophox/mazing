@@ -282,18 +282,25 @@ This allows mazes to be correctly and seamlessly built using independent perfect
 </details>
 
 
-# Helper Modules
+# Repository File Summaries
 
-Some functionality was developed for this project which was best factored out into separate modules.
-
-- `colortools` - Homebrewn color module.
+Each file (obviously) has some specific purpose;
+- `mazing.py` - Main maze functionality (see [beginning](#what-is-this))
+- `playground` - Sandbox functionality to try out `mazing`.
+- `benchmark.py` - Personal mini-benchmark, not specifically intended for use.
+- `colortools.py` - Homebrewn color module.
     * Common/useful color constants
     * Interpolation functions
     * Color gradient presets
     * Conversion between color spaces
-- `benchtools` - Minimal timing decorators.
+- `benchtools.py` - Minimal timing decorators.
     * `timed` to time a function by its name
     * explicit `timed_titled` for lambdas
+- `prototype_gridrunner.py` - Unfinished top-down maze navigator implemented using `curses`.
+    I don't intend on continuing work on it.
+    * Should correctly display and appropriately scroll large mazes.
+    * Navigate the maze on-screen using **arrow keys** or **w**, **a**, **s**, **d**.
+    * Use **shift** in combination with the latter to jump to next wall.
 
 
 # Code Examples
