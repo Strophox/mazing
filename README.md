@@ -390,7 +390,7 @@ imgsol.save(imgsol.filename)
 
 # 2) Normal image, altered colors
 img = my_maze.generate_image(
-    wall_air_colors=(ct.COLORS['sepia'],ct.COLORS['pergament']),
+    wall_air_colors=(ct.COLORS['sepia'],ct.COLORS['vellum']),
 )
 img.save(img.filename)
 
