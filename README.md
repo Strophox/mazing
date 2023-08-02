@@ -442,7 +442,9 @@ Each file (obviously) has some specific purpose;
     * Navigate the maze on-screen using **arrow keys** or **w**, **a**, **s**, **d**.
     * Use **shift** in combination with the latter to jump to next wall.
     <details><summary>Console Screenshot</summary>
+
     ![Screenshot](Gallery/prototype_gridrunner_screenshot.png)
+
     </details>
 
 ## Resources
