@@ -8,35 +8,36 @@ Help menu shown upon execution:
 ~:--------------------------------------:~
            A Mazing Playground
 ~:--------------------------------------:~
- Enter a command to achieve its effect:
+ Enter blank command to quit.
+ Commands are autocompleted if possible.
+ Available commands:
  ;  help   - show this menu
- Maze Generation
+ Mazebuilding
  ;  build  - make new maze
- :  dim    - set dimensions for next build
- :  load   - load maze from temp.txt
  :  store  - store maze to  temp.txt
- Modification
+ :  load   - load maze from temp.txt
+ :  join   - join (remove) dead ends
+ Maze Settings
+ :  dim    - set dimensions for next build
+ :  goal   - set new entrance & exit
  :  maxim  - find & set longest path
- :  goal   - manually set entrance & exit
- :  unicrs - unicursal = remove dead ends
- Console View
+ Viewing in Console
  ;  print  - text art of maze
- :  txtsol - text art, solutions
+ :  solve  - solution ascii art
  :  stats  - ~statistics of maze
- Imaging
- ;  img    - png image
- ;  imgsol - png solution image
- :  imgdst - png distance map
+ Viewing as Image
+ ;  img    - maze image
+ ;  imgsol - maze solution image
+ :  imgdst - maze path distance heatmap
+ :  imgalg - alg. map (`build` -> `xdiv`)
  :  imgbrc - branch dist. of spann. tree
- :  imgalg - alg's used (for `xdivision`)
- :  color  - set color map
- :  ratio  - set ratio of wall:air size
  :  view   - view latest image
+ Image Settings
+ :  color  - change colors
+ :  ratio  - change pxl ratio of wall:air
  :  save   - save latest image
  Animation
  ;  anim   - open animation helper
- (Commands are autocompleted if possible)
- Enter blank command to quit
 ~:--------------------------------------:~
 """
 # END   OUTLINE
@@ -764,7 +765,7 @@ def playground():
          ;  build  - make new maze
          :  store  - store maze to  temp.txt
          :  load   - load maze from temp.txt
-         :  unicrs - 'unicursal' = no dead ends
+         :  join   - join (remove) dead ends
          Maze Settings
          :  dim    - set dimensions for next build
          :  goal   - set new entrance & exit
@@ -890,9 +891,9 @@ def playground():
                 #new_maze = maybe_load_new_maze()
                 #if new_maze is not None:
                     #maze = new_maze
-            # Make maze unicursal
-            case 'unicrs':
-                timed(maze.make_unicursal)()
+            # Make maze braided
+            case 'join':
+                timed(maze.make_braided)()
                 preview(maze)
             # Load maze from temporary storage file
             case 'load':

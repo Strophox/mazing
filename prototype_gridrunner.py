@@ -161,7 +161,7 @@ def main():
         ],
     )
     #maze.clear() # Debug
-    maze.make_unicursal(probability=0.1) # Make easier for player
+    maze.make_braided(probability=0.1) # Make easier for player
     maze.node_at( 0, 0)._edges |= 0b0010 # Hack top entrance
     maze.node_at(-1,-1)._edges |= 0b1000 # Hack bottom exit
     grid = maze.generate_raster(decolumnated=True)

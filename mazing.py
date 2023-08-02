@@ -15,7 +15,7 @@ Comprehensive list of public interface methods:
         * division
         * xdivision
     + Modification algorithms.
-        * make_unicursal
+        * make_braided
 - Generating Strings.
     * str_block
     * str_block_half
@@ -810,6 +810,16 @@ class Maze:
     def generate_algorithmimage(self, raster=None):
         """Generate Image object showing the maze and its algorithms colored in.
 
+        Hardcoded, not currently compatible with custom algorithms:
+        - Clear: White
+        - Random Edges: Gray
+        - Growing Tree: Moss (green)
+        - Backtracker: Blue
+        - Prim: Crimson (red)
+        - Kruskal: Goldenrod (yellow)
+        - Wilson: Violet/Purple
+        - Division: Light Gray
+
         Args:
             raster (list(list(bool))): Custom raster map to be rendered
                 (default is self.generate_raster(show_algorithms=True)).
@@ -1573,10 +1583,10 @@ class Maze:
         )
         return
 
-    def make_unicursal(self, record_frame=None, area=None, probability=1):
-        """Convert maze into a unicursal maze.
+    def make_braided(self, record_frame=None, area=None, probability=1):
+        """Convert maze into a braided maze.
 
-        A unicursal maze has no dead ends (and only cycles), the conversion
+        A braided maze has no dead ends (and only cycles), the conversion
         is done by finding all dead ends and randomly connecting them again.
 
         Args:

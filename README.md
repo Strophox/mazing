@@ -43,7 +43,7 @@ Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamis
 
 # Gallery
 
-## Text Art
+## Text Art Examples
 
 ### ASCII
 *Timeless maze art for any (any?) console!*
@@ -212,7 +212,7 @@ Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamis
 
 </details>
 
-### Bigger maze samples
+### Bigger Examples
 
 > Solution of a 128×128 randomized-Kruskal maze.
 ![Kruskal Solution](Gallery/maze_kruskal-128x128_solution_2023.07.29-09h00m07.png)
@@ -228,7 +228,7 @@ Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamis
 
 ## Animations
 
-### Comparing Algorithm Animations
+### Comparing Algorithms
 
 <details><summary>Backtracker</summary>
 
@@ -264,7 +264,7 @@ Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamis
 
 </details>
 
-### Mixed Algorithm Timelapse
+### Mixing Algorithms
 
 'x-divide-and-conquer' *(better name pending)* is a variation on normal divide-and-conquer where any recursive call may decide to let an arbitrary algorithm finish the remaining subsection.
 This allows mazes to be correctly and seamlessly built using independent perfect maze algorithms.
@@ -280,27 +280,6 @@ This allows mazes to be correctly and seamlessly built using independent perfect
 </div>
 
 </details>
-
-
-# Repository File Summaries
-
-Each file (obviously) has some specific purpose;
-- `mazing.py` - Main maze functionality (see [beginning](#what-is-this))
-- `playground` - Sandbox functionality to try out `mazing`.
-- `benchmark.py` - Personal mini-benchmark, not specifically intended for use.
-- `colortools.py` - Homebrewn color module.
-    * Common/useful color constants
-    * Interpolation functions
-    * Color gradient presets
-    * Conversion between color spaces
-- `benchtools.py` - Minimal timing decorators.
-    * `timed` to time a function by its name
-    * explicit `timed_titled` for lambdas
-- `prototype_gridrunner.py` - Unfinished top-down maze navigator implemented using `curses`.
-    I don't intend on continuing work on it.
-    * Should correctly display and appropriately scroll large mazes.
-    * Navigate the maze on-screen using **arrow keys** or **w**, **a**, **s**, **d**.
-    * Use **shift** in combination with the latter to jump to next wall.
 
 
 # Code Examples
@@ -439,3 +418,38 @@ imgdst.save(imgdst.filename)
 ```
 
 </details>
+
+
+# More About
+
+## Repository File Summaries
+
+Each file (obviously) has some specific purpose;
+- `mazing.py` - Main maze functionality (see [beginning](#what-is-this))
+- `playground` - Sandbox functionality to try out `mazing`.
+- `benchmark.py` - Personal mini-benchmark, not specifically intended for use.
+- `colortools.py` - Homebrewn color module.
+    * Common/useful color constants
+    * Interpolation functions
+    * Color gradient presets
+    * Conversion between color spaces
+- `benchtools.py` - Minimal timing decorators.
+    * `timed` to time a function by its name
+    * explicit `timed_titled` for lambdas
+- `prototype_gridrunner.py` - Unfinished top-down maze navigator implemented using `curses`.
+    I don't intend on continuing work on it.
+    * Should correctly display and appropriately scroll large mazes.
+    * Navigate the maze on-screen using **arrow keys** or **w**, **a**, **s**, **d**.
+    * Use **shift** in combination with the latter to jump to next wall.
+
+## Resources
+- Jamis Buck
+    * [Online presentation slides (on maze algorithms)](http://www.jamisbuck.org/presentations/rubyconf2011/index.html)
+    * [Blog posts on maze generation](http://weblog.jamisbuck.org/under-the-hood/)
+    * [*Mazes for Programmers* book](http://www.mazesforprogrammers.com/)
+- Walter Pullen
+    * [Maze Classification](https://www.astrolog.org/labyrnth/algrithm.htm)
+- Javidx9
+    * [Programming Mazes (YouTube)](https://youtu.be/Y37-gB83HKE)
+- armin-reichert
+    * [GitHub wiki page on mazes](https://github.com/armin-reichert/mazes/wiki)
