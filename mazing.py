@@ -1584,7 +1584,7 @@ class Maze:
         )
         return
 
-    def make_braided(self, record_frame=None, area=None, probability=1):
+    def make_braided(self, record_frame=None, area=None, probability=1.0, use_trick=True):
         """Convert maze into a braided maze.
 
         A braided maze has no dead ends (and only cycles), the conversion
@@ -1597,8 +1597,12 @@ class Maze:
                 and bottom right (..,x1,y1) corners between which to execute
                 (default is (0,0, self.width-1,self.height-1)).
             probability (float): Probability 0<=p<=1 to connect a dead end with
-                a random neighbor (default is 1).
+                a random neighbor (default is 1.0).
+            use_trick (bool): Whether to always try connect two dead ends
+                everytime (default is True).
         """
+        def is_dead_end(node):
+            return sum(1 for _ in self.connected_to(node)) <= 1
         if area is None:
             area = (0,0,self.width-1,self.height-1)
         if record_frame is None:
@@ -1607,10 +1611,14 @@ class Maze:
             # Decide whether to connect node
             if random.random() < probability:
                 # Add connections until we have at least two
-                while sum(1 for _ in self.connected_to(node)) <= 1:
-                    neighbor = random.choice(
-                        list(self.connected_to(node,invert=True)))
-                    self.connect(node,neighbor)
+                while is_dead_end(node):
+                    neighbors = list(self.connected_to(node,invert=True))
+                    # Try to only connect mutual dead ends
+                    if use_trick:
+                        dead_end_neighbors = [
+                            n for n in neighbors if is_dead_end(n)]
+                        neighbors = dead_end_neighbors or neighbors
+                    self.connect(node,random.choice(neighbors))
                     record_frame(self)
         return
 
