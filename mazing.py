@@ -455,6 +455,19 @@ class Maze:
                     scanr(neighbor)
         return
 
+    def _branch_distance(self, node):
+        dist = 0
+        previous = None
+        current = node
+        while True:
+            neighbors = [nbr for nbr in self.connected_to(current) if nbr!=previous]
+            if len(neighbors) != 1:
+                break
+            dist += 1
+            previous = current
+            current = neighbors[0]
+        return dist
+
     def compute_solution(self, recompute_distances=True):
         """Recompute distances and solve maze by backtracking.
 
@@ -493,7 +506,7 @@ class Maze:
     def compute_branchdistances(self):
         """Reset and compute all distances from nearest dead end within branch.
 
-        This will compute the distance a node that are within a 'branch',
+        This will compute the distance that a node is within a 'branch',
         i.e. between an intersection and a dead end.
         """
         for node in self.nodes():
@@ -563,18 +576,6 @@ class Maze:
                 The third list is a list of all maximum distances of paths that
                 branch off the current solution path.
         """
-        def nearest_branch_distance(node):
-            dist = 0
-            previous = None
-            current = node
-            while True:
-                neighbors = [nbr for nbr in self.connected_to(current) if nbr!=previous]
-                if len(neighbors) != 1:
-                    break
-                dist += 1
-                previous = current
-                current = neighbors[0]
-            return dist
         is_dead_end = lambda node: (node._edges in [1,2,4,8])
         # Prepare accumulators for tiles and distance stats
         self.compute_solution()
@@ -583,7 +584,7 @@ class Maze:
         for node in self.nodes():
             tiles_counts[node._edges] += 1
             if is_dead_end(node):
-                branch_distances.append(nearest_branch_distance(node))
+                branch_distances.append(self._branch_distance(node))
             # Preparation for next part
             if node not in self._solution_nodes:
                 node._distance = _INFINITY
@@ -1584,7 +1585,7 @@ class Maze:
         )
         return
 
-    def make_braided(self, record_frame=None, area=None, probability=1.0, use_trick=True):
+    def make_braided(self, record_frame=None, area=None, probability=0.5*1.0, use_trick=True, criterion=None):
         """Convert maze into a braided maze.
 
         A braided maze has no dead ends (and only cycles), the conversion
@@ -1600,18 +1601,24 @@ class Maze:
                 a random neighbor (default is 1.0).
             use_trick (bool): Whether to always try connect two dead ends
                 everytime (default is True).
+            criterion: TODO
         """
-        def is_dead_end(node):
-            return sum(1 for _ in self.connected_to(node)) <= 1
         if area is None:
             area = (0,0,self.width-1,self.height-1)
         if record_frame is None:
             record_frame = lambda maze:None
+        if criterion is None:
+            #criterion = lambda _: True
+            criterion = lambda node: self._branch_distance(node) <= 1
+        def is_dead_end(node):
+            return sum(1 for _ in self.connected_to(node)) <= 1
+        def qualifies(node):
+            return is_dead_end(node) and criterion(node)
         for node in self.nodes(area):
             # Decide whether to connect node
-            if random.random() < probability:
+            if qualifies(node) and random.random() < probability:
                 # Add connections until we have at least two
-                while is_dead_end(node):
+                while qualifies(node):
                     neighbors = list(self.connected_to(node,invert=True))
                     # Try to only connect mutual dead ends
                     if use_trick:
