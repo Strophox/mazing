@@ -2,7 +2,7 @@
 maze_store.dat
 images/
 animations/
-benchmark_output/
+output_benchmark/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

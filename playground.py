@@ -837,7 +837,7 @@ def playground():
                 except Exception as e: print(f"<error: {e}>")
             case 'img': # Generate image of maze and open externally
                 image = timed(maze.generate_image)(
-                    raster=maze.generate_raster(
+                    raster=timed(maze.generate_raster)(
                         wall_air_ratio=ratio
                     )
                 )
@@ -845,7 +845,7 @@ def playground():
             # Generate image of maze colored by algorithm used
             case 'imgalg':
                 image = timed(maze.generate_algorithmimage)(
-                    raster=maze.generate_raster(
+                    raster=timed(maze.generate_raster)(
                         show_algorithms=True,
                         decolumnated=True,
                         wall_air_ratio=ratio
@@ -857,7 +857,7 @@ def playground():
                 timed(maze.compute_branchdistances)()
                 image = timed(maze.generate_colorimage)(
                     gradient_colors=ct.COLORMAPS[colormap_name][::-1],
-                    raster=maze.generate_raster(
+                    raster=timed(maze.generate_raster)(
                         show_distances=True,
                         decolumnated=False,
                         wall_air_ratio=ratio
@@ -869,7 +869,7 @@ def playground():
                 timed(maze.compute_distances)()
                 image = timed(maze.generate_colorimage)(
                     gradient_colors=ct.COLORMAPS[colormap_name][::-1],
-                    raster=maze.generate_raster(
+                    raster=timed(maze.generate_raster)(
                         show_distances=True,
                         decolumnated=True,
                         wall_air_ratio=ratio
@@ -880,7 +880,7 @@ def playground():
             case 'imgsol':
                 timed(maze.compute_solution)()
                 image = timed(maze.generate_solutionimage)(
-                    raster=maze.generate_raster(
+                    raster=timed(maze.generate_raster)(
                         show_solution=True,
                         wall_air_ratio=ratio
                     )

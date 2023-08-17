@@ -10,6 +10,7 @@ Note to self: do `python3 -m scalene small_benchmark.py`
 # BEGIN IMPORTS
 
 import random
+import colortools as ct
 from os         import makedirs
 from benchtools import timed, timed_titled
 from mazing     import Maze, ALGORITHMS
@@ -134,25 +135,37 @@ def test_tree_probabilites():
         append_text(filename, string)
     return
 
-#@run
-def test_kanagawa():
-    for i in range(50):
-        maze = timed(Maze)(128,128)
-        maze.set_entrance(63,0)
+@run
+def test_kanagawa2():
+    m = 1
+    while True:
+        maze = timed_titled(f"Maze {m}", Maze)(1920,1080)
         timed(maze.backtracker)()
         timed(maze.compute_distances)()
         image = timed(maze.generate_colorimage)(
-            gradient_colors=colortools.COLORMAPS['kanagawa'][::-1],
-            raster=maze.generate_raster(
+            gradient_colors=ct.COLORMAPS['kanagawa'][::-1],
+            raster=timed(maze.generate_raster)(
                 show_distances=True,
-                columnated=False,
-                wall_air_ratio=(1,3)
+                wall_air_ratio=(0,1)
             )
         )
-        save_image(image)
+        timed(image.save)(f"{OUTPUT_DIRECTORY}/{image.filename}")
+        timed(maze.compute_longest_path)()
+        timed(maze.compute_distances)()
+        image = timed(maze.generate_colorimage)(
+            gradient_colors=ct.COLORMAPS['kanagawa'][::-1],
+            raster=timed(maze.generate_raster)(
+                show_distances=True,
+                wall_air_ratio=(0,1)
+            )
+        )
+        timed(image.save)(f"{OUTPUT_DIRECTORY}/{image.filename}")
+        #with open(f"{OUTPUT_DIRECTORY}/{image.filename[:-4]}.dat",'w') as file:
+            #file.write(timed(repr)(maze))
+        m += 1
     return
 
-@run
+#@run
 def test_big_images():
     maze = grid(10)
     timed(maze.backtracker)()

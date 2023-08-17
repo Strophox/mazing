@@ -1512,6 +1512,7 @@ class Maze:
             #slice_direction_choice = lambda w,h, prev: prev ^ (random.random() < 1.9)
             #slice_direction_choice = lambda w,h, prev: random.getrandbits(1)
         def divide(area, prev_dir):
+            """Recursive division subroutine."""
             (x0,y0,x1,y1) = area
             ewidth, eheight = (x1-x0)+1, (y1-y0)+1
             room1 = ewidth <= 1 or eheight <= 1
@@ -1603,7 +1604,9 @@ class Maze:
         if record_frame is None:
             record_frame = lambda maze:None
         for node in self.nodes(area):
+            # Decide whether to connect node
             if random.random() < probability:
+                # Add connections until we have at least two
                 while sum(1 for _ in self.connected_to(node)) <= 1:
                     neighbor = random.choice(
                         list(self.connected_to(node,invert=True)))
