@@ -135,7 +135,7 @@ def test_tree_probabilites():
         append_text(filename, string)
     return
 
-@run
+#@run
 def test_kanagawa2():
     m = 1
     while True:
@@ -177,6 +177,42 @@ def test_big_images():
     timed(maze.compute_branchdistances)()
     image = timed(maze.generate_colorimage)()
     timed(save_image)(image)
+    return
+
+@run
+def test_wandering_light():
+    MAKE_LOOPED = True
+    maze = Maze(64,64)
+    timed(maze.kruskal)()
+    timed(maze.compute_solution)()
+    path = sorted(maze.solution, key=lambda n: n.distance)
+    if MAKE_LOOPED:
+        path = path + path[::-1]
+    palette = ct.COLORMAPS['helix2'][::-1]
+    frames = []
+    frame_only = 4
+    for i,node in enumerate(path):
+        if i % frame_only == 0:
+            maze.set_entrance(*node.coordinates)
+            maze.compute_distances()
+            node._distance = max(n.distance for n in maze.nodes())
+            image = maze.generate_colorimage(
+                gradient_colors=palette,
+                raster=maze.generate_raster(
+                    wall_air_ratio=(1,2),
+                    show_distances=True,
+                ),
+            )
+            frames.append(image)
+    frames[0].filename = f"{maze.name()}_l-anim_{maze._stamp()}.gif"
+    timed_titled(f"saving {frames[0].filename}", frames[0].save)(
+        f"{OUTPUT_DIRECTORY}/{frames[0].filename}",
+        save_all=True,
+        append_images=frames[1:],
+        optimize=False,
+        duration=30,
+        loop=0,
+    )
     return
 
 # END   FUNCTIONS

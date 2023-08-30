@@ -55,6 +55,12 @@ Comprehensive list of public interface methods:
         * connect
 
 NOTE - Ideas in Progress:
+- Carvers
+    * Tree
+        + Oldest
+        + Median
+        + Same Cell
+        + Most distant
 - Solvers
     * A* pathfinder
 - ETC Dreams
@@ -516,10 +522,9 @@ class Maze:
                 previous = None
                 previous_distance = -1
                 current = node
-                while True:
-                    neighbors = [nbr for nbr in self.connected_to(current) if nbr!=previous]
-                    if len(neighbors) != 1:
-                        break
+                while len(neighbors := [
+                        nbr for nbr in self.connected_to(current)
+                        if nbr!=previous]) == 1:
                     current._distance = previous_distance + 1
                     previous_distance = current._distance
                     previous = current
