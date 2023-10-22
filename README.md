@@ -36,7 +36,7 @@ Functionality includes but is not limited to
     * Solution path
     * Longest possible path through maze, and other interesting stats
 
-![Commandline demo screenshot](Gallery/Screenshot from 2023-10-22 17-44-02.png)
+![Commandline demo screenshot.](Gallery/commandline_screenshot.png)
 
 
 ## Don't you have exams to write?
