@@ -36,8 +36,6 @@ Functionality includes but is not limited to
     * Solution path
     * Longest possible path through maze, and other interesting stats
 
-![Commandline demo screenshot.](Gallery/commandline_screenshot.png)
-
 
 ## Don't you have exams to write?
 Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamisbuck.org/presentations/rubyconf2011/index.html) are interesting (lots of different ['flavors' of mazes](https://www.astrolog.org/labyrnth/algrithm.htm)), also [ASCII art](https://en.wikipedia.org/wiki/ASCII_art) is cool, and, then I uh, kinda got lost learning about different [color spaces](https://bottosson.github.io/posts/oklab/) and what makes [good color gradients for scientific graphs](https://www.youtube.com/watch?v=o9KxYxROSgM) too, and, and [Python decorators](https://stackoverflow.com/questions/308999/what-does-functools-wraps-do) kept me occupied *(& did you know that [`yield from`](https://stackoverflow.com/questions/9708902/in-practice-what-are-the-main-uses-for-the-yield-from-syntax-in-python-3-3) is a valid syntax struct in Python?)*, so anyway uh....
@@ -217,15 +215,19 @@ Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamis
 ### Bigger Examples
 
 > Solution of a 128×128 randomized-Kruskal maze.
+
 ![Kruskal Solution](Gallery/maze_kruskal-128x128_solution_2023.07.29-09h00m07.png)
 
 > 'Great Wave off Kanagawa'
+
 ![Kanagawa](Gallery/maze128x128_backtracker_dist_2023.07.26-08h27m14.png)
 
 > 1920×1080 maze wallpaper variation ([see others here](Gallery/wallpapers))
+
 ![Wallpaper](Gallery/wallpapers/wallpaper_brewerBlue_maze_kruskal-1920x1080_colormap_2023.07.29-09h37m37.png)
 
 > 'Magma' colormap.
+
 ![Magma](Gallery/maze1024x1024_TREE_dist_2023.07.24-03h16m55.png)
 
 ## Animations
