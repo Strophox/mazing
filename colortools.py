@@ -690,7 +690,7 @@ def change_space(input_color, from_space, to_space):
     - 'LINRGB': ([0,1], [0,1], [0,1])
         * Red, Green, Blue
         * https://bottosson.github.io/posts/colorwrong/#what-can-we-do%3F
-    - 'HSV': ([0,1], [0,1], [0,1])
+    - 'HSV': ([0,360], [0,1], [0,1])
         * Hue, Value, Saturation
         * Hue = Red-Green-Blue-Red
         * https://en.wikipedia.org/wiki/HSL_and_HSV
