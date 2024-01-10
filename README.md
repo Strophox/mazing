@@ -1,4 +1,4 @@
-# 'Mazing
+# Mazing
 *Generating, visualising, playing around with mazes*
 
 <img align="right" src="/Gallery/maze_backtracker-32x32_anim_2023.07.29-06h57m21.gif" width=200 alt="A Mazing animation" title="randomized-DFS carving">
@@ -6,22 +6,21 @@
 ## What is this?
 A hobby project to familiarize myself with Git.
 
-Mazes are fun, so I whipped up some code to build arbitrarily large ones – and nothing easier for a computer than to solve, print, draw and color them in, too!
+But mazes are so amazing that, after writing code to build arbitrarily large ones, I naturally had to extend functionality to have them solved, printed, drawn and colored in by the computer, too.
 
-In essence, [`mazing.py`](./mazing.py) provides a handy *`Maze`* class to play around with.
+In essence, [`mazing.py`](./mazing.py) provides a handy *`Maze`* class to mess around with.
 
 
-## How could I use it?
-Run `playground.py` directly to try stuff out on the command line!
-(I put some small effort into making this usable, too)
+## How to I use it
+To play around with implemented functionality, run `playground.py` directly to try stuff out on the command line.
 
-I tried adding [Google-style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) docstrings to everything, so `help()` should yield sensible information for usage of any script/module (c.f. code examples in last section).
+I tried adding [Google-style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) docstrings to everything, so `help(...)` might yield sensible information for usage of any script/module (c.f. code examples in last section).
 
 
 ## What can it do?
 Functionality includes but is not limited to
 - **Randomly carving** (so-called) 'perfect' mazes with a unique solution.
-    * Common algorithms implemented [Growing tree, backtracker, (simplified) Prim's, Kruskal's, Wilson's, divide-and-conquer]
+    * Common maze (graph) algorithms implemented [Growing tree, backtracker, (simplified) Prim's, Kruskal's, Wilson's, divide-and-conquer]
     * Mix of different methods ('x-divide-and-conquer')
 - **Text art.**
     * 7 different ways to print maze as text (including 3 w/ solution path)
@@ -37,16 +36,12 @@ Functionality includes but is not limited to
     * Longest possible path through maze, and other interesting stats
 
 
-## Don't you have exams to write?
-Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamisbuck.org/presentations/rubyconf2011/index.html) are interesting (lots of different ['flavors' of mazes](https://www.astrolog.org/labyrnth/algrithm.htm)), also [ASCII art](https://en.wikipedia.org/wiki/ASCII_art) is cool, and, then I uh, kinda got lost learning about different [color spaces](https://bottosson.github.io/posts/oklab/) and what makes [good color gradients for scientific graphs](https://www.youtube.com/watch?v=o9KxYxROSgM) too, and, and [Python decorators](https://stackoverflow.com/questions/308999/what-does-functools-wraps-do) kept me occupied *(& did you know that [`yield from`](https://stackoverflow.com/questions/9708902/in-practice-what-are-the-main-uses-for-the-yield-from-syntax-in-python-3-3) is a valid syntax struct in Python?)*, so anyway uh....
-
-
 # Gallery
 
 ## Text Art Examples
 
 ### ASCII
-*Timeless maze art for any (any?) console!*
+*Timeless maze art for any(?)(!) console.*
 
 > ASCII 'frame'
 ```
@@ -95,7 +90,7 @@ Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamis
 ```
 
 ### Unicode
-> *Note: Unfortunately it may happen that certain special characters don't display correctly (uneven character width)*
+> *Note: Certain special box/frame characters may not display correctly*
 
 <details markdown=1><summary>Show Unicode arts</summary>
 
@@ -272,6 +267,7 @@ Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamis
 
 'x-divide-and-conquer' *(better name pending)* is a variation on normal divide-and-conquer where any recursive call may decide to let an arbitrary algorithm finish the remaining subsection.
 This allows mazes to be correctly and seamlessly built using independent perfect maze algorithms.
+*(\*Note that actual implementation includes a clear-area subalgorithms, because having empty rooms in the maze is fun)*
 
 <details><summary>Mixed Divide-and-Conquer</summary>
 
@@ -299,10 +295,10 @@ my_maze = Maze(16,16)
 # Randomize maze
 my_maze.backtracker()
 
-# Choose a Unicode string function
+# Use a Unicode string function
 print(my_maze.str_frame())
 
-# Choose an ASCII string function
+# Use an ASCII string function
 print(my_maze.str_frame_ascii())
 ```
 
@@ -336,9 +332,9 @@ imgsol.save(imgsol.filename)
 from mazing import Maze
 
 # Generate animation frames
-(frames, my_unused_maze) = Maze.generate_animation(16,16, Maze.backtracker)
+(frames, _resulting_maze) = Maze.generate_animation(16,16, Maze.backtracker)
 
-# Save frames as .gif
+# Save frames as .gif animation
 frames[0].save(
     frames[0].filename,
     save_all=True,
@@ -366,10 +362,10 @@ my_maze.compute_distances()
 
 # Generate image
 imgdst = my_maze.generate_colorimage(
-    gradient_colors=ct.COLORMAPS['acton'][::-1], # makes bright -> dark
+    gradient_colors=ct.COLORMAPS['acton'][::-1], # (Makes bright -> dark)
     raster=my_maze.generate_raster(
-        wall_air_ratio=(0,1),
-        show_distances=True
+        wall_air_ratio=(0,1), # (No walls, Only air)
+        show_distances=True # (Color in distances)
     )
 )
 
@@ -426,12 +422,15 @@ imgdst.save(imgdst.filename)
 
 # More About
 
+## Don't you have exams to write?
+Messing with mazes is tons of fun, and their [graph algorithms](http://www.jamisbuck.org/presentations/rubyconf2011/index.html) are interesting (lots of different ['flavors' of mazes](https://www.astrolog.org/labyrnth/algrithm.htm)), also [ASCII art](https://en.wikipedia.org/wiki/ASCII_art) is cool, and, then I uh, kinda got lost learning about different [color spaces](https://bottosson.github.io/posts/oklab/) and what makes [good color gradients for scientific graphs](https://www.youtube.com/watch?v=o9KxYxROSgM) too, and, and [Python decorators](https://stackoverflow.com/questions/308999/what-does-functools-wraps-do) kept me occupied *(& did you know that [`yield from`](https://stackoverflow.com/questions/9708902/in-practice-what-are-the-main-uses-for-the-yield-from-syntax-in-python-3-3) is a valid syntax struct in Python?)*, so anyway uh....
+
 ## Repository File Summaries
 
-Each file (obviously) has some specific purpose;
-- `mazing.py` - Main maze functionality (see [beginning](#what-is-this))
-- `playground` - Sandbox functionality to try out `mazing`.
-- `benchmark.py` - Personal mini-benchmark, not specifically intended for use.
+Purposes of each file;
+- `mazing.py` - Main maze functionality (see [above](#what-is-this))
+- `playground` - Sandbox functionality to try `mazing`.
+- `benchmark.py` - Personal mini-benchmark script.
 - `colortools.py` - Homebrewn color module.
     * Common/useful color constants
     * Interpolation functions
