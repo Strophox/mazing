@@ -11,7 +11,7 @@ But mazes are so amazing that, after writing code to build arbitrarily large one
 In essence, [`mazing.py`](./mazing.py) provides a handy *`Maze`* class to mess around with.
 
 
-## How to I use it
+## How to use it
 To play around with implemented functionality, run `playground.py` directly to try stuff out on the command line.
 
 I tried adding [Google-style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) docstrings to everything, so `help(...)` might yield sensible information for usage of any script/module (c.f. code examples in last section).
