@@ -1,6 +1,7 @@
 # BEGIN OUTLINE
 """
 A handrolled color utilities module.
+2024-02-18T05:29:04+0000
 
 This module attempts to provide useful color definitions and utility functions
 to allow for further (basic) handling of colors. Some color names were inspired
@@ -998,11 +999,11 @@ def average(*colors, rnd=True):
     color_sum = (0,0,0)
     count = 0
     for color in colors:
-        add(color_sum, color)
+        color_sum = add(color_sum, color)
         count += 1
-    color_average = tuple((color_sum/count) for ch in color_sum)
+    color_average = tuple((ch/count) for ch in color_sum)
     if rnd:
-        color_mixed = tuple(round(ch) for ch in color_mixed)
+        color_average = tuple(round(ch) for ch in color_average)
     return color_average
 
 def rainbow_color(param, color0=RED, over_space=OKLCH):
