@@ -90,7 +90,8 @@ Functionality includes but is not limited to
 ```
 
 ### Unicode
-> *Note: Certain special box/frame characters may not display correctly*
+> [!NOTE]
+> *Certain special box/frame characters may not display/align correctly.*
 
 <details markdown=1><summary>Show Unicode arts</summary>
 
