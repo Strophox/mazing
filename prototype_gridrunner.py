@@ -30,20 +30,17 @@ class Gridrunner:
     def __init__(self, grid):
         self._grid = grid
         self._player_coordinates = (1, 1)
-        self._goal_coordinates = (-2, -2)
-        self._entities = []
-        self._won = None
+        #self._goal_coordinates = (-2, -2)
+        #self._entities = []
+        self._won = False
 
     @property
     def won(self):
-        """Whether last round was 'won'."""
+        """Whether round is 'won'."""
         return self._won
 
     def run(self):
-        """Run the `curses` in-console grid navigator.
-
-        Wraps the actual navigator with curses.wrapper so cleanup is done nicely
-        """
+        """Run the `curses` in-console grid navigator."""
         #try:
             #stdscr = curses.initscr()
             #curses.cbreak()
@@ -57,7 +54,7 @@ class Gridrunner:
             #stdscr.keypad(False)
             #curses.curs_set(True)
             #curses.endwin()
-        curses.wrapper(self._run)
+        curses.wrapper(self._run) # Wraps the actual main runner so cleanup is done nicely
         return
 
     def _run(self, stdscr):
@@ -74,12 +71,11 @@ class Gridrunner:
 
         # State initialization
         (CH, CW) = stdscr.getmaxyx() # Console Height, Width
-        CH -= 1 # Don't wanna deal with bottom right corner curses 'bug'
+        CH -= 1 # (I don't wanna deal with bottom right corner curses 'bug')
         grid = self._grid
         (gridH, gridW) = len(grid), len(grid[0]) # Grid dimensions
         (screenH, screenW) = CH, CW//2 # Grid cells allowed on screen
-        (marginH, marginW) = screenH//3, screenW//3 # Safe padding for player cam
-        (goalx, goaly) = self._goal_coordinates # Finish tile
+        (marginH, marginW) = screenH//3, screenW//3 # View padding for player cam
 
         # Helper functions
         def wall_at(y, x):
@@ -91,32 +87,30 @@ class Gridrunner:
 
         # Main loop
         while True:
-            # Get Update
+            # Get inputs
             try:                 key = stdscr.getkey()
             except curses.error: key = ''
             if key == '\x1b': # Escape
-                self._won = False
                 break
 
-            # Do computations
+            # Do player movement calculations
             longjmp = (key in "DWAS") # Jump to wall?
             while True:
                 if   (key in ['d','D','KEY_RIGHT'] and not wall_at(y,x+1)):
                     (y,x) = (y, x+1)
-                    if longjmp: continue
                 elif (key in ['w','W','KEY_UP']    and not wall_at(y-1,x)):
                     (y,x) = (y-1, x)
-                    if longjmp: continue
                 elif (key in ['a','A','KEY_LEFT']  and not wall_at(y,x-1)):
                     (y,x) = (y, x-1)
-                    if longjmp: continue
                 elif (key in ['s','S','KEY_DOWN']  and not wall_at(y+1,x)):
                     (y,x) = (y+1, x)
-                    if longjmp: continue
-                break
+                else:
+                    break
+                if not longjmp:
+                    break
 
             # Test for win condition
-            if x >= gridW-1 or y >= gridH-1:
+            if x >= gridW-1 or y >= gridH-1: # Hack: win if outside grid
                 self._won = True
                 break
 
