@@ -1,7 +1,7 @@
 # BEGIN OUTLINE
 """
+colortools v1.0.0 (2026-01-14)
 A handrolled color utilities module.
-2024-02-18T05:29:04+0000
 
 This module attempts to provide useful color definitions and utility functions
 to allow for further (basic) handling of colors. Some color names were inspired
@@ -673,7 +673,7 @@ def from_hexcode(string):
     Returns:
         tuple(int,int,int): parsed color
     """
-    hex_color = int(code.removeprefix('#'), base=16)
+    hex_color = int(string.removeprefix('#'), base=16)
     R = (0xFF0000 & hex_color) >> 16
     G = (0x00FF00 & hex_color) >>  8
     B = (0x0000FF & hex_color) >>  0
