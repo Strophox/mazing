@@ -452,7 +452,7 @@ Purposes of each file;
     </details>
 
 ## Resources
-- Jamis Buck
+- Jamis Buck. This was my main inspiration for many of the results in this repository; His book *Mazes for Programmers* might be an excellent read for the interested.
     * [Online presentation slides (on maze algorithms)](http://www.jamisbuck.org/presentations/rubyconf2011/index.html)
     * [Blog posts on maze generation](http://weblog.jamisbuck.org/under-the-hood/)
     * [*Mazes for Programmers* book](http://www.mazesforprogrammers.com/)
