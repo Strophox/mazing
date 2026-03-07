@@ -78,7 +78,7 @@ import time # strftime
 # FIXME: Hack so we don't crash "just" because we don't have image functionality.
 try:
     from PIL import Image
-except Exception e:
+except Exception as e:
     print("ERROR: {e}")
 
 import colortools as ct
@@ -438,24 +438,25 @@ class Maze:
         self.exit = self.node_at(x,y)
         return
 
-    def _breadth_first_search(self, start, scanr=lambda _:None):
-        """Start a breadth first search at some node in the maze.
+    def _breadth_first_search(self, start_nodes, scanr=lambda _:None):
+        """Start a breadth first search at start nodes in the maze.
 
-        BFS won't start if start doesn't have infinite `distance`.
-        Otherwise BFS will set the start distance to 0 and then look for
+        BFS will ignore nodes that don't have `distance` set to infinite.
+        Else BFS will reset the start distance to 0 and then look for
         unvisited nodes (distance infinity) until no more are found as usual.
 
         Args:
-            start (Node): Node to start at.
+            start_nodes (Iterable(Node)): Iterable over the nodes to start at.
             scanr (callable(Node)): Arbitrary function that gets called on every
                 node exactly once (default: lambda _: None)
         """
-        if start.distance < _INFINITY:
-            return
-        queue = collections.deque(maxlen=3*max(self.width,self.height))
-        queue.append(start)
-        start._distance = 0
-        scanr(start)
+        queue = collections.deque()
+        for start in start_nodes:
+            if start.distance < _INFINITY:
+                continue
+            queue.append(start)
+            start._distance = 0
+            scanr(start)
         while queue:
             current = queue.popleft()
             neighbors = list(self.connected_to(current))
@@ -498,6 +499,7 @@ class Maze:
             self._solution_nodes.add(current)
         return
 
+    # FIXME: Argument should probably take start_nodes, or entire functionality merged with compute_distances_from.
     def compute_distances(self, start_coord=None):
         """Reset and compute all node distances within maze.
 
@@ -511,7 +513,21 @@ class Maze:
             start = self.node_at(*start_coord)
         for node in self.nodes():
             node._distance = _INFINITY
-        self._breadth_first_search(start)
+        self._breadth_first_search([start])
+        return
+
+    def compute_distances_from(self, start_nodes=None):
+        """Reset and compute all node distances within maze.
+
+        Args:
+            start_nodes (Iterable(Node)): Starting nodes with
+                0<=x<width && 0<=y<height
+        """
+        if start_nodes is None:
+            start_nodes = [self.entrance]
+        for node in self.nodes():
+            node._distance = _INFINITY
+        self._breadth_first_search(start_nodes)
         return
 
     def compute_branchdistances(self):
@@ -548,13 +564,13 @@ class Maze:
         for node in self.nodes():
             if counter == self.width*self.height:
                 break
-            self._breadth_first_search(node, scanr=increment_counter)
+            self._breadth_first_search([node], scanr=increment_counter)
         finite_nodes = [n for n in self.nodes() if n.distance < _INFINITY]
         farthest = max(finite_nodes, key=lambda n:n.distance)
         self.entrance = farthest
         for node in self.nodes():
             node._distance = _INFINITY
-        self._breadth_first_search(self.entrance)
+        self._breadth_first_search([self.entrance])
         finite_nodes = [n for n in self.nodes() if n.distance < _INFINITY]
         farthest = max(finite_nodes, key=lambda n:n.distance)
         self.exit = farthest
@@ -606,7 +622,7 @@ class Maze:
                 if offshoot not in self._solution_nodes:
                     lengths = []
                     length_adder = lambda n: lengths.append(n.distance) if is_dead_end(n) else None
-                    self._breadth_first_search(offshoot, scanr=length_adder)
+                    self._breadth_first_search([offshoot], scanr=length_adder)
                     maxlength = max(lengths, default=0)
                     offshoots_maxlengths.append(maxlength)
         return (tiles_counts, branch_distances, offshoots_maxlengths)
@@ -901,7 +917,7 @@ class Maze:
                 )
             frame_only (int): Determines to takes a screenshot every n-th frame.
                 (default is 1 (every frame)).
-            alert_progress_steps (int): TODO (vaguely: give feedback after
+            alert_progress_steps (int): FIXME (vaguely: give feedback after
                 n-th part of the process).
 
         Returns:

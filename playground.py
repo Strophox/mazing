@@ -28,7 +28,8 @@ Help menu shown upon execution:
  Viewing as Image
  ;  img    - maze image
  ;  imgsol - maze solution image
- :  imgdst - maze path distance heatmap
+ :  imgdst - maze walk distance heatmap
+ :  imgpth - maze distance-to-path heatmap
  :  imgalg - alg. map (`build` -> `xdiv`)
  :  imgbrc - branch dist. of spann. tree
  :  view   - view latest image
@@ -387,6 +388,7 @@ def animation_helper():
                 )
             )
         ),
+        # TODO: Implement `imgpth`.
         'imgbrc': (lambda maze:
             maze.compute_branchdistances()
             and()or maze.generate_colorimage(
@@ -778,7 +780,8 @@ def playground():
          Viewing as Image
          ;  img    - maze image
          ;  imgsol - maze solution image
-         :  imgdst - maze path distance heatmap
+         :  imgdst - maze walk distance heatmap
+         :  imgpth - maze distance-to-path heatmap
          :  imgalg - alg. map (`build` -> `xdiv`)
          :  imgbrc - branch dist. of spann. tree
          :  view   - view latest image
@@ -877,6 +880,21 @@ def playground():
                     )
                 )
                 image.show()
+            # Generate image of maze colored by distances to path
+            case 'imgpth':
+                timed(maze.compute_distances)()
+                timed(maze.compute_solution)(recompute_distances=False)
+                solution_nodes = maze.solution
+                timed(maze.compute_distances_from)(solution_nodes)
+                image = timed(maze.generate_colorimage)(
+                    gradient_colors=ct.COLORMAPS[colormap_name][::-1],
+                    raster=timed(maze.generate_raster)(
+                        show_distances=True,
+                        decolumnated=True,
+                        wall_air_ratio=ratio
+                    )
+                )
+                image.show()
             # Generate image of current maze with solution
             case 'imgsol':
                 timed(maze.compute_solution)()
@@ -955,7 +973,7 @@ def playground():
         # Get new user input and check if user wants to exit
         user_input = input(commands_menu_text).strip()
         if not user_input:
-            if not input("Are you sure you want to leave? Enter nothing to confirm"):
+            if not input("Are you sure you want to leave? Enter nothing to confirm >"):
                 print("goodbye")
                 break
         # We autocomplete unambiguous user input for 'ergonomics'
