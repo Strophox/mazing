@@ -72,11 +72,16 @@ NOTE - Ideas in Progress:
 
 # BEGIN IMPORTS
 
+import collections # deque, OrderedDict
 import random
 import time # strftime
-import collections # deque, OrderedDict
+# FIXME: Hack so we don't crash "just" because we don't have image functionality.
+try:
+    from PIL import Image
+except Exception e:
+    print("ERROR: {e}")
+
 import colortools as ct
-from PIL import Image
 
 # END   IMPORTS
 

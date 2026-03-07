@@ -45,10 +45,11 @@ Help menu shown upon execution:
 
 # BEGIN IMPORTS
 
-import colortools as ct
-from shutil     import get_terminal_size
 from os         import makedirs
+from shutil     import get_terminal_size
+
 from benchtools import timed, timed_titled
+import colortools as ct
 from mazing     import Maze, ALGORITHMS
 
 # END   IMPORTS
@@ -954,8 +955,9 @@ def playground():
         # Get new user input and check if user wants to exit
         user_input = input(commands_menu_text).strip()
         if not user_input:
-            print("goodbye")
-            break
+            if not input("Are you sure you want to leave? Enter nothing to confirm"):
+                print("goodbye")
+                break
         # We autocomplete unambiguous user input for 'ergonomics'
         command = autocomplete(user_input.lower(), commands)
         if command != user_input:
