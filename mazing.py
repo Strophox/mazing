@@ -1136,7 +1136,7 @@ class Maze:
         wall = self.has_wall
         if show_solution and self._solution_nodes is None:
             raise RuntimeError("cannot show solution path before searching for it")
-        # Corner cases are nasty, dude;
+        # Corner cases are nasty, folks;
         """ ,___, ,___, ,___, ,___,
             |   | | __| | | | | |_|
             |___| |___| |___| |___|
@@ -1169,12 +1169,12 @@ class Maze:
             else: return ' ' if decolumnated else '.'
         def trsfm1(char):
             if show_solution and self.node_at(x,y) in self._solution_nodes:
-                return {'_':'i', ' ':'!'}[char]
+                return {'_':'i', ' ':':'}[char]
             else:
                 return char
         def trsfm2(char):
             if show_solution and self.node_at(x,y) in self._solution_nodes and x<self.width-1 and self.node_at(x+1,y) in self._solution_nodes:
-                return {'|':'|', ',':'i', '_':'i', '.':'!'}[char]
+                return {'|':'|', ',':';', '_':'i', '.':':'}[char]
             else:
                 return char
 
