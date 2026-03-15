@@ -55,7 +55,11 @@ Comprehensive list of public interface methods:
         * connect
 
 NOTE - Ideas in Progress:
+- Entire list 'nodes_of_interest', to replace entrance/exit
+- Have entrance/exit-adjacent outer walls remove, on visual raster when solution is generated
 - Carvers
+    * Fix: Current 'Prim' implementation
+    * Biased directions: e.g. DFS with horizontal bias
     * Tree
         + Oldest
         + Median
